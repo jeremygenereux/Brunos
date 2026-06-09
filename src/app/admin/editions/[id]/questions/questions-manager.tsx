@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useState, useTransition } from "react";
 import {
   DndContext,
   closestCenter,
@@ -44,15 +44,11 @@ export function QuestionsManager({
   questions: Question[];
   editable: boolean;
 }) {
+  // Seeded from props. The parent keys this component on the SET of question
+  // ids, so it remounts (fresh state) when questions are added/removed, while
+  // a reorder (same id set) keeps the optimistic local order.
   const [items, setItems] = useState<Question[]>(questions);
   const [, startTransition] = useTransition();
-
-  // Re-sync when questions are added/removed on the server (ids change).
-  const signature = questions.map((q) => q.id).join(",");
-  useEffect(() => {
-    setItems(questions);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [signature]);
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
