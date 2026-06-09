@@ -14,6 +14,12 @@ export type CurrentUser = {
  * Returns null when no valid session exists.
  */
 export async function getCurrentUser(): Promise<CurrentUser | null> {
+  // Degrade gracefully if Supabase env isn't configured (e.g. a deploy made
+  // before the env vars are wired) instead of throwing a 500.
+  if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY) {
+    return null;
+  }
+
   const supabase = await createClient();
   const {
     data: { user },

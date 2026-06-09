@@ -39,7 +39,11 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const path = request.nextUrl.pathname;
-  const isProtected = path === "/account" || path.startsWith("/account/");
+  const isProtected =
+    path === "/account" ||
+    path.startsWith("/account/") ||
+    path === "/admin" ||
+    path.startsWith("/admin/");
   const isAuthPage = path === "/login" || path === "/signup";
 
   // Unauthenticated users may not see protected areas.
