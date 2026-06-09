@@ -84,6 +84,14 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
         >
           Questions →
         </Link>
+        {edition.state === "COMPILATION" && (
+          <Link
+            href={`/admin/editions/${edition.id}/compile`}
+            className="text-or-300 hover:text-or-400 transition"
+          >
+            Compilation →
+          </Link>
+        )}
       </nav>
 
       <section className="mt-10">
