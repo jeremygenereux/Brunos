@@ -1,0 +1,90 @@
+"use server";
+
+import { revalidatePath } from "next/cache";
+import { createClient } from "@/lib/supabase/server";
+import { requireAdmin } from "@/lib/auth/guards";
+import { nextState, type EditionState } from "@/lib/editions/state-machine";
+
+export type ActionState = { error: string | null; success?: boolean };
+
+export async function transitionEdition(
+  _prev: ActionState,
+  formData: FormData,
+): Promise<ActionState> {
+  await requireAdmin();
+
+  const editionId = String(formData.get("edition_id") ?? "");
+  const requested = String(formData.get("next_state") ?? "") as EditionState;
+  const voteDeadline = String(formData.get("vote_deadline") ?? "").trim();
+  if (!editionId) return { error: "Édition introuvable." };
+
+  const supabase = await createClient();
+  const { data: edition, error: fetchError } = await supabase
+    .from("editions")
+    .select("state")
+    .eq("id", editionId)
+    .single();
+  if (fetchError || !edition) return { error: "Édition introuvable." };
+
+  // Only the single legal forward transition is allowed (no skipping states).
+  const expected = nextState(edition.state);
+  if (!expected) return { error: "Cette édition est déjà archivée." };
+  if (requested !== expected) return { error: "Transition d'état invalide." };
+
+  const payload: { state: EditionState; vote_deadline?: string | null } = {
+    state: requested,
+  };
+  if (requested === "SENT_FOR_VOTE") {
+    payload.vote_deadline = voteDeadline ? new Date(voteDeadline).toISOString() : null;
+  }
+
+  // RLS (editions_update_admin) is the real gate; this update is admin-only.
+  const { error } = await supabase.from("editions").update(payload).eq("id", editionId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/editions/${editionId}`);
+  revalidatePath("/admin/editions");
+  return { error: null, success: true };
+}
+
+export async function updateEdition(_prev: ActionState, formData: FormData): Promise<ActionState> {
+  await requireAdmin();
+
+  const editionId = String(formData.get("edition_id") ?? "");
+  const name = String(formData.get("name") ?? "").trim();
+  const year = Number(String(formData.get("year") ?? "").trim());
+  const eventAt = String(formData.get("event_at") ?? "").trim();
+  const venueName = String(formData.get("venue_name") ?? "").trim();
+  const venueAddress = String(formData.get("venue_address") ?? "").trim();
+  const description = String(formData.get("description") ?? "").trim();
+  const drinkRule = String(formData.get("drink_rule") ?? "ESCALATION");
+  const shooterValue = Number(String(formData.get("shooter_value") ?? "4").trim());
+
+  if (!editionId) return { error: "Édition introuvable." };
+  if (!name) return { error: "Le nom est requis." };
+  if (!Number.isInteger(year) || year < 2001) return { error: "Année invalide." };
+  if (!(shooterValue > 0)) return { error: "La valeur du shooter doit être positive." };
+  if (drinkRule !== "ESCALATION" && drinkRule !== "TOP_UNIQUE") {
+    return { error: "Règle de consommation invalide." };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("editions")
+    .update({
+      name,
+      year,
+      event_at: eventAt ? new Date(eventAt).toISOString() : null,
+      venue_name: venueName || null,
+      venue_address: venueAddress || null,
+      description: description || null,
+      drink_rule: drinkRule,
+      shooter_value: shooterValue,
+    })
+    .eq("id", editionId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/editions/${editionId}`);
+  revalidatePath("/admin/editions");
+  return { error: null, success: true };
+}

@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { StateBadge } from "@/components/state-badge";
 import { NewEditionForm } from "./new-edition-form";
@@ -62,7 +63,12 @@ export default async function EditionsPage() {
               >
                 <div>
                   <div className="flex items-center gap-3">
-                    <span className="text-ivoire font-display text-xl">{e.name}</span>
+                    <Link
+                      href={`/admin/editions/${e.id}`}
+                      className="text-ivoire hover:text-or-300 font-display text-xl transition"
+                    >
+                      {e.name}
+                    </Link>
                     <StateBadge state={e.state} />
                   </div>
                   <p className="text-ivoire-muted mt-1 font-sans text-sm">
