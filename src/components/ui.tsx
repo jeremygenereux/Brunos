@@ -45,7 +45,7 @@ export function SubmitButton({
       disabled={pending}
       aria-busy={pending}
       className={cn(
-        "from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 rounded-lg bg-gradient-to-b px-4 py-2.5 font-sans text-sm font-semibold shadow-lg transition disabled:opacity-60",
+        "from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 w-full rounded-lg bg-gradient-to-b px-4 py-2.5 font-sans text-sm font-semibold shadow-lg transition disabled:opacity-60",
         className,
       )}
     >
