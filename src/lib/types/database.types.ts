@@ -16,6 +16,7 @@ export type Database = {
           event_at: string | null;
           id: string;
           name: string;
+          shooter_value: number;
           state: Database["public"]["Enums"]["edition_state"];
           updated_at: string;
           venue_address: string | null;
@@ -30,6 +31,7 @@ export type Database = {
           event_at?: string | null;
           id?: string;
           name: string;
+          shooter_value?: number;
           state?: Database["public"]["Enums"]["edition_state"];
           updated_at?: string;
           venue_address?: string | null;
@@ -44,6 +46,7 @@ export type Database = {
           event_at?: string | null;
           id?: string;
           name?: string;
+          shooter_value?: number;
           state?: Database["public"]["Enums"]["edition_state"];
           updated_at?: string;
           venue_address?: string | null;
