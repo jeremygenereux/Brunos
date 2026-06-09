@@ -1,0 +1,99 @@
+@import "tailwindcss";
+
+/* ============================================================
+   Les Brunos — Direction artistique
+   Gala des Oscars : or sur noir, art-déco, « liquid glass ».
+   L'élégance vient de la retenue et du détail.
+   ============================================================ */
+
+:root {
+  /* Noirs étagés */
+  --noir-900: #0a0a0b;
+  --noir-800: #0f0f11;
+  --noir-700: #121214;
+  --noir-600: #18181b;
+  --noir-500: #1f1f23;
+
+  /* Ors & champagne */
+  --or-600: #b8932f;
+  --or-500: #d4af37;
+  --or-400: #e8c87e;
+  --or-300: #f0d77b;
+
+  /* Texte ivoire cassé */
+  --ivoire: #f4efe6;
+  --ivoire-muted: #b9b2a4;
+  --ivoire-faint: #6f6a60;
+
+  /* Verre (glassmorphism) */
+  --glass-bg: color-mix(in oklab, var(--noir-700) 62%, transparent);
+  --glass-border: color-mix(in oklab, var(--or-400) 28%, transparent);
+
+  --background: var(--noir-900);
+  --foreground: var(--ivoire);
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+
+  --color-noir-900: var(--noir-900);
+  --color-noir-800: var(--noir-800);
+  --color-noir-700: var(--noir-700);
+  --color-noir-600: var(--noir-600);
+  --color-noir-500: var(--noir-500);
+
+  --color-or-600: var(--or-600);
+  --color-or-500: var(--or-500);
+  --color-or-400: var(--or-400);
+  --color-or-300: var(--or-300);
+
+  --color-ivoire: var(--ivoire);
+  --color-ivoire-muted: var(--ivoire-muted);
+  --color-ivoire-faint: var(--ivoire-faint);
+
+  --font-display: var(--font-display), ui-serif, Georgia, serif;
+  --font-sans: var(--font-sans), ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  color-scheme: dark;
+}
+
+body {
+  background-color: var(--background);
+  /* Mesh doré qui dérive lentement, très discret */
+  background-image:
+    radial-gradient(
+      60rem 60rem at 12% -10%,
+      color-mix(in oklab, var(--or-500) 10%, transparent),
+      transparent 60%
+    ),
+    radial-gradient(
+      50rem 50rem at 110% 10%,
+      color-mix(in oklab, var(--or-400) 8%, transparent),
+      transparent 55%
+    ),
+    radial-gradient(
+      70rem 70rem at 50% 120%,
+      color-mix(in oklab, var(--or-600) 7%, transparent),
+      transparent 60%
+    );
+  background-attachment: fixed;
+  color: var(--foreground);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+/* Respecter la préférence de mouvement réduit. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
+}
