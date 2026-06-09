@@ -7,6 +7,10 @@ import { createClient } from "@/lib/supabase/server";
 
 export type AuthState = { error: string | null; success?: boolean };
 
+function supabaseConfigured() {
+  return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
+}
+
 async function siteOrigin(): Promise<string> {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
   const h = await headers();
@@ -19,6 +23,7 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   const email = String(formData.get("email") ?? "").trim();
   const password = String(formData.get("password") ?? "");
   if (!email || !password) return { error: "Courriel et mot de passe requis." };
+  if (!supabaseConfigured()) return { error: "Configuration Supabase manquante côté serveur." };
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -34,6 +39,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   const displayName = String(formData.get("display_name") ?? "").trim();
   if (!email || !password) return { error: "Courriel et mot de passe requis." };
   if (password.length < 8) return { error: "Le mot de passe doit faire au moins 8 caractères." };
+  if (!supabaseConfigured()) return { error: "Configuration Supabase manquante côté serveur." };
 
   const supabase = await createClient();
   const { data, error } = await supabase.auth.signUp({
@@ -54,8 +60,10 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
 }
 
 export async function signOut(): Promise<void> {
-  const supabase = await createClient();
-  await supabase.auth.signOut();
+  if (supabaseConfigured()) {
+    const supabase = await createClient();
+    await supabase.auth.signOut();
+  }
   revalidatePath("/", "layout");
   redirect("/login");
 }
