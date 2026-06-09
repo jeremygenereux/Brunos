@@ -426,6 +426,10 @@ export type Database = {
         Args: { p_person: string };
         Returns: boolean;
       };
+      reorder_questions: {
+        Args: { p_edition: string; p_ids: string[] };
+        Returns: undefined;
+      };
       user_role: {
         Args: never;
         Returns: Database["public"]["Enums"]["user_role"];
