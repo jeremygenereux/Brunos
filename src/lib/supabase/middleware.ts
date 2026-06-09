@@ -34,7 +34,33 @@ export async function updateSession(request: NextRequest) {
   );
 
   // IMPORTANT: getUser() revalidates the token; do not remove.
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  const path = request.nextUrl.pathname;
+  const isProtected = path === "/account" || path.startsWith("/account/");
+  const isAuthPage = path === "/login" || path === "/signup";
+
+  // Unauthenticated users may not see protected areas.
+  if (!user && isProtected) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    return copyCookies(supabaseResponse, NextResponse.redirect(url));
+  }
+
+  // Signed-in users skip the auth pages.
+  if (user && isAuthPage) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/account";
+    return copyCookies(supabaseResponse, NextResponse.redirect(url));
+  }
 
   return supabaseResponse;
+}
+
+/** Carry the refreshed session cookies onto a redirect response. */
+function copyCookies(from: NextResponse, to: NextResponse) {
+  from.cookies.getAll().forEach((cookie) => to.cookies.set(cookie));
+  return to;
 }
