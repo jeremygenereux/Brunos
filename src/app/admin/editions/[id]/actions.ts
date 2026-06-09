@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth/guards";
 import { nextState, type EditionState } from "@/lib/editions/state-machine";
+import { snapshotEditionResults } from "@/lib/editions/snapshot";
 
 export type ActionState = { error: string | null; success?: boolean };
 
@@ -31,6 +32,13 @@ export async function transitionEdition(
   if (!expected) return { error: "Cette édition est déjà archivée." };
   if (requested !== expected) return { error: "Transition d'état invalide." };
 
+  // Freeze the computed rankings into the `results` cache as the edition
+  // locks. Done BEFORE flipping state so a failure aborts the transition.
+  if (requested === "LOCKED") {
+    const snap = await snapshotEditionResults(supabase, editionId);
+    if (snap.error) return { error: snap.error };
+  }
+
   const payload: { state: EditionState; vote_deadline?: string | null } = {
     state: requested,
   };
@@ -43,6 +51,35 @@ export async function transitionEdition(
   if (error) return { error: error.message };
 
   revalidatePath(`/admin/editions/${editionId}`);
+  revalidatePath("/admin/editions");
+  return { error: null, success: true };
+}
+
+/**
+ * Archive the edition from the presentation's recap screen (LIVE → ARCHIVED).
+ * Makes results public (the `results` RLS opens to participants once ARCHIVED).
+ */
+export async function archiveEdition(editionId: string): Promise<ActionState> {
+  await requireAdmin();
+  if (!editionId) return { error: "Édition introuvable." };
+
+  const supabase = await createClient();
+  const { data: edition, error: fetchError } = await supabase
+    .from("editions")
+    .select("state")
+    .eq("id", editionId)
+    .single();
+  if (fetchError || !edition) return { error: "Édition introuvable." };
+  if (edition.state !== "LIVE") return { error: "L'édition n'est pas en direct." };
+
+  const { error } = await supabase
+    .from("editions")
+    .update({ state: "ARCHIVED" })
+    .eq("id", editionId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/editions/${editionId}`);
+  revalidatePath(`/admin/editions/${editionId}/present`);
   revalidatePath("/admin/editions");
   return { error: null, success: true };
 }
