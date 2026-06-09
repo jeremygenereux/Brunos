@@ -77,6 +77,12 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
         >
           Joueurs →
         </Link>
+        <Link
+          href={`/admin/editions/${edition.id}/questions`}
+          className="text-or-300 hover:text-or-400 transition"
+        >
+          Questions →
+        </Link>
       </nav>
 
       <section className="mt-10">
