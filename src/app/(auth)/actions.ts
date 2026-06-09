@@ -11,6 +11,11 @@ function supabaseConfigured() {
   return Boolean(process.env.NEXT_PUBLIC_SUPABASE_URL && process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
 }
 
+function safeNext(formData: FormData): string {
+  const next = String(formData.get("next") ?? "");
+  return next.startsWith("/") && !next.startsWith("//") ? next : "/account";
+}
+
 async function siteOrigin(): Promise<string> {
   if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
   const h = await headers();
@@ -30,7 +35,7 @@ export async function signIn(_prev: AuthState, formData: FormData): Promise<Auth
   if (error) return { error: "Identifiants invalides." };
 
   revalidatePath("/", "layout");
-  redirect("/account");
+  redirect(safeNext(formData));
 }
 
 export async function signUp(_prev: AuthState, formData: FormData): Promise<AuthState> {
@@ -56,7 +61,7 @@ export async function signUp(_prev: AuthState, formData: FormData): Promise<Auth
   if (!data.session) return { error: null, success: true };
 
   revalidatePath("/", "layout");
-  redirect("/account");
+  redirect(safeNext(formData));
 }
 
 export async function signOut(): Promise<void> {
