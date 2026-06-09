@@ -43,7 +43,8 @@ export async function updateSession(request: NextRequest) {
     path === "/account" ||
     path.startsWith("/account/") ||
     path === "/admin" ||
-    path.startsWith("/admin/");
+    path.startsWith("/admin/") ||
+    path.startsWith("/vote/");
   const isAuthPage = path === "/login" || path === "/signup";
 
   // Unauthenticated users may not see protected areas.

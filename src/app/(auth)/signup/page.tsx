@@ -5,14 +5,19 @@ import { SignupForm } from "./signup-form";
 
 export const metadata: Metadata = { title: "Créer un compte" };
 
-export default async function SignupPage() {
+export default async function SignupPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ next?: string }>;
+}) {
   if (await getCurrentUser()) redirect("/account");
+  const { next } = await searchParams;
 
   return (
     <>
       <h1 className="text-ivoire font-display mb-1 text-3xl font-semibold">Créer un compte</h1>
       <p className="text-ivoire-muted mb-6 font-sans text-sm">Rejoins la soirée des Brunos.</p>
-      <SignupForm />
+      <SignupForm next={next} />
     </>
   );
 }

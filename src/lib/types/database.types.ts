@@ -15,6 +15,7 @@ export type Database = {
           drink_rule: Database["public"]["Enums"]["drink_rule"];
           event_at: string | null;
           id: string;
+          invite_token: string;
           name: string;
           shooter_value: number;
           state: Database["public"]["Enums"]["edition_state"];
@@ -30,6 +31,7 @@ export type Database = {
           drink_rule?: Database["public"]["Enums"]["drink_rule"];
           event_at?: string | null;
           id?: string;
+          invite_token?: string;
           name: string;
           shooter_value?: number;
           state?: Database["public"]["Enums"]["edition_state"];
@@ -45,6 +47,7 @@ export type Database = {
           drink_rule?: Database["public"]["Enums"]["drink_rule"];
           event_at?: string | null;
           id?: string;
+          invite_token?: string;
           name?: string;
           shooter_value?: number;
           state?: Database["public"]["Enums"]["edition_state"];
@@ -419,9 +422,19 @@ export type Database = {
       current_person_id: { Args: never; Returns: string };
       edition_accepts_votes: { Args: { p_edition: string }; Returns: boolean };
       edition_is_archived: { Args: { p_edition: string }; Returns: boolean };
+      edition_join_info: { Args: { p_token: string }; Returns: Json };
       edition_of_question: { Args: { p_question: string }; Returns: string };
       is_admin: { Args: never; Returns: boolean };
       is_edition_participant: { Args: { p_edition: string }; Returns: boolean };
+      join_edition: {
+        Args: {
+          p_token: string;
+          p_kind: Database["public"]["Enums"]["participant_kind"];
+          p_linked_player?: string;
+          p_relation?: string;
+        };
+        Returns: string;
+      };
       person_is_edition_nominee_for_caller: {
         Args: { p_person: string };
         Returns: boolean;

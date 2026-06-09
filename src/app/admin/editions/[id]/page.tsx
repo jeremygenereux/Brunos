@@ -6,6 +6,7 @@ import { StateBadge } from "@/components/state-badge";
 import { nextState, TRANSITION_LABEL, TRANSITION_NOTE } from "@/lib/editions/state-machine";
 import { TransitionControl } from "./transition-control";
 import { EditEditionForm } from "./edit-edition-form";
+import { InviteLink } from "@/components/invite-link";
 
 export const metadata: Metadata = { title: "Édition" };
 
@@ -84,6 +85,16 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
           Questions →
         </Link>
       </nav>
+
+      <section className="mt-10">
+        <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
+          Lien d&apos;invitation
+        </h2>
+        <p className="text-ivoire-muted mb-3 font-sans text-sm">
+          Partage ce lien pour que joueurs et jury rejoignent l&apos;édition.
+        </p>
+        <InviteLink token={edition.invite_token} />
+      </section>
 
       <section className="mt-10">
         <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
