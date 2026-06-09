@@ -7,11 +7,12 @@ import { Input, Label, SubmitButton } from "@/components/ui";
 
 const initialState: AuthState = { error: null };
 
-export function LoginForm() {
+export function LoginForm({ next }: { next?: string }) {
   const [state, formAction] = useActionState(signIn, initialState);
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      <input type="hidden" name="next" value={next ?? ""} />
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="email">Courriel</Label>
         <Input

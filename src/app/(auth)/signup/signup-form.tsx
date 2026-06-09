@@ -7,7 +7,7 @@ import { Input, Label, SubmitButton } from "@/components/ui";
 
 const initialState: AuthState = { error: null };
 
-export function SignupForm() {
+export function SignupForm({ next }: { next?: string }) {
   const [state, formAction] = useActionState(signUp, initialState);
 
   if (state.success) {
@@ -24,6 +24,7 @@ export function SignupForm() {
 
   return (
     <form action={formAction} className="flex flex-col gap-4">
+      <input type="hidden" name="next" value={next ?? ""} />
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="display_name">Nom affiché</Label>
         <Input
