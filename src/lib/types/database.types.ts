@@ -443,6 +443,10 @@ export type Database = {
         Args: { p_edition: string; p_ids: string[] };
         Returns: undefined;
       };
+      set_question_selection: {
+        Args: { p_edition: string; p_ordered_ids: string[] };
+        Returns: undefined;
+      };
       user_role: {
         Args: never;
         Returns: Database["public"]["Enums"]["user_role"];
