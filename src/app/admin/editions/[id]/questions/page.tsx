@@ -54,7 +54,15 @@ export default async function QuestionsPage({ params }: { params: Promise<{ id: 
             Aucune question pour l&apos;instant.
           </p>
         ) : (
-          <QuestionsManager editionId={id} questions={questions} editable={editable} />
+          <QuestionsManager
+            key={[...questions]
+              .map((q) => q.id)
+              .sort()
+              .join(",")}
+            editionId={id}
+            questions={questions}
+            editable={editable}
+          />
         )}
       </section>
     </div>
