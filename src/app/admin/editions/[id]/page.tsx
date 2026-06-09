@@ -70,6 +70,15 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
         <p className="text-ivoire-muted mt-4 font-sans text-sm">{edition.description}</p>
       )}
 
+      <nav className="mt-6 flex flex-wrap gap-4 font-sans text-sm">
+        <Link
+          href={`/admin/editions/${edition.id}/players`}
+          className="text-or-300 hover:text-or-400 transition"
+        >
+          Joueurs →
+        </Link>
+      </nav>
+
       <section className="mt-10">
         <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
           État de l&apos;édition
