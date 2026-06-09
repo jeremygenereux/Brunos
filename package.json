@@ -19,7 +19,9 @@
     "db:stop": "supabase stop",
     "db:reset": "supabase db reset",
     "db:diff": "supabase db diff -f",
-    "db:types": "supabase gen types typescript --local > src/lib/types/database.types.ts"
+    "db:types": "supabase gen types typescript --local > src/lib/types/database.types.ts",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.3.1",
@@ -46,6 +48,7 @@
     "prettier-plugin-tailwindcss": "^0.8.0",
     "supabase": "^2.105.0",
     "tailwindcss": "^4",
-    "typescript": "^5"
+    "typescript": "^5",
+    "vitest": "^2.1.9"
   }
 }
