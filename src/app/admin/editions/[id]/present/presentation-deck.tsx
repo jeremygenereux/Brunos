@@ -3,40 +3,15 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
+import type {
+  Category,
+  PresentEdition,
+  RankRow,
+  RecapRow,
+} from "@/lib/editions/presentation-types";
 import { ArchiveButton } from "./archive-button";
 
-export type RankRow = {
-  playerId: string;
-  name: string;
-  headshot: string | null;
-  finalRank: number;
-  drinks: number;
-  /** Genuinely tied for 1st (revealed together). */
-  isWinner?: boolean;
-  /** Actually took the shooter charge (not a coincidental value). */
-  isShooter?: boolean;
-};
-export type Category = {
-  questionId: string;
-  index: number;
-  prompt: string;
-  format: string;
-  players: RankRow[];
-  jury: RankRow[];
-};
-export type RecapRow = {
-  playerId: string;
-  name: string;
-  headshot: string | null;
-  total: number;
-};
-type Edition = {
-  id: string;
-  name: string;
-  year: number;
-  venueName: string | null;
-  state: string;
-};
+export type { Category, RankRow, RecapRow };
 
 function Avatar({ name, headshot, size }: { name: string; headshot: string | null; size: number }) {
   if (headshot) {
@@ -69,11 +44,14 @@ export function PresentationDeck({
   edition,
   categories,
   recap,
+  backHref,
 }: {
-  edition: Edition;
+  edition: PresentEdition;
   categories: Category[];
   recap: RecapRow[];
+  backHref?: string;
 }) {
+  const quitHref = backHref ?? `/admin/editions/${edition.id}`;
   const slideCount = categories.length + 2; // intro + categories + recap
   const lastSlide = slideCount - 1;
   const [pos, setPos] = useState({ slide: 0, step: 0 });
@@ -169,7 +147,7 @@ export function PresentationDeck({
         onClick={(e) => e.stopPropagation()}
       >
         <Link
-          href={`/admin/editions/${edition.id}`}
+          href={quitHref}
           className="text-ivoire-faint hover:text-or-300 font-sans text-xs tracking-wide uppercase transition"
         >
           ✕ Quitter
