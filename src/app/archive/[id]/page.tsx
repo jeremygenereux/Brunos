@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { loadPresentation } from "@/lib/editions/presentation";
+import { loadEditionVoteReveal } from "@/lib/editions/drama";
 import type { RankRow } from "@/lib/editions/presentation-types";
 import { Avatar } from "@/components/avatar";
 
@@ -80,6 +81,9 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
   const topDrinker = recap[0];
   const hasPlayable = categories.some((c) => c.players.length > 0);
 
+  const reveal = await loadEditionVoteReveal(supabase, id);
+  const hasReveal = reveal.categories.some((c) => c.ballots.length > 0 || c.drama.length > 0);
+
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-12">
       <Link
@@ -144,6 +148,55 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
             </section>
           ))}
         </div>
+      )}
+
+      {hasReveal && (
+        <section className="mt-14">
+          <h2 className="text-or-400/80 font-sans text-xs tracking-[0.3em] uppercase">
+            Révélations des votes
+          </h2>
+          <p className="text-ivoire-faint mt-1 font-sans text-sm">
+            Qui a voté pour qui — maintenant que la soirée est archivée.
+          </p>
+          <div className="mt-5 flex flex-col gap-6">
+            {reveal.categories
+              .filter((c) => c.ballots.length > 0 || c.drama.length > 0)
+              .map((c) => (
+                <div key={c.questionId} className="flex flex-col gap-3">
+                  <h3 className="text-ivoire font-display text-lg font-semibold">{c.prompt}</h3>
+                  {c.drama.map((d, i) => (
+                    <div
+                      key={`${d.kind}-${i}`}
+                      className="brunos-glass border-or-400/30 rounded-xl border px-4 py-3"
+                    >
+                      <span className="text-or-300 font-sans text-sm font-medium">{d.title}</span>
+                      <span className="text-ivoire-muted font-sans text-sm"> — {d.detail}</span>
+                    </div>
+                  ))}
+                  {c.ballots.length > 0 && (
+                    <details className="group">
+                      <summary className="text-ivoire-muted hover:text-or-300 cursor-pointer font-sans text-sm transition">
+                        Voir les {c.ballots.length} bulletin{c.ballots.length > 1 ? "s" : ""}
+                      </summary>
+                      <ul className="mt-2 flex flex-col gap-1.5 pl-1">
+                        {c.ballots.map((b, i) => (
+                          <li key={i} className="font-sans text-sm">
+                            <span className="text-or-300">{b.voterName}</span>
+                            <span className="text-ivoire-faint">
+                              {b.voterKind === "jury" ? " (entourage)" : ""} :{" "}
+                            </span>
+                            <span className="text-ivoire-muted">
+                              {b.ranking.map((r) => r.playerName).join(" › ")}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    </details>
+                  )}
+                </div>
+              ))}
+          </div>
+        </section>
       )}
     </main>
   );

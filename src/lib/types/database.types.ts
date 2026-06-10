@@ -418,6 +418,15 @@ export type Database = {
         Args: { p_confirm?: boolean; p_edition: string };
         Returns: undefined;
       };
+      archived_edition_voters: {
+        Args: { p_edition: string };
+        Returns: {
+          participant_id: string;
+          person_id: string | null;
+          display_name: string;
+          kind: string;
+        }[];
+      };
       current_participant_id: { Args: { p_edition: string }; Returns: string };
       current_person_id: { Args: never; Returns: string };
       edition_accepts_votes: { Args: { p_edition: string }; Returns: boolean };

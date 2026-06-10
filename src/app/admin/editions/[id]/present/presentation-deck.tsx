@@ -61,8 +61,12 @@ export function PresentationDeck({
 
   const isCategory = slide >= 1 && slide <= categories.length;
   const maxStepOf = useCallback(
-    (s: number) => (s >= 1 && s <= categories.length ? 2 : 0),
-    [categories.length],
+    (s: number) => {
+      if (s < 1 || s > categories.length) return 0;
+      const c = categories[s - 1];
+      return c.players.length > 0 && c.drama && c.drama.length > 0 ? 3 : 2;
+    },
+    [categories],
   );
 
   const advance = useCallback(() => {
@@ -125,7 +129,10 @@ export function PresentationDeck({
 
   const announce = cat
     ? `Catégorie ${cat.index + 1} sur ${categories.length}. ${cat.prompt}` +
-      (step >= 1 && winners.length ? `. ${winners.map((w) => w.name).join(", ")}.` : "")
+      (step >= 1 && winners.length ? `. ${winners.map((w) => w.name).join(", ")}.` : "") +
+      (step >= 3 && cat.drama
+        ? ` ${cat.drama.map((d) => `${d.title}. ${d.detail}`).join(" ")}`
+        : "")
     : isRecap
       ? "Récapitulatif de la soirée."
       : `${edition.name}.`;
@@ -203,13 +210,13 @@ export function PresentationDeck({
               </p>
             )}
 
-            {noVotes && (
+            {noVotes && step === 0 && (
               <p className="brunos-fade text-ivoire-muted font-sans text-base">
                 Personne n&apos;a voté dans cette catégorie 🤷
               </p>
             )}
 
-            {step >= 1 && winners.length > 0 && (
+            {step >= 1 && step <= 2 && winners.length > 0 && (
               <div
                 key={`winner-${cat.questionId}`}
                 className="brunos-winner flex flex-col items-center gap-4"
@@ -245,6 +252,24 @@ export function PresentationDeck({
                     showDrinks={false}
                   />
                 )}
+              </div>
+            )}
+
+            {step >= 3 && cat.drama && cat.drama.length > 0 && (
+              <div key="drama" className="flex w-full max-w-2xl flex-col items-center gap-4">
+                <p className="text-or-400/70 font-sans text-xs tracking-[0.4em] uppercase">
+                  Carte drame
+                </p>
+                {cat.drama.map((d, i) => (
+                  <div
+                    key={`${d.kind}-${i}`}
+                    className="brunos-glass brunos-rise border-or-400/30 w-full rounded-2xl border px-6 py-5 text-center"
+                    style={{ animationDelay: `${i * 120}ms` }}
+                  >
+                    <p className="text-or-300 font-display text-2xl font-semibold">{d.title}</p>
+                    <p className="text-ivoire mt-1 font-sans text-base">{d.detail}</p>
+                  </div>
+                ))}
               </div>
             )}
           </div>
