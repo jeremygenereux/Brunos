@@ -59,6 +59,36 @@ export type Database = {
         };
         Relationships: [];
       };
+      notifications: {
+        Row: {
+          created_at: string;
+          edition_id: string;
+          id: string;
+          kind: string;
+          message: string;
+          participant_id: string | null;
+          read_at: string | null;
+        };
+        Insert: {
+          created_at?: string;
+          edition_id: string;
+          id?: string;
+          kind?: string;
+          message: string;
+          participant_id?: string | null;
+          read_at?: string | null;
+        };
+        Update: {
+          created_at?: string;
+          edition_id?: string;
+          id?: string;
+          kind?: string;
+          message?: string;
+          participant_id?: string | null;
+          read_at?: string | null;
+        };
+        Relationships: [];
+      };
       participants: {
         Row: {
           created_at: string;
@@ -456,6 +486,11 @@ export type Database = {
         Args: { p_edition: string; p_ordered_ids: string[] };
         Returns: undefined;
       };
+      submit_ballot: {
+        Args: { p_answers: Json; p_edition: string };
+        Returns: undefined;
+      };
+      vote_is_editable: { Args: { p_vote: string }; Returns: boolean };
       user_role: {
         Args: never;
         Returns: Database["public"]["Enums"]["user_role"];
