@@ -1,6 +1,7 @@
 import type { Metadata, Viewport } from "next";
 import { Cormorant_Garamond, Manrope } from "next/font/google";
 import "./globals.css";
+import { AmbientBackground } from "@/components/ambient-background";
 
 const display = Cormorant_Garamond({
   subsets: ["latin"],
@@ -35,7 +36,10 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="fr-CA" className={`${display.variable} ${sans.variable} h-full antialiased`}>
-      <body className="flex min-h-full flex-col">{children}</body>
+      <body className="flex min-h-full flex-col">
+        <AmbientBackground />
+        {children}
+      </body>
     </html>
   );
 }
