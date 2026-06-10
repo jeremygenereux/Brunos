@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import type {
@@ -52,21 +52,36 @@ export function PresentationDeck({
   backHref?: string;
 }) {
   const quitHref = backHref ?? `/admin/editions/${edition.id}`;
-  const slideCount = categories.length + 2; // intro + categories + recap
-  const lastSlide = slideCount - 1;
+
+  // Typed slide deck: intro → rules → categories → recap.
+  type Slide =
+    | { type: "intro" }
+    | { type: "rules" }
+    | { type: "category"; cat: Category }
+    | { type: "recap" };
+  const slides = useMemo<Slide[]>(
+    () => [
+      { type: "intro" },
+      { type: "rules" },
+      ...categories.map((cat) => ({ type: "category" as const, cat })),
+      { type: "recap" },
+    ],
+    [categories],
+  );
+  const lastSlide = slides.length - 1;
+
   const [pos, setPos] = useState({ slide: 0, step: 0 });
   const { slide, step } = pos;
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
-  const isCategory = slide >= 1 && slide <= categories.length;
   const maxStepOf = useCallback(
     (s: number) => {
-      if (s < 1 || s > categories.length) return 0;
-      const c = categories[s - 1];
-      return c.players.length > 0 && c.drama && c.drama.length > 0 ? 3 : 2;
+      const sl = slides[s];
+      if (sl?.type !== "category") return 0;
+      return sl.cat.players.length > 0 && sl.cat.drama && sl.cat.drama.length > 0 ? 3 : 2;
     },
-    [categories],
+    [slides],
   );
 
   const advance = useCallback(() => {
@@ -121,8 +136,11 @@ export function PresentationDeck({
     return () => document.removeEventListener("fullscreenchange", onFs);
   }, []);
 
-  const cat = isCategory ? categories[slide - 1] : null;
-  const isRecap = slide === lastSlide;
+  const currentSlide = slides[slide];
+  const isIntro = currentSlide?.type === "intro";
+  const isRules = currentSlide?.type === "rules";
+  const isRecap = currentSlide?.type === "recap";
+  const cat = currentSlide?.type === "category" ? currentSlide.cat : null;
   const winners = cat ? cat.players.filter((p) => p.isWinner) : [];
   const noVotes = Boolean(cat && cat.players.length === 0);
   const maxTotal = recap.length ? Math.max(...recap.map((r) => r.total)) : 0;
@@ -135,7 +153,9 @@ export function PresentationDeck({
         : "")
     : isRecap
       ? "Récapitulatif de la soirée."
-      : `${edition.name}.`;
+      : isRules
+        ? "Les règles de la soirée."
+        : `${edition.name}.`;
 
   return (
     <div
@@ -161,7 +181,13 @@ export function PresentationDeck({
         </Link>
         <div className="flex items-center gap-4">
           <span className="text-ivoire-faint font-sans text-xs tracking-widest tabular-nums">
-            {cat ? `${cat.index + 1} / ${categories.length}` : isRecap ? "Récap" : "Ouverture"}
+            {cat
+              ? `${cat.index + 1} / ${categories.length}`
+              : isRecap
+                ? "Récap"
+                : isRules
+                  ? "Règles"
+                  : "Ouverture"}
           </span>
           <button
             type="button"
@@ -175,7 +201,7 @@ export function PresentationDeck({
 
       {/* Stage */}
       <div className="relative z-0 flex h-full w-full flex-col items-center justify-center px-8 text-center">
-        {slide === 0 && (
+        {isIntro && (
           <div key="intro" className="brunos-fade flex flex-col items-center gap-5">
             <Kicker>Les Brunos {edition.year}</Kicker>
             <h1 className="text-ivoire font-display text-6xl leading-tight font-semibold sm:text-7xl">
@@ -186,6 +212,35 @@ export function PresentationDeck({
             )}
             <p className="text-ivoire-faint mt-6 font-sans text-sm">
               Cliquez ou appuyez sur → pour commencer
+            </p>
+          </div>
+        )}
+
+        {isRules && (
+          <div key="rules" className="brunos-fade flex max-w-2xl flex-col items-center gap-6">
+            <Kicker>Les règles</Kicker>
+            <h2 className="text-ivoire font-display text-4xl leading-tight font-semibold sm:text-5xl">
+              {edition.drinkRule === "TOP_UNIQUE"
+                ? "Le ou la gagnant·e cale."
+                : "Plus bas tu finis, plus tu bois."}
+            </h2>
+            <p className="text-ivoire-muted font-sans text-lg leading-relaxed">
+              {edition.drinkRule === "TOP_UNIQUE" ? (
+                <>
+                  Pour chaque catégorie, seul·e le·la gagnant·e descend un shooter — soit{" "}
+                  <span className="text-or-300">{edition.shooterValue} gorgées</span>. Les ex æquo
+                  trinquent ensemble.
+                </>
+              ) : (
+                <>
+                  Pour chaque catégorie, on boit selon son rang : 1 gorgée pour la 1re place, 2 pour
+                  la 2e, et ainsi de suite. Le·la dernier·ère cale un shooter —{" "}
+                  <span className="text-or-300">{edition.shooterValue} gorgées</span>.
+                </>
+              )}
+            </p>
+            <p className="text-or-400/60 font-sans text-sm tracking-[0.2em] uppercase">
+              Que le meilleur perde 🥃
             </p>
           </div>
         )}

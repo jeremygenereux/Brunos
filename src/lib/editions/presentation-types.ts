@@ -48,4 +48,6 @@ export type PresentEdition = {
   venueName: string | null;
   eventAt: string | null;
   state: EditionState;
+  drinkRule: "ESCALATION" | "TOP_UNIQUE";
+  shooterValue: number;
 };

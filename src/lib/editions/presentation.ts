@@ -40,7 +40,7 @@ export async function loadPresentation(
 
   const { data: edition } = await supabase
     .from("editions")
-    .select("id, name, year, state, venue_name, event_at, drink_rule")
+    .select("id, name, year, state, venue_name, event_at, drink_rule, shooter_value")
     .eq("id", editionId)
     .single();
   if (!edition) return empty;
@@ -52,6 +52,8 @@ export async function loadPresentation(
     venueName: edition.venue_name,
     eventAt: edition.event_at,
     state: edition.state,
+    drinkRule: edition.drink_rule as "ESCALATION" | "TOP_UNIQUE",
+    shooterValue: Number(edition.shooter_value),
   };
 
   const { data: rawQuestions } = await supabase
