@@ -108,7 +108,7 @@ body {
 @keyframes brunos-rise {
   from {
     opacity: 0;
-    transform: translateY(1.5rem);
+    transform: translateY(2rem);
   }
   to {
     opacity: 1;
@@ -119,25 +119,30 @@ body {
 @keyframes brunos-winner {
   0% {
     opacity: 0;
-    transform: scale(0.86);
+    transform: scale(0.78);
     filter: drop-shadow(0 0 0 transparent);
   }
-  60% {
+  45% {
     opacity: 1;
+  }
+  70% {
+    transform: scale(1.04);
   }
   100% {
     opacity: 1;
     transform: scale(1);
-    filter: drop-shadow(0 0 2.5rem color-mix(in oklab, var(--or-400) 55%, transparent));
+    filter: drop-shadow(0 0 3.5rem color-mix(in oklab, var(--or-400) 65%, transparent));
   }
 }
 
 @keyframes brunos-fade {
   from {
     opacity: 0;
+    transform: translateY(0.5rem);
   }
   to {
     opacity: 1;
+    transform: translateY(0);
   }
 }
 
@@ -154,15 +159,15 @@ body {
 }
 
 .brunos-rise {
-  animation: brunos-rise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: brunos-rise 1s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .brunos-winner {
-  animation: brunos-winner 1.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: brunos-winner 2.4s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 .brunos-fade {
-  animation: brunos-fade 0.9s ease both;
+  animation: brunos-fade 1.3s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
 /* « Liquid glass » card — glassmorphism for the presentation surfaces
