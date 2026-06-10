@@ -17,21 +17,29 @@ export async function addPlayer(_prev: PlayerState, formData: FormData): Promise
   await requireAdmin();
 
   const editionId = String(formData.get("edition_id") ?? "");
+  const existingPersonId = String(formData.get("person_id") ?? "").trim();
   const name = String(formData.get("name") ?? "").trim();
   const file = formData.get("headshot");
   if (!editionId) return { error: "Édition introuvable." };
-  if (!name) return { error: "Le nom est requis." };
+  if (!existingPersonId && !name) {
+    return { error: "Choisis une personne de la banque ou entre un nouveau nom." };
+  }
 
   const supabase = await createClient();
 
-  // 1. Persistent person identity (nominee with no auth account).
-  const { data: person, error: personError } = await supabase
-    .from("people")
-    .insert({ display_name: name })
-    .select("id")
-    .single();
-  if (personError || !person) {
-    return { error: personError?.message ?? "Création de la personne échouée." };
+  // Reuse a person from the bank (persistent identity across editions), or
+  // mint a new one — which also adds them to the bank.
+  let personId = existingPersonId;
+  if (!personId) {
+    const { data: person, error: personError } = await supabase
+      .from("people")
+      .insert({ display_name: name })
+      .select("id")
+      .single();
+    if (personError || !person) {
+      return { error: personError?.message ?? "Création de la personne échouée." };
+    }
+    personId = person.id;
   }
 
   // 2. Optional headshot upload to the public `headshots` bucket (admin RLS).
@@ -60,11 +68,16 @@ export async function addPlayer(_prev: PlayerState, formData: FormData): Promise
   // 4. The player (= the person's participation in this edition).
   const { error: playerError } = await supabase.from("players").insert({
     edition_id: editionId,
-    person_id: person.id,
+    person_id: personId,
     headshot_url: headshotUrl,
     display_order: nextOrder,
   });
-  if (playerError) return { error: playerError.message };
+  if (playerError) {
+    if (playerError.code === "23505") {
+      return { error: "Cette personne fait déjà partie de l'édition." };
+    }
+    return { error: playerError.message };
+  }
 
   revalidatePath(`/admin/editions/${editionId}/players`);
   return { error: null, success: true };
