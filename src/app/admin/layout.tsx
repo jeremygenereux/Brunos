@@ -15,6 +15,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/editions" className="text-ivoire-muted hover:text-or-300 transition">
             Éditions
           </Link>
+          <Link href="/admin/people" className="text-ivoire-muted hover:text-or-300 transition">
+            Banque de joueurs
+          </Link>
           <form action={signOut}>
             <button
               type="submit"
