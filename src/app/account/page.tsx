@@ -61,14 +61,22 @@ export default async function AccountPage() {
             </div>
           </dl>
 
-          {current.role === "admin" && (
+          <div className="mt-6 flex flex-col gap-2">
+            {current.role === "admin" && (
+              <Link
+                href="/admin/editions"
+                className="text-or-300 hover:text-or-400 font-sans text-sm transition"
+              >
+                Espace admin →
+              </Link>
+            )}
             <Link
-              href="/admin/editions"
-              className="text-or-300 hover:text-or-400 mt-6 inline-block font-sans text-sm transition"
+              href="/archive"
+              className="text-or-300 hover:text-or-400 font-sans text-sm transition"
             >
-              Espace admin →
+              Archive des soirées →
             </Link>
-          )}
+          </div>
 
           <form action={signOut} className="mt-8">
             <SubmitButton>Se déconnecter</SubmitButton>
@@ -97,6 +105,13 @@ export default async function AccountPage() {
                       className="from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 rounded-md bg-gradient-to-b px-3 py-1.5 font-sans text-xs font-semibold transition"
                     >
                       Voter →
+                    </Link>
+                  ) : e.state === "ARCHIVED" ? (
+                    <Link
+                      href={`/archive/${e.id}`}
+                      className="text-or-300 hover:text-or-400 font-sans text-xs transition"
+                    >
+                      Résultats →
                     </Link>
                   ) : (
                     <span className="text-ivoire-faint font-sans text-xs">Vote fermé</span>
