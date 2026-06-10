@@ -92,6 +92,30 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
             Compilation →
           </Link>
         )}
+        {edition.state === "LOCKED" && (
+          <Link
+            href={`/admin/editions/${edition.id}/present`}
+            className="text-or-300 hover:text-or-400 transition"
+          >
+            Aperçu de la présentation →
+          </Link>
+        )}
+        {edition.state === "LIVE" && (
+          <Link
+            href={`/admin/editions/${edition.id}/present`}
+            className="text-or-300 hover:text-or-400 transition"
+          >
+            Lancer la présentation →
+          </Link>
+        )}
+        {edition.state === "ARCHIVED" && (
+          <Link
+            href={`/admin/editions/${edition.id}/present`}
+            className="text-or-300 hover:text-or-400 transition"
+          >
+            Rejouer la présentation →
+          </Link>
+        )}
       </nav>
 
       <section className="mt-10">

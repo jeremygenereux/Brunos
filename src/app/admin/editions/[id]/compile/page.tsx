@@ -3,8 +3,7 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
-import { computeQuestionRanking } from "@/lib/scoring/rankings";
-import { questionDrinks } from "@/lib/scoring/drinks";
+import { computeQuestionResult } from "@/lib/scoring/edition";
 import type { QuestionBallot } from "@/lib/scoring/types";
 import { EqualizerPanel } from "./equalizer-panel";
 
@@ -103,9 +102,18 @@ export default async function CompilePage({ params }: { params: Promise<{ id: st
       if (kind === "player") playerBallots.push(ballot);
       else if (kind === "jury") juryBallots.push(ballot);
     }
-    const official = computeQuestionRanking(q.format, playerBallots, playerIds);
-    const rule = q.drink_rule_override ?? edition.drink_rule;
-    const drinks = Object.fromEntries(questionDrinks(official, rule, shooterValue));
+    const computed = computeQuestionResult(
+      {
+        questionId: q.id,
+        format: q.format,
+        drinkRule: q.drink_rule_override ?? edition.drink_rule,
+        playerBallots,
+        juryBallots,
+      },
+      playerIds,
+      shooterValue,
+    );
+    const drinks = Object.fromEntries(computed.drinks);
     return {
       id: q.id,
       prompt: q.prompt,
