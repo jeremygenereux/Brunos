@@ -29,9 +29,19 @@ export default async function PlayersPage({ params }: { params: Promise<{ id: st
 
   const { data: players } = await supabase
     .from("players")
-    .select("id, headshot_url, display_order, people(display_name)")
+    .select("id, person_id, headshot_url, display_order, people(display_name)")
     .eq("edition_id", id)
     .order("display_order");
+
+  // People in the bank not already nominated in this edition.
+  const { data: bank } = await supabase
+    .from("people")
+    .select("id, display_name")
+    .order("display_name");
+  const used = new Set((players ?? []).map((p) => p.person_id));
+  const available = (bank ?? [])
+    .filter((p) => !used.has(p.id))
+    .map((p) => ({ id: p.id, name: p.display_name ?? "Sans nom" }));
 
   return (
     <div className="mx-auto w-full max-w-3xl px-6 py-10">
@@ -44,11 +54,15 @@ export default async function PlayersPage({ params }: { params: Promise<{ id: st
 
       <h1 className="text-ivoire font-display mt-4 text-4xl font-semibold">Joueurs</h1>
       <p className="text-ivoire-muted mt-1 font-sans text-sm">
-        Les nominés de cette édition — nom et photo headshot.
+        Les nominés de cette édition — pris dans la{" "}
+        <Link href="/admin/people" className="text-or-300 hover:text-or-400 transition">
+          banque de joueurs
+        </Link>
+        , avec leur photo.
       </p>
 
       <section className="mt-8">
-        <AddPlayerForm editionId={id} />
+        <AddPlayerForm editionId={id} available={available} />
       </section>
 
       <section className="mt-10">
