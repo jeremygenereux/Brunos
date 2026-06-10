@@ -19,7 +19,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { saveBallot, type BallotResult } from "./actions";
+import { submitBallot, type BallotResult } from "./actions";
 
 type Player = { id: string; display_name: string; headshot_url: string | null };
 type Question = {
@@ -76,13 +76,25 @@ export function BallotForm({
   const [result, setResult] = useState<BallotResult>({ error: null });
   const [pending, startTransition] = useTransition();
 
-  function save() {
+  function submit() {
+    const missing = questions.find((q) => q.format === "single_choice" && !choices[q.id]);
+    if (missing) {
+      setResult({ error: "Choisis un joueur pour chaque catégorie à choix unique." });
+      return;
+    }
+    if (
+      !window.confirm(
+        "Ton vote est définitif : une fois envoyé, tu ne pourras plus rien modifier. Envoyer ?",
+      )
+    ) {
+      return;
+    }
     const answers = questions.map((q) =>
       q.format === "ranking"
         ? { questionId: q.id, format: "ranking", ranking: rankings[q.id] }
         : { questionId: q.id, format: "single_choice", choice: choices[q.id] || null },
     );
-    startTransition(async () => setResult(await saveBallot(editionId, answers)));
+    startTransition(async () => setResult(await submitBallot(editionId, answers)));
   }
 
   return (
@@ -114,16 +126,21 @@ export function BallotForm({
       ))}
 
       {result.error && <p className="font-sans text-sm text-red-300/90">{result.error}</p>}
-      {result.saved && <p className="text-or-300 font-sans text-sm">Votes enregistrés ✓</p>}
+      {result.saved && <p className="text-or-300 font-sans text-sm">Vote envoyé ✓</p>}
 
-      <button
-        type="button"
-        onClick={save}
-        disabled={pending}
-        className="from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 w-full rounded-lg bg-gradient-to-b px-4 py-3 font-sans text-sm font-semibold shadow-lg transition disabled:opacity-60"
-      >
-        {pending ? "Enregistrement…" : "Enregistrer mes votes"}
-      </button>
+      <div className="flex flex-col gap-2">
+        <button
+          type="button"
+          onClick={submit}
+          disabled={pending}
+          className="from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 w-full rounded-lg bg-gradient-to-b px-4 py-3 font-sans text-sm font-semibold shadow-lg transition disabled:opacity-60"
+        >
+          {pending ? "Envoi…" : "Envoyer mes réponses"}
+        </button>
+        <p className="text-ivoire-faint text-center font-sans text-xs">
+          ⚠️ Ton vote est définitif — tu ne pourras plus le modifier après l&apos;envoi.
+        </p>
+      </div>
     </div>
   );
 }
