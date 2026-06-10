@@ -4,14 +4,25 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { loadPresentation } from "@/lib/editions/presentation";
 import { loadEditionVoteReveal } from "@/lib/editions/drama";
-import type { RankRow } from "@/lib/editions/presentation-types";
+import type { Category, RankRow } from "@/lib/editions/presentation-types";
 import { Avatar } from "@/components/avatar";
 
-export const metadata: Metadata = { title: "Résultats" };
+export const metadata: Metadata = { title: "Récap" };
 
 function fmtDate(value: string | null) {
   if (!value) return null;
   return new Date(value).toLocaleDateString("fr-CA", { dateStyle: "long" });
+}
+
+function StatTile({ value, label }: { value: string | number; label: string }) {
+  return (
+    <div className="brunos-glass border-or-400/12 flex flex-col items-center gap-0.5 rounded-2xl border px-4 py-5 text-center">
+      <span className="text-or-300 font-display text-3xl tabular-nums">{value}</span>
+      <span className="text-ivoire-faint font-sans text-[11px] tracking-wide uppercase">
+        {label}
+      </span>
+    </div>
+  );
 }
 
 function RankList({
@@ -32,8 +43,8 @@ function RankList({
           return (
             <li
               key={r.playerId}
-              className={`brunos-glass flex items-center gap-3 rounded-xl border px-4 py-2.5 ${
-                shooter ? "border-or-400/45 bg-or-500/10" : "border-or-400/12"
+              className={`flex items-center gap-3 rounded-xl border px-4 py-2.5 ${
+                shooter ? "border-or-400/45 bg-or-500/10" : "border-or-400/12 bg-noir-700/40"
               }`}
             >
               <span className="text-ivoire-faint w-5 text-right font-sans text-sm tabular-nums">
@@ -71,6 +82,49 @@ function RankList({
   );
 }
 
+function CategoryCard({ c }: { c: Category }) {
+  const winners = c.players.filter((p) => p.isWinner);
+  return (
+    <section className="brunos-glass border-or-400/12 flex flex-col gap-5 rounded-3xl border p-6">
+      <div className="flex items-center gap-4">
+        {winners.length > 0 && (
+          <div className="flex -space-x-4">
+            {winners.slice(0, 3).map((w) => (
+              <span key={w.playerId} className="ring-noir-700 rounded-full ring-2" title={w.name}>
+                <Avatar name={w.name} headshot={w.headshot} size={64} />
+              </span>
+            ))}
+          </div>
+        )}
+        <div className="flex flex-col gap-0.5">
+          <span className="text-or-400/50 font-sans text-xs tracking-[0.25em] uppercase">
+            Catégorie {c.index + 1}
+          </span>
+          <h2 className="text-ivoire font-display text-2xl leading-tight font-semibold">
+            {c.prompt}
+          </h2>
+          {winners.length > 0 && (
+            <span className="text-or-300 font-sans text-sm">
+              🏆 {winners.map((w) => w.name).join(", ")}
+            </span>
+          )}
+        </div>
+      </div>
+
+      {c.players.length === 0 ? (
+        <p className="text-ivoire-faint font-sans text-sm">
+          Personne n&apos;a voté dans cette catégorie.
+        </p>
+      ) : (
+        <div className={`grid gap-6 ${c.jury.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
+          <RankList title="Joueurs" rows={c.players} showDrinks />
+          {c.jury.length > 0 && <RankList title="Entourage" rows={c.jury} showDrinks={false} />}
+        </div>
+      )}
+    </section>
+  );
+}
+
 export default async function ArchiveEditionPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const supabase = await createClient();
@@ -78,14 +132,18 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
   if (!data.edition || data.edition.state !== "ARCHIVED") notFound();
   const { edition, categories, recap } = data;
   const date = fmtDate(edition.eventAt);
-  const topDrinker = recap[0];
   const hasPlayable = categories.some((c) => c.players.length > 0);
 
   const reveal = await loadEditionVoteReveal(supabase, id);
   const hasReveal = reveal.categories.some((c) => c.ballots.length > 0 || c.drama.length > 0);
 
+  const totalDrinks = recap.reduce((s, r) => s + r.total, 0);
+  const maxTotal = recap.length ? recap[0].total : 0;
+  const votedCategories = categories.filter((c) => c.players.length > 0).length;
+  const topDrinker = recap[0];
+
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-12">
+    <main className="mx-auto w-full max-w-4xl px-6 py-12">
       <Link
         href="/archive"
         className="text-ivoire-muted hover:text-or-300 font-sans text-sm transition"
@@ -95,7 +153,7 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
 
       <header className="mt-4 flex flex-col gap-2">
         <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">
-          Les Brunos {edition.year}
+          Récap · Les Brunos {edition.year}
         </p>
         <h1 className="text-ivoire font-display text-5xl font-semibold">{edition.name}</h1>
         <p className="text-ivoire-faint font-sans text-sm">
@@ -104,20 +162,56 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
       </header>
 
       {hasPlayable && (
-        <div className="mt-6 flex flex-wrap items-center gap-4">
-          <Link
-            href={`/archive/${id}/present`}
-            className="from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 rounded-full bg-gradient-to-b px-6 py-2.5 font-sans text-sm font-semibold shadow-lg transition"
-          >
-            ▶ Rejouer la présentation
-          </Link>
-          {topDrinker && topDrinker.total > 0 && (
-            <span className="text-ivoire-muted font-sans text-sm">
-              🥃 Plus arrosé : <span className="text-or-300">{topDrinker.name}</span> (
-              {topDrinker.total} gorgées)
-            </span>
-          )}
-        </div>
+        <>
+          <div className="mt-6">
+            <Link
+              href={`/archive/${id}/present`}
+              className="from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 inline-flex rounded-full bg-gradient-to-b px-6 py-2.5 font-sans text-sm font-semibold shadow-lg transition"
+            >
+              ▶ Rejouer la présentation
+            </Link>
+          </div>
+
+          <div className="mt-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
+            <StatTile value={totalDrinks} label="Gorgées au total" />
+            <StatTile value={votedCategories} label="Catégories" />
+            <StatTile value={recap.length} label="Joueurs" />
+            <StatTile value={topDrinker ? topDrinker.name : "—"} label="Plus arrosé" />
+          </div>
+        </>
+      )}
+
+      {recap.length > 0 && totalDrinks > 0 && (
+        <section className="mt-10">
+          <h2 className="text-or-400/80 mb-4 font-sans text-xs tracking-[0.3em] uppercase">
+            La note de la soirée
+          </h2>
+          <ol className="flex flex-col gap-2">
+            {recap.map((r, i) => (
+              <li
+                key={r.playerId}
+                className={`brunos-glass flex items-center gap-4 rounded-2xl border px-5 py-3 ${
+                  i === 0 ? "border-or-400/45 bg-or-500/10" : "border-or-400/12"
+                }`}
+              >
+                <span className="text-ivoire-faint font-display w-6 text-right text-lg tabular-nums">
+                  {i + 1}
+                </span>
+                <Avatar name={r.name} headshot={r.headshot} size={40} />
+                <span className="text-ivoire flex-1 font-sans">{r.name}</span>
+                <span className="bg-noir-900/60 hidden h-2 w-32 overflow-hidden rounded-full sm:block">
+                  <span
+                    className="from-or-300 to-or-600 block h-full bg-gradient-to-r"
+                    style={{ width: `${maxTotal ? (r.total / maxTotal) * 100 : 0}%` }}
+                  />
+                </span>
+                <span className="text-or-300 font-display w-10 text-right text-2xl tabular-nums">
+                  {r.total}
+                </span>
+              </li>
+            ))}
+          </ol>
+        </section>
       )}
 
       {categories.length === 0 ? (
@@ -125,27 +219,12 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
           Cette édition n&apos;a aucune catégorie présentée.
         </p>
       ) : (
-        <div className="mt-10 flex flex-col gap-8">
+        <div className="mt-12 flex flex-col gap-5">
+          <h2 className="text-or-400/80 font-sans text-xs tracking-[0.3em] uppercase">
+            Les catégories
+          </h2>
           {categories.map((c) => (
-            <section key={c.questionId} className="flex flex-col gap-4">
-              <h2 className="text-ivoire font-display text-2xl font-semibold">
-                <span className="text-or-400/50">{c.index + 1}.</span> {c.prompt}
-              </h2>
-              {c.players.length === 0 ? (
-                <p className="text-ivoire-faint font-sans text-sm">
-                  Personne n&apos;a voté dans cette catégorie.
-                </p>
-              ) : (
-                <div
-                  className={`grid gap-6 ${c.jury.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}
-                >
-                  <RankList title="Joueurs" rows={c.players} showDrinks />
-                  {c.jury.length > 0 && (
-                    <RankList title="Entourage" rows={c.jury} showDrinks={false} />
-                  )}
-                </div>
-              )}
-            </section>
+            <CategoryCard key={c.questionId} c={c} />
           ))}
         </div>
       )}
