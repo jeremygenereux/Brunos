@@ -44,13 +44,18 @@ export async function updateSession(request: NextRequest) {
     path.startsWith("/account/") ||
     path === "/admin" ||
     path.startsWith("/admin/") ||
+    path === "/archive" ||
+    path.startsWith("/archive/") ||
     path.startsWith("/vote/");
   const isAuthPage = path === "/login" || path === "/signup";
 
-  // Unauthenticated users may not see protected areas.
+  // Unauthenticated users may not see protected areas — bounce to login and
+  // remember where they were headed (login/signup honour ?next=).
   if (!user && isProtected) {
     const url = request.nextUrl.clone();
     url.pathname = "/login";
+    url.search = "";
+    url.searchParams.set("next", path);
     return copyCookies(supabaseResponse, NextResponse.redirect(url));
   }
 
