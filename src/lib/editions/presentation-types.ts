@@ -18,6 +18,12 @@ export type RankRow = {
   isShooter?: boolean;
 };
 
+export type DramaCard = {
+  kind: "mutual_last" | "unanimous_first" | "unanimous_last" | "self_top";
+  title: string;
+  detail: string;
+};
+
 export type Category = {
   questionId: string;
   index: number;
@@ -25,6 +31,7 @@ export type Category = {
   format: string;
   players: RankRow[];
   jury: RankRow[];
+  drama?: DramaCard[];
 };
 
 export type RecapRow = {
