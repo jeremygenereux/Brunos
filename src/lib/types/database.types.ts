@@ -252,6 +252,7 @@ export type Database = {
           format: Database["public"]["Enums"]["question_format"];
           id: string;
           is_selected_for_show: boolean;
+          reveal_enabled: boolean;
           position: number;
           prompt: string;
           show_order: number | null;
@@ -264,6 +265,7 @@ export type Database = {
           format: Database["public"]["Enums"]["question_format"];
           id?: string;
           is_selected_for_show?: boolean;
+          reveal_enabled?: boolean;
           position?: number;
           prompt: string;
           show_order?: number | null;
@@ -276,6 +278,7 @@ export type Database = {
           format?: Database["public"]["Enums"]["question_format"];
           id?: string;
           is_selected_for_show?: boolean;
+          reveal_enabled?: boolean;
           position?: number;
           prompt?: string;
           show_order?: number | null;
