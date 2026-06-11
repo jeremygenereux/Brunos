@@ -115,13 +115,9 @@ export default async function VotePage({ params }: { params: Promise<{ editionId
           Le bulletin n&apos;est pas encore prêt.
         </p>
       ) : (
-        <>
-          <p className="text-ivoire-muted mt-1 mb-8 font-sans text-sm">
-            Classe les joueurs ou choisis-en un par catégorie. Réponds une seule fois — ton vote est
-            définitif.
-          </p>
+        <div className="mt-6">
           <BallotForm editionId={editionId} players={playerList} questions={questions} />
-        </>
+        </div>
       )}
     </main>
   );
