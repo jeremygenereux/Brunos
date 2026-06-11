@@ -19,7 +19,7 @@ export async function createEdition(
   const venueAddress = String(formData.get("venue_address") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const drinkRule = String(formData.get("drink_rule") ?? "ESCALATION");
-  const shooterValue = Number(String(formData.get("shooter_value") ?? "4").trim());
+  const shooterValue = Number(String(formData.get("shooter_value") ?? "8").trim());
 
   if (!name) return { error: "Le nom est requis." };
   if (!Number.isInteger(year) || year < 2001) return { error: "Année invalide." };

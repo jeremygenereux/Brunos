@@ -8,6 +8,21 @@ import { snapshotEditionResults } from "@/lib/editions/snapshot";
 
 export type ActionState = { error: string | null; success?: boolean };
 
+/** Permanently delete an edition and everything under it (cascades). */
+export async function deleteEdition(editionId: string): Promise<ActionState> {
+  await requireAdmin();
+  if (!editionId) return { error: "Édition introuvable." };
+
+  const supabase = await createClient();
+  // FK cascades drop players/questions/participants/votes/answers/results/
+  // notifications; persistent people in the bank are untouched.
+  const { error } = await supabase.from("editions").delete().eq("id", editionId);
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/editions");
+  return { error: null, success: true };
+}
+
 export async function transitionEdition(
   _prev: ActionState,
   formData: FormData,
@@ -95,7 +110,7 @@ export async function updateEdition(_prev: ActionState, formData: FormData): Pro
   const venueAddress = String(formData.get("venue_address") ?? "").trim();
   const description = String(formData.get("description") ?? "").trim();
   const drinkRule = String(formData.get("drink_rule") ?? "ESCALATION");
-  const shooterValue = Number(String(formData.get("shooter_value") ?? "4").trim());
+  const shooterValue = Number(String(formData.get("shooter_value") ?? "8").trim());
 
   if (!editionId) return { error: "Édition introuvable." };
   if (!name) return { error: "Le nom est requis." };
