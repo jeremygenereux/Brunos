@@ -75,9 +75,30 @@ export function BallotForm({
   );
   const [result, setResult] = useState<BallotResult>({ error: null });
   const [pending, startTransition] = useTransition();
+  const [page, setPage] = useState(0); // 0 = intro, 1..N = questions, N+1 = review
+
+  const total = questions.length;
+  const reviewPage = total + 1;
+  const q = page >= 1 && page <= total ? questions[page - 1] : null;
+  const canAdvance = !q || q.format === "ranking" || Boolean(choices[q.id]);
+  const progress = page / reviewPage;
+
+  function answerSummary(question: Question): { text: string; missing: boolean } {
+    if (question.format === "ranking") {
+      const top = rankings[question.id]?.[0];
+      return {
+        text: top ? `${playerById.get(top)?.display_name ?? "—"} en tête` : "—",
+        missing: false,
+      };
+    }
+    const pick = choices[question.id];
+    return pick
+      ? { text: playerById.get(pick)?.display_name ?? "—", missing: false }
+      : { text: "Pas encore répondu", missing: true };
+  }
 
   function submit() {
-    const missing = questions.find((q) => q.format === "single_choice" && !choices[q.id]);
+    const missing = questions.find((qq) => qq.format === "single_choice" && !choices[qq.id]);
     if (missing) {
       setResult({ error: "Choisis un joueur pour chaque catégorie à choix unique." });
       return;
@@ -89,57 +110,170 @@ export function BallotForm({
     ) {
       return;
     }
-    const answers = questions.map((q) =>
-      q.format === "ranking"
-        ? { questionId: q.id, format: "ranking", ranking: rankings[q.id] }
-        : { questionId: q.id, format: "single_choice", choice: choices[q.id] || null },
+    const answers = questions.map((qq) =>
+      qq.format === "ranking"
+        ? { questionId: qq.id, format: "ranking", ranking: rankings[qq.id] }
+        : { questionId: qq.id, format: "single_choice", choice: choices[qq.id] || null },
     );
     startTransition(async () => setResult(await submitBallot(editionId, answers)));
   }
 
   return (
-    <div className="flex flex-col gap-8">
-      {questions.map((q, i) => (
-        <div key={q.id} className="border-or-400/15 bg-noir-700/40 rounded-2xl border p-5">
-          <h3 className="text-ivoire font-display mb-1 text-xl">
-            <span className="text-or-400/70">{i + 1}.</span> {q.prompt}
-          </h3>
-          <p className="text-ivoire-faint mb-4 font-sans text-xs">
-            {q.format === "ranking"
-              ? "Classe du plus (en haut) au moins probable."
-              : "Choisis un joueur."}
-          </p>
-          {q.format === "ranking" ? (
-            <RankingQuestion
-              order={rankings[q.id] ?? []}
-              playerById={playerById}
-              onReorder={(ids) => setRankings((r) => ({ ...r, [q.id]: ids }))}
-            />
+    <div className="flex min-h-[28rem] flex-col">
+      <div className="brunos-fade flex-1" key={page}>
+        {/* Intro */}
+        {page === 0 && (
+          <div className="flex flex-col items-center gap-5 py-8 text-center">
+            <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">
+              Bulletin de vote
+            </p>
+            <h2 className="text-ivoire font-display text-4xl font-semibold">À toi de juger.</h2>
+            <p className="text-ivoire-muted max-w-md font-sans text-sm leading-relaxed">
+              {total} catégorie{total > 1 ? "s" : ""}. Pour certaines tu <strong>classes</strong>{" "}
+              les joueurs (glisse-dépose), pour d&apos;autres tu en <strong>choisis un</strong>.
+              Prends ton temps — ton vote est <span className="text-or-300">définitif</span> une
+              fois envoyé.
+            </p>
+            <button
+              type="button"
+              onClick={() => setPage(1)}
+              className="from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 mt-2 rounded-full bg-gradient-to-b px-8 py-3 font-sans text-sm font-semibold shadow-lg transition"
+            >
+              Commencer →
+            </button>
+          </div>
+        )}
+
+        {/* One question per page */}
+        {q && (
+          <div className="border-or-400/15 bg-noir-700/40 flex flex-col gap-4 rounded-2xl border p-6">
+            <div className="flex flex-wrap items-center gap-2">
+              <span
+                className={`rounded-full px-3 py-1 font-sans text-[11px] tracking-wide uppercase ${
+                  q.format === "ranking"
+                    ? "bg-or-500/15 text-or-300"
+                    : "bg-noir-900/60 text-ivoire-muted"
+                }`}
+              >
+                {q.format === "ranking" ? "À classer" : "Choix unique"}
+              </span>
+              <span className="text-ivoire-faint font-sans text-xs">
+                Question {page} / {total}
+              </span>
+            </div>
+            <h3 className="text-ivoire font-display text-2xl leading-tight font-semibold">
+              {q.prompt}
+            </h3>
+            <p className="text-ivoire-faint font-sans text-xs">
+              {q.format === "ranking"
+                ? "Glisse pour classer, du plus probable (en haut) au moins probable."
+                : "Choisis un joueur pour avancer."}
+            </p>
+            {q.format === "ranking" ? (
+              <RankingQuestion
+                order={rankings[q.id] ?? []}
+                playerById={playerById}
+                onReorder={(ids) => setRankings((r) => ({ ...r, [q.id]: ids }))}
+              />
+            ) : (
+              <ChoiceQuestion
+                players={players}
+                value={choices[q.id] ?? ""}
+                onChange={(id) => setChoices((c) => ({ ...c, [q.id]: id }))}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Review + submit */}
+        {page === reviewPage && (
+          <div className="flex flex-col gap-4">
+            <h2 className="text-ivoire font-display text-3xl font-semibold">Révision</h2>
+            <p className="text-ivoire-muted font-sans text-sm">
+              Vérifie tes réponses avant d&apos;envoyer.
+            </p>
+            <ul className="flex flex-col gap-2">
+              {questions.map((question, i) => {
+                const s = answerSummary(question);
+                return (
+                  <li
+                    key={question.id}
+                    className={`flex items-center justify-between gap-3 rounded-xl border px-4 py-3 ${
+                      s.missing
+                        ? "border-red-400/30 bg-red-500/5"
+                        : "border-or-400/12 bg-noir-700/40"
+                    }`}
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-ivoire font-sans text-sm">
+                        {i + 1}. {question.prompt}
+                      </span>
+                      <span
+                        className={`font-sans text-xs ${s.missing ? "text-red-300/90" : "text-or-300"}`}
+                      >
+                        {s.text}
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setPage(i + 1)}
+                      className="text-ivoire-faint hover:text-or-300 shrink-0 font-sans text-xs transition"
+                    >
+                      Modifier
+                    </button>
+                  </li>
+                );
+              })}
+            </ul>
+
+            {result.error && <p className="font-sans text-sm text-red-300/90">{result.error}</p>}
+            {result.saved && <p className="text-or-300 font-sans text-sm">Vote envoyé ✓</p>}
+
+            <button
+              type="button"
+              onClick={submit}
+              disabled={pending}
+              className="from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 mt-2 w-full rounded-lg bg-gradient-to-b px-4 py-3 font-sans text-sm font-semibold shadow-lg transition disabled:opacity-60"
+            >
+              {pending ? "Envoi…" : "Envoyer mes réponses"}
+            </button>
+            <p className="text-ivoire-faint text-center font-sans text-xs">
+              ⚠️ Définitif — tu ne pourras plus rien modifier après l&apos;envoi.
+            </p>
+          </div>
+        )}
+      </div>
+
+      {/* Bottom nav + progress */}
+      <div className="border-or-400/10 mt-6 flex flex-col gap-3 border-t pt-4">
+        <div className="flex items-center justify-between">
+          <button
+            type="button"
+            onClick={() => setPage((p) => Math.max(0, p - 1))}
+            disabled={page === 0}
+            className="text-ivoire-muted hover:text-or-300 font-sans text-sm transition disabled:opacity-30"
+          >
+            ← Précédent
+          </button>
+          {page < reviewPage ? (
+            <button
+              type="button"
+              onClick={() => setPage((p) => Math.min(reviewPage, p + 1))}
+              disabled={!canAdvance}
+              className="text-or-300 hover:text-or-400 font-sans text-sm transition disabled:opacity-30"
+            >
+              {page === 0 ? "Commencer →" : page === total ? "Réviser →" : "Suivant →"}
+            </button>
           ) : (
-            <ChoiceQuestion
-              players={players}
-              value={choices[q.id] ?? ""}
-              onChange={(id) => setChoices((c) => ({ ...c, [q.id]: id }))}
-            />
+            <span className="text-ivoire-faint font-sans text-sm">Dernière étape</span>
           )}
         </div>
-      ))}
-
-      {result.error && <p className="font-sans text-sm text-red-300/90">{result.error}</p>}
-      {result.saved && <p className="text-or-300 font-sans text-sm">Vote envoyé ✓</p>}
-
-      <div className="flex flex-col gap-2">
-        <button
-          type="button"
-          onClick={submit}
-          disabled={pending}
-          className="from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 w-full rounded-lg bg-gradient-to-b px-4 py-3 font-sans text-sm font-semibold shadow-lg transition disabled:opacity-60"
-        >
-          {pending ? "Envoi…" : "Envoyer mes réponses"}
-        </button>
-        <p className="text-ivoire-faint text-center font-sans text-xs">
-          ⚠️ Ton vote est définitif — tu ne pourras plus le modifier après l&apos;envoi.
-        </p>
+        <div className="bg-noir-900/60 h-1.5 w-full overflow-hidden rounded-full">
+          <div
+            className="from-or-300 to-or-600 h-full rounded-full bg-gradient-to-r transition-all duration-500"
+            style={{ width: `${Math.round(progress * 100)}%` }}
+          />
+        </div>
       </div>
     </div>
   );
