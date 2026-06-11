@@ -97,6 +97,7 @@ export type Database = {
           kind: Database["public"]["Enums"]["participant_kind"];
           linked_player_id: string | null;
           relation_label: string | null;
+          apple_invite_url: string | null;
           rsvp: Database["public"]["Enums"]["rsvp_status"] | null;
           updated_at: string;
           user_id: string;
@@ -108,6 +109,7 @@ export type Database = {
           kind: Database["public"]["Enums"]["participant_kind"];
           linked_player_id?: string | null;
           relation_label?: string | null;
+          apple_invite_url?: string | null;
           rsvp?: Database["public"]["Enums"]["rsvp_status"] | null;
           updated_at?: string;
           user_id: string;
@@ -119,6 +121,7 @@ export type Database = {
           kind?: Database["public"]["Enums"]["participant_kind"];
           linked_player_id?: string | null;
           relation_label?: string | null;
+          apple_invite_url?: string | null;
           rsvp?: Database["public"]["Enums"]["rsvp_status"] | null;
           updated_at?: string;
           user_id?: string;
