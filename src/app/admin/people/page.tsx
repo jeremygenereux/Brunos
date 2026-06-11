@@ -47,7 +47,7 @@ export default async function PeoplePage() {
   const roster = people ?? [];
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-10">
+    <main className="mx-auto w-full max-w-4xl px-6 py-10">
       <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">Admin</p>
       <h1 className="text-ivoire font-display mt-2 text-4xl font-semibold">Banque de joueurs</h1>
       <p className="text-ivoire-muted mt-1 font-sans text-sm">

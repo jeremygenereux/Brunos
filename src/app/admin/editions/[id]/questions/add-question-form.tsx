@@ -6,7 +6,13 @@ import { Input, Label, Select, SubmitButton } from "@/components/ui";
 
 const initialState: QuestionState = { error: null };
 
-export function AddQuestionForm({ editionId }: { editionId: string }) {
+export function AddQuestionForm({
+  editionId,
+  editionRule,
+}: {
+  editionId: string;
+  editionRule: "ESCALATION" | "TOP_UNIQUE";
+}) {
   const [state, formAction] = useActionState(addQuestion, initialState);
   const formRef = useRef<HTMLFormElement>(null);
 
@@ -32,12 +38,21 @@ export function AddQuestionForm({ editionId }: { editionId: string }) {
         />
       </div>
 
-      <div className="flex flex-col gap-1.5 sm:max-w-xs">
-        <Label htmlFor="format">Format</Label>
-        <Select id="format" name="format" defaultValue="ranking">
-          <option value="ranking">Classement (tous les joueurs)</option>
-          <option value="single_choice">Choix unique (un seul joueur)</option>
-        </Select>
+      <div className="grid gap-4 sm:grid-cols-2">
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="format">Format</Label>
+          <Select id="format" name="format" defaultValue="ranking">
+            <option value="ranking">Classement (tous les joueurs)</option>
+            <option value="single_choice">Choix unique (un seul joueur)</option>
+          </Select>
+        </div>
+        <div className="flex flex-col gap-1.5">
+          <Label htmlFor="drink_rule">Règle de gorgées</Label>
+          <Select id="drink_rule" name="drink_rule" defaultValue={editionRule}>
+            <option value="ESCALATION">Escalade (rang = gorgées, dernier cale)</option>
+            <option value="TOP_UNIQUE">Top unique (le·la gagnant·e cale)</option>
+          </Select>
+        </div>
       </div>
 
       {state.error && <p className="font-sans text-sm text-red-300/90">{state.error}</p>}
