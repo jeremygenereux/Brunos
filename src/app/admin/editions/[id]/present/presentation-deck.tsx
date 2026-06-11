@@ -279,7 +279,9 @@ export function PresentationDeck({
                 <div className="flex flex-wrap items-center justify-center gap-8">
                   {winners.map((w) => (
                     <div key={w.playerId} className="flex flex-col items-center gap-3">
-                      <Avatar name={w.name} headshot={w.headshot} size={150} />
+                      <div className="brunos-aura">
+                        <Avatar name={w.name} headshot={w.headshot} size={150} />
+                      </div>
                       <span className="text-or-300 font-display text-3xl font-semibold sm:text-4xl">
                         {w.name}
                       </span>

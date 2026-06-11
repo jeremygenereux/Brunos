@@ -3,20 +3,41 @@ import Link from "next/link";
 import { createClient } from "@/lib/supabase/server";
 import { StateBadge } from "@/components/state-badge";
 import { NewEditionForm } from "./new-edition-form";
+import { DeleteEditionButton } from "./[id]/delete-edition-button";
+import type { Database } from "@/lib/types/database.types";
 
 export const metadata: Metadata = { title: "Éditions" };
 
-const DRINK_RULE_LABEL: Record<string, string> = {
-  ESCALATION: "Escalade",
-  TOP_UNIQUE: "Top unique",
-};
+type EditionState = Database["public"]["Enums"]["edition_state"];
 
 function formatDate(value: string | null) {
   if (!value) return "Date à venir";
-  return new Date(value).toLocaleString("fr-CA", {
-    dateStyle: "long",
-    timeStyle: "short",
-  });
+  return new Date(value).toLocaleDateString("fr-CA", { dateStyle: "long" });
+}
+
+const PRIMARY =
+  "from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 rounded-lg bg-gradient-to-b px-4 py-2 font-sans text-sm font-semibold transition";
+const SECONDARY =
+  "border-or-400/25 text-ivoire hover:border-or-400/50 hover:text-or-300 rounded-lg border px-4 py-2 font-sans text-sm transition";
+
+function primaryAction(e: {
+  id: string;
+  state: EditionState;
+}): { label: string; href: string } | null {
+  switch (e.state) {
+    case "CONSTRUCTION":
+    case "SENT_FOR_VOTE":
+      return { label: "Configurer →", href: `/admin/editions/${e.id}` };
+    case "COMPILATION":
+      return { label: "Compiler →", href: `/admin/editions/${e.id}/compile` };
+    case "LOCKED":
+    case "LIVE":
+      return { label: "Présentation →", href: `/admin/editions/${e.id}/present` };
+    case "ARCHIVED":
+      return { label: "Récap →", href: `/archive/${e.id}` };
+    default:
+      return null;
+  }
 }
 
 export default async function EditionsPage() {
@@ -26,65 +47,90 @@ export default async function EditionsPage() {
     .select("id, name, year, event_at, venue_name, state, drink_rule, shooter_value")
     .order("year", { ascending: false })
     .order("created_at", { ascending: false });
+  const list = editions ?? [];
 
-  // Reasonable default for the "new edition" year field.
-  const defaultYear =
-    (editions?.[0]?.year ?? new Date().getFullYear()) + (editions?.length ? 1 : 0);
+  const defaultYear = (list[0]?.year ?? new Date().getFullYear()) + (list.length ? 1 : 0);
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-6 py-10">
-      <h1 className="text-ivoire font-display text-4xl font-semibold">Éditions</h1>
-      <p className="text-ivoire-muted mt-1 font-sans text-sm">
-        Crée et gère les galas. Chaque édition suit sa propre machine à états.
-      </p>
+    <div className="mx-auto w-full max-w-5xl px-6 py-10">
+      <div className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h1 className="text-ivoire font-display text-4xl font-semibold">Éditions</h1>
+          <p className="text-ivoire-muted mt-1 font-sans text-sm">
+            Gère les galas et leur cycle de vie.
+          </p>
+        </div>
+      </div>
 
       <section className="mt-8">
-        <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
-          Nouvelle édition
-        </h2>
-        <NewEditionForm defaultYear={defaultYear} />
-      </section>
-
-      <section className="mt-12">
-        <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
-          Éditions existantes
-        </h2>
-
-        {!editions || editions.length === 0 ? (
-          <p className="border-or-400/10 text-ivoire-muted rounded-2xl border border-dashed px-6 py-10 text-center font-sans text-sm">
-            Aucune édition pour l&apos;instant. Crée la première ci-dessus.
+        {list.length === 0 ? (
+          <p className="border-or-400/10 text-ivoire-muted rounded-2xl border border-dashed px-6 py-12 text-center font-sans text-sm">
+            Aucune édition. Crée la première ci-dessous.
           </p>
         ) : (
-          <ul className="flex flex-col gap-3">
-            {editions.map((e) => (
-              <li
-                key={e.id}
-                className="border-or-400/15 bg-noir-700/40 flex flex-wrap items-center justify-between gap-3 rounded-xl border px-5 py-4"
-              >
-                <div>
-                  <div className="flex items-center gap-3">
-                    <Link
-                      href={`/admin/editions/${e.id}`}
-                      className="text-ivoire hover:text-or-300 font-display text-xl transition"
-                    >
-                      {e.name}
-                    </Link>
-                    <StateBadge state={e.state} />
+          <ul className="flex flex-col gap-4">
+            {list.map((e) => {
+              const primary = primaryAction(e);
+              return (
+                <li
+                  key={e.id}
+                  className="border-or-400/15 bg-noir-700/40 flex flex-col gap-4 rounded-2xl border p-6 backdrop-blur-sm"
+                >
+                  <div className="flex flex-wrap items-start justify-between gap-3">
+                    <div className="flex flex-col gap-1">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <Link
+                          href={`/admin/editions/${e.id}`}
+                          className="text-ivoire hover:text-or-300 font-display text-2xl font-semibold transition"
+                        >
+                          {e.name}
+                        </Link>
+                        <StateBadge state={e.state} />
+                        <span className="text-ivoire-faint font-display text-lg tabular-nums">
+                          {e.year}
+                        </span>
+                      </div>
+                      <p className="text-ivoire-muted font-sans text-sm">
+                        {formatDate(e.event_at)}
+                        {e.venue_name ? ` · ${e.venue_name}` : ""} · shooter = {e.shooter_value}{" "}
+                        gorgées
+                      </p>
+                    </div>
+                    <DeleteEditionButton compact editionId={e.id} name={e.name} />
                   </div>
-                  <p className="text-ivoire-muted mt-1 font-sans text-sm">
-                    {formatDate(e.event_at)}
-                    {e.venue_name ? ` · ${e.venue_name}` : ""}
-                  </p>
-                </div>
-                <div className="text-ivoire-faint text-right font-sans text-xs">
-                  <div>{DRINK_RULE_LABEL[e.drink_rule] ?? e.drink_rule}</div>
-                  <div>shooter = {e.shooter_value} gorgées</div>
-                </div>
-              </li>
-            ))}
+
+                  <div className="flex flex-wrap gap-2">
+                    {primary && (
+                      <Link href={primary.href} className={PRIMARY}>
+                        {primary.label}
+                      </Link>
+                    )}
+                    <Link href={`/admin/editions/${e.id}/players`} className={SECONDARY}>
+                      Joueurs
+                    </Link>
+                    <Link href={`/admin/editions/${e.id}/questions`} className={SECONDARY}>
+                      Questions
+                    </Link>
+                    <Link href={`/admin/editions/${e.id}`} className={SECONDARY}>
+                      Réglages
+                    </Link>
+                  </div>
+                </li>
+              );
+            })}
           </ul>
         )}
       </section>
+
+      {/* New edition is the least-used action (once a year) — kept secondary. */}
+      <details className="group mt-8">
+        <summary className="border-or-400/20 text-or-300 hover:bg-noir-900 inline-flex cursor-pointer items-center gap-2 rounded-full border px-5 py-2.5 font-sans text-sm transition">
+          <span className="text-lg leading-none">+</span> Nouvelle édition
+        </summary>
+        <div className="mt-4">
+          <NewEditionForm defaultYear={defaultYear} />
+        </div>
+      </details>
     </div>
   );
 }

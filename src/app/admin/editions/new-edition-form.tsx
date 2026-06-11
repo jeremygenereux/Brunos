@@ -61,7 +61,7 @@ export function NewEditionForm({ defaultYear }: { defaultYear: number }) {
           type="number"
           min={0.5}
           step={0.5}
-          defaultValue={4}
+          defaultValue={8}
         />
       </div>
 
