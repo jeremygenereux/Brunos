@@ -18,13 +18,18 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { reorderQuestions, deleteQuestion } from "./actions";
+import { reorderQuestions, deleteQuestion, setQuestionRule } from "./actions";
 
-type Question = { id: string; prompt: string; format: string };
+type Rule = "ESCALATION" | "TOP_UNIQUE";
+type Question = { id: string; prompt: string; format: string; drink_rule_override: string | null };
 
 const FORMAT_LABEL: Record<string, string> = {
   ranking: "Classement",
   single_choice: "Choix unique",
+};
+const RULE_LABEL: Record<string, string> = {
+  ESCALATION: "Escalade",
+  TOP_UNIQUE: "Top unique",
 };
 
 function FormatBadge({ format }: { format: string }) {
@@ -35,14 +40,49 @@ function FormatBadge({ format }: { format: string }) {
   );
 }
 
+function RuleControl({
+  questionId,
+  editionId,
+  value,
+}: {
+  questionId: string;
+  editionId: string;
+  value: Rule;
+}) {
+  const [rule, setRule] = useState<Rule>(value);
+  const [pending, start] = useTransition();
+  function change(next: Rule) {
+    const prev = rule;
+    setRule(next);
+    start(async () => {
+      const r = await setQuestionRule(questionId, editionId, next);
+      if (r.error) setRule(prev);
+    });
+  }
+  return (
+    <select
+      value={rule}
+      disabled={pending}
+      onChange={(e) => change(e.target.value as Rule)}
+      onPointerDown={(e) => e.stopPropagation()}
+      className="border-or-400/20 bg-noir-900/60 text-ivoire focus:border-or-400/60 shrink-0 rounded-lg border px-2 py-1 font-sans text-xs outline-none disabled:opacity-60"
+    >
+      <option value="ESCALATION">Escalade</option>
+      <option value="TOP_UNIQUE">Top unique</option>
+    </select>
+  );
+}
+
 export function QuestionsManager({
   editionId,
   questions,
   editable,
+  editionRule,
 }: {
   editionId: string;
   questions: Question[];
   editable: boolean;
+  editionRule: Rule;
 }) {
   // Seeded from props. The parent keys this component on the SET of question
   // ids, so it remounts (fresh state) when questions are added/removed, while
@@ -82,6 +122,9 @@ export function QuestionsManager({
             <span className="text-ivoire-faint w-5 text-right font-sans text-sm">{i + 1}</span>
             <FormatBadge format={q.format} />
             <span className="text-ivoire flex-1 font-sans text-sm">{q.prompt}</span>
+            <span className="text-or-300/70 shrink-0 font-sans text-xs">
+              {RULE_LABEL[q.drink_rule_override ?? editionRule]}
+            </span>
           </li>
         ))}
       </ol>
@@ -93,7 +136,13 @@ export function QuestionsManager({
       <SortableContext items={items.map((q) => q.id)} strategy={verticalListSortingStrategy}>
         <ol className="flex flex-col gap-2">
           {items.map((q, i) => (
-            <SortableRow key={q.id} question={q} index={i} editionId={editionId} />
+            <SortableRow
+              key={q.id}
+              question={q}
+              index={i}
+              editionId={editionId}
+              editionRule={editionRule}
+            />
           ))}
         </ol>
       </SortableContext>
@@ -105,10 +154,12 @@ function SortableRow({
   question,
   index,
   editionId,
+  editionRule,
 }: {
   question: Question;
   index: number;
   editionId: string;
+  editionRule: Rule;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: question.id,
@@ -137,6 +188,11 @@ function SortableRow({
       <span className="text-ivoire-faint w-5 text-right font-sans text-sm">{index + 1}</span>
       <FormatBadge format={question.format} />
       <span className="text-ivoire flex-1 font-sans text-sm">{question.prompt}</span>
+      <RuleControl
+        questionId={question.id}
+        editionId={editionId}
+        value={(question.drink_rule_override ?? editionRule) as Rule}
+      />
       <form
         action={deleteQuestion}
         onSubmit={(e) => {

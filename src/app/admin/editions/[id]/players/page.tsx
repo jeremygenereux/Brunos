@@ -44,7 +44,7 @@ export default async function PlayersPage({ params }: { params: Promise<{ id: st
     .map((p) => ({ id: p.id, name: p.display_name ?? "Sans nom" }));
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-10">
+    <div className="mx-auto w-full max-w-4xl px-6 py-10">
       <Link
         href={`/admin/editions/${id}`}
         className="text-ivoire-muted hover:text-or-300 font-sans text-sm transition"
