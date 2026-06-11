@@ -2,11 +2,17 @@ import Link from "next/link";
 import { requireAdmin } from "@/lib/auth/guards";
 import { signOut } from "@/app/(auth)/actions";
 import { createClient } from "@/lib/supabase/server";
+import { NotificationBell } from "./notification-bell";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   await requireAdmin();
 
   const supabase = await createClient();
+  const { data: notifications } = await supabase
+    .from("notifications")
+    .select("id, message, created_at, read_at, edition_id")
+    .order("created_at", { ascending: false })
+    .limit(8);
   const { count } = await supabase
     .from("notifications")
     .select("id", { count: "exact", head: true })
@@ -26,17 +32,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/people" className="text-ivoire-muted hover:text-or-300 transition">
             Banque de joueurs
           </Link>
-          <Link
-            href="/admin/notifications"
-            className="text-ivoire-muted hover:text-or-300 inline-flex items-center gap-1.5 transition"
-          >
-            Notifications
-            {unread > 0 && (
-              <span className="bg-or-500 text-noir-900 inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-semibold tabular-nums">
-                {unread}
-              </span>
-            )}
-          </Link>
+          <NotificationBell notifications={notifications ?? []} unread={unread} />
           <form action={signOut}>
             <button
               type="submit"
