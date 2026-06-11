@@ -17,6 +17,7 @@ export type CategoryReveal = {
   questionId: string;
   prompt: string;
   format: string;
+  revealEnabled: boolean;
   ballots: VoterBallot[];
   drama: DramaCard[];
 };
@@ -45,10 +46,15 @@ function personName(people: unknown): string {
 export async function loadEditionVoteReveal(
   supabase: Client,
   editionId: string,
+  opts: { respectToggle?: boolean } = {},
 ): Promise<EditionReveal> {
+  // The admin curates which questions' reveals show (reveal_enabled). The
+  // compile preview passes respectToggle:false to see everything.
+  const respectToggle = opts.respectToggle !== false;
+
   const { data: rawQuestions } = await supabase
     .from("questions")
-    .select("id, prompt, format, show_order")
+    .select("id, prompt, format, show_order, reveal_enabled")
     .eq("edition_id", editionId)
     .eq("is_selected_for_show", true)
     .order("show_order");
@@ -228,12 +234,15 @@ export async function loadEditionVoteReveal(
       }))
       .sort((x, y) => x.voterName.localeCompare(y.voterName));
 
+    const revealEnabled = q.reveal_enabled;
+    const gated = respectToggle && !revealEnabled;
     return {
       questionId: q.id,
       prompt: q.prompt,
       format: q.format,
-      ballots: voterBallots,
-      drama,
+      revealEnabled,
+      ballots: gated ? [] : voterBallots,
+      drama: gated ? [] : drama,
     };
   });
 
