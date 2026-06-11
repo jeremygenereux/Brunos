@@ -118,14 +118,15 @@ export default async function AccountPage() {
 
   return (
     <main className="mx-auto w-full max-w-6xl px-6 py-10">
-      <header className="mb-8 flex flex-wrap items-center justify-between gap-4">
+      <header className="brunos-enter mb-8 flex flex-wrap items-center justify-between gap-4">
         <div className="flex flex-col gap-1">
           <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">Les Brunos</p>
           <h1 className="text-ivoire font-display text-4xl font-semibold">
-            Bonsoir<span className="text-or-300">.</span>
+            Bonsoir{current.name ? `, ${current.name}` : ""}
+            <span className="text-or-300">.</span>
           </h1>
           <p className="text-ivoire-faint font-sans text-sm">
-            {current.user.email} · <span className="text-or-300">{ROLE_LABEL[current.role]}</span>
+            <span className="text-or-300">{ROLE_LABEL[current.role]}</span>
           </p>
         </div>
         <div className="flex items-center gap-4 font-sans text-sm">
@@ -147,7 +148,10 @@ export default async function AccountPage() {
 
       <div className="grid gap-5 lg:grid-cols-3">
         {/* Upcoming edition — right 2/3, full height */}
-        <div className="lg:col-span-2 lg:col-start-2 lg:row-span-2 lg:row-start-1">
+        <div
+          className="brunos-enter lg:col-span-2 lg:col-start-2 lg:row-span-2 lg:row-start-1"
+          style={{ animationDelay: "150ms" }}
+        >
           {upcoming ? (
             <UpcomingCard
               edition={upcoming}
@@ -176,7 +180,10 @@ export default async function AccountPage() {
         </div>
 
         {/* Stats — top-left */}
-        <div className="lg:col-start-1 lg:row-start-1">
+        <div
+          className="brunos-enter lg:col-start-1 lg:row-start-1"
+          style={{ animationDelay: "300ms" }}
+        >
           <Panel title="Palmarès">
             {drinkers.length === 0 ? (
               <p className="text-ivoire-faint font-sans text-sm">
@@ -215,7 +222,10 @@ export default async function AccountPage() {
         </div>
 
         {/* Archive — bottom-left */}
-        <div className="lg:col-start-1 lg:row-start-2">
+        <div
+          className="brunos-enter lg:col-start-1 lg:row-start-2"
+          style={{ animationDelay: "450ms" }}
+        >
           <Panel title="Archives">
             <ArchiveRolodex
               editions={archived.map((e) => ({ id: e.id, name: e.name, year: e.year }))}
