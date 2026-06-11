@@ -6,9 +6,15 @@ import { StateBadge } from "@/components/state-badge";
 import { nextState, TRANSITION_LABEL, TRANSITION_NOTE } from "@/lib/editions/state-machine";
 import { TransitionControl } from "./transition-control";
 import { EditEditionForm } from "./edit-edition-form";
+import { DeleteEditionButton } from "./delete-edition-button";
 import { InviteLink } from "@/components/invite-link";
 
 export const metadata: Metadata = { title: "Édition" };
+
+const PRIMARY =
+  "from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 rounded-lg bg-gradient-to-b px-4 py-2 font-sans text-sm font-semibold transition";
+const SECONDARY =
+  "border-or-400/25 text-ivoire hover:border-or-400/50 hover:text-or-300 rounded-lg border px-4 py-2 font-sans text-sm transition";
 
 const DRINK_RULE_LABEL: Record<string, string> = {
   ESCALATION: "Escalade par classement",
@@ -41,7 +47,7 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
   const next = nextState(edition.state);
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-10">
+    <div className="mx-auto w-full max-w-4xl px-6 py-10">
       <Link
         href="/admin/editions"
         className="text-ivoire-muted hover:text-or-300 font-sans text-sm transition"
@@ -71,49 +77,31 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
         <p className="text-ivoire-muted mt-4 font-sans text-sm">{edition.description}</p>
       )}
 
-      <nav className="mt-6 flex flex-wrap gap-4 font-sans text-sm">
-        <Link
-          href={`/admin/editions/${edition.id}/players`}
-          className="text-or-300 hover:text-or-400 transition"
-        >
-          Joueurs →
+      <nav className="mt-6 flex flex-wrap gap-3">
+        <Link href={`/admin/editions/${edition.id}/players`} className={SECONDARY}>
+          Joueurs
         </Link>
-        <Link
-          href={`/admin/editions/${edition.id}/questions`}
-          className="text-or-300 hover:text-or-400 transition"
-        >
-          Questions →
+        <Link href={`/admin/editions/${edition.id}/questions`} className={SECONDARY}>
+          Questions
         </Link>
         {edition.state === "COMPILATION" && (
-          <Link
-            href={`/admin/editions/${edition.id}/compile`}
-            className="text-or-300 hover:text-or-400 transition"
-          >
-            Compilation →
+          <Link href={`/admin/editions/${edition.id}/compile`} className={PRIMARY}>
+            Compiler →
           </Link>
         )}
         {edition.state === "LOCKED" && (
-          <Link
-            href={`/admin/editions/${edition.id}/present`}
-            className="text-or-300 hover:text-or-400 transition"
-          >
+          <Link href={`/admin/editions/${edition.id}/present`} className={PRIMARY}>
             Aperçu de la présentation →
           </Link>
         )}
         {edition.state === "LIVE" && (
-          <Link
-            href={`/admin/editions/${edition.id}/present`}
-            className="text-or-300 hover:text-or-400 transition"
-          >
+          <Link href={`/admin/editions/${edition.id}/present`} className={PRIMARY}>
             Lancer la présentation →
           </Link>
         )}
         {edition.state === "ARCHIVED" && (
-          <Link
-            href={`/admin/editions/${edition.id}/present`}
-            className="text-or-300 hover:text-or-400 transition"
-          >
-            Rejouer la présentation →
+          <Link href={`/archive/${edition.id}`} className={PRIMARY}>
+            Voir le récap →
           </Link>
         )}
       </nav>
@@ -163,6 +151,21 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
             drink_rule: edition.drink_rule,
             shooter_value: edition.shooter_value,
           }}
+        />
+      </section>
+
+      <section className="mt-12 border-t border-red-400/15 pt-8">
+        <h2 className="mb-3 font-sans text-xs tracking-[0.3em] text-red-300/70 uppercase">
+          Zone de danger
+        </h2>
+        <p className="text-ivoire-muted mb-3 font-sans text-sm">
+          Supprime définitivement cette édition et tout son contenu (joueurs, questions, votes,
+          résultats).
+        </p>
+        <DeleteEditionButton
+          editionId={edition.id}
+          name={edition.name}
+          redirectTo="/admin/editions"
         />
       </section>
     </div>
