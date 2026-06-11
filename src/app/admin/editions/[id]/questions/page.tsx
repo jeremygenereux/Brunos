@@ -13,21 +13,22 @@ export default async function QuestionsPage({ params }: { params: Promise<{ id: 
 
   const { data: edition } = await supabase
     .from("editions")
-    .select("id, name, state")
+    .select("id, name, state, drink_rule")
     .eq("id", id)
     .single();
   if (!edition) notFound();
 
   const { data: questions } = await supabase
     .from("questions")
-    .select("id, prompt, format, position")
+    .select("id, prompt, format, position, drink_rule_override")
     .eq("edition_id", id)
     .order("position");
 
   const editable = edition.state === "CONSTRUCTION";
+  const editionRule = edition.drink_rule as "ESCALATION" | "TOP_UNIQUE";
 
   return (
-    <div className="mx-auto w-full max-w-3xl px-6 py-10">
+    <div className="mx-auto w-full max-w-4xl px-6 py-10">
       <Link
         href={`/admin/editions/${id}`}
         className="text-ivoire-muted hover:text-or-300 font-sans text-sm transition"
@@ -44,7 +45,7 @@ export default async function QuestionsPage({ params }: { params: Promise<{ id: 
 
       {editable && (
         <section className="mt-8">
-          <AddQuestionForm editionId={id} />
+          <AddQuestionForm editionId={id} editionRule={editionRule} />
         </section>
       )}
 
@@ -62,6 +63,7 @@ export default async function QuestionsPage({ params }: { params: Promise<{ id: 
             editionId={id}
             questions={questions}
             editable={editable}
+            editionRule={editionRule}
           />
         )}
       </section>

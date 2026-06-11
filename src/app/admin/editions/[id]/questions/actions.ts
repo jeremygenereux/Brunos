@@ -15,11 +15,13 @@ export async function addQuestion(
   const editionId = String(formData.get("edition_id") ?? "");
   const prompt = String(formData.get("prompt") ?? "").trim();
   const format = String(formData.get("format") ?? "ranking");
+  const drinkRule = String(formData.get("drink_rule") ?? "");
   if (!editionId) return { error: "Édition introuvable." };
   if (!prompt) return { error: "L'énoncé est requis." };
   if (format !== "ranking" && format !== "single_choice") {
     return { error: "Format invalide." };
   }
+  const ruleOverride = drinkRule === "ESCALATION" || drinkRule === "TOP_UNIQUE" ? drinkRule : null;
 
   const supabase = await createClient();
   const { data: last } = await supabase
@@ -37,11 +39,33 @@ export async function addQuestion(
     prompt,
     format,
     position: nextPosition,
+    drink_rule_override: ruleOverride,
   });
   if (error) return { error: error.message };
 
   revalidatePath(`/admin/editions/${editionId}/questions`);
   return { error: null, success: true };
+}
+
+/** Set a question's drink rule (during CONSTRUCTION; the edit-lock trigger
+ *  blocks it afterwards). drink_rule_override drives the per-question rule. */
+export async function setQuestionRule(
+  questionId: string,
+  editionId: string,
+  rule: string,
+): Promise<QuestionState> {
+  await requireAdmin();
+  if (rule !== "ESCALATION" && rule !== "TOP_UNIQUE") return { error: "Règle invalide." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("questions")
+    .update({ drink_rule_override: rule })
+    .eq("id", questionId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/editions/${editionId}/questions`);
+  return { error: null };
 }
 
 export async function deleteQuestion(formData: FormData): Promise<void> {

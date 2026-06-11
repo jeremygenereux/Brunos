@@ -5,7 +5,9 @@ import { requireAdmin } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { computeQuestionResult } from "@/lib/scoring/edition";
 import type { QuestionBallot } from "@/lib/scoring/types";
+import { loadEditionVoteReveal } from "@/lib/editions/drama";
 import { EqualizerPanel } from "./equalizer-panel";
+import { RevealCurator } from "./reveal-curator";
 
 export const metadata: Metadata = { title: "Compilation" };
 
@@ -129,8 +131,20 @@ export default async function CompilePage({ params }: { params: Promise<{ id: st
     .sort((a, b) => (a.showOrder ?? 0) - (b.showOrder ?? 0))
     .map((c) => c.id);
 
+  // Preview ALL reveals (respectToggle:false) so the admin can curate them.
+  const reveal = await loadEditionVoteReveal(supabase, id, { respectToggle: false });
+  const revealItems = reveal.categories
+    .filter((c) => c.ballots.length > 0 || c.drama.length > 0)
+    .map((c) => ({
+      questionId: c.questionId,
+      prompt: c.prompt,
+      drama: c.drama,
+      ballotCount: c.ballots.length,
+      revealEnabled: c.revealEnabled,
+    }));
+
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-10">
+    <main className="mx-auto w-full max-w-4xl px-6 py-10">
       <Link
         href={`/admin/editions/${id}`}
         className="text-ivoire-muted hover:text-or-300 font-sans text-sm transition"
@@ -148,17 +162,20 @@ export default async function CompilePage({ params }: { params: Promise<{ id: st
           Il faut des joueurs et des questions pour compiler.
         </p>
       ) : (
-        <EqualizerPanel
-          editionId={id}
-          players={players}
-          questions={computed.map((c) => ({
-            id: c.id,
-            prompt: c.prompt,
-            format: c.format,
-            drinks: c.drinks,
-          }))}
-          initialSelected={initialSelected}
-        />
+        <>
+          <EqualizerPanel
+            editionId={id}
+            players={players}
+            questions={computed.map((c) => ({
+              id: c.id,
+              prompt: c.prompt,
+              format: c.format,
+              drinks: c.drinks,
+            }))}
+            initialSelected={initialSelected}
+          />
+          {revealItems.length > 0 && <RevealCurator editionId={id} items={revealItems} />}
+        </>
       )}
     </main>
   );
