@@ -8,6 +8,25 @@ import { snapshotEditionResults } from "@/lib/editions/snapshot";
 
 export type ActionState = { error: string | null; success?: boolean };
 
+/** Set (or clear) a participant's personalized Apple Invitation URL. */
+export async function setAppleInvite(participantId: string, url: string): Promise<ActionState> {
+  await requireAdmin();
+  if (!participantId) return { error: "Participant introuvable." };
+
+  const trimmed = url.trim();
+  if (trimmed && !/^https?:\/\//i.test(trimmed)) {
+    return { error: "Le lien doit commencer par http(s)://" };
+  }
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("participants")
+    .update({ apple_invite_url: trimmed || null })
+    .eq("id", participantId);
+  if (error) return { error: error.message };
+  return { error: null, success: true };
+}
+
 /** Permanently delete an edition and everything under it (cascades). */
 export async function deleteEdition(editionId: string): Promise<ActionState> {
   await requireAdmin();

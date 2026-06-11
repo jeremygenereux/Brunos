@@ -6,14 +6,12 @@ import { signOut } from "@/app/(auth)/actions";
 import { StateBadge } from "@/components/state-badge";
 import { createClient } from "@/lib/supabase/server";
 import { loadArchiveStats } from "@/lib/editions/stats";
-import { RsvpControl } from "./rsvp-control";
 import { ArchiveRolodex } from "./archive-rolodex";
 import type { Database } from "@/lib/types/database.types";
 
 export const metadata: Metadata = { title: "Accueil" };
 
 type EditionState = Database["public"]["Enums"]["edition_state"];
-type RsvpStatus = Database["public"]["Enums"]["rsvp_status"];
 
 const ROLE_LABEL: Record<Role, string> = {
   admin: "Administrateur",
@@ -87,7 +85,7 @@ export default async function AccountPage() {
 
   const { data: parts } = await supabase
     .from("participants")
-    .select("edition_id, rsvp, kind")
+    .select("edition_id, kind, apple_invite_url")
     .eq("user_id", current.user.id);
   const partByEdition = new Map((parts ?? []).map((p) => [p.edition_id, p]));
   const editionIds = (parts ?? []).map((p) => p.edition_id);
@@ -155,7 +153,7 @@ export default async function AccountPage() {
           {upcoming ? (
             <UpcomingCard
               edition={upcoming}
-              rsvp={(partByEdition.get(upcoming.id)?.rsvp ?? null) as RsvpStatus | null}
+              appleInvite={partByEdition.get(upcoming.id)?.apple_invite_url ?? null}
               kind={partByEdition.get(upcoming.id)?.kind ?? "player"}
             />
           ) : (
@@ -239,11 +237,11 @@ export default async function AccountPage() {
 
 function UpcomingCard({
   edition,
-  rsvp,
+  appleInvite,
   kind,
 }: {
   edition: Edition;
-  rsvp: RsvpStatus | null;
+  appleInvite: string | null;
   kind: string;
 }) {
   const cta = ctaFor(edition);
@@ -280,7 +278,16 @@ function UpcomingCard({
       )}
 
       <div className="relative mt-auto flex flex-col gap-5">
-        <RsvpControl editionId={edition.id} initial={rsvp} />
+        {appleInvite && (
+          <a
+            href={appleInvite}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="border-or-400/30 text-or-300 hover:bg-noir-900 inline-flex w-fit items-center gap-2 rounded-full border px-5 py-2.5 font-sans text-sm transition"
+          >
+            🍎 Voir mon invitation
+          </a>
+        )}
 
         <div className="flex flex-wrap items-center gap-4">
           {cta.href ? (
