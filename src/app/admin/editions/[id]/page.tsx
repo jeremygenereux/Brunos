@@ -7,6 +7,7 @@ import { nextState, TRANSITION_LABEL, TRANSITION_NOTE } from "@/lib/editions/sta
 import { TransitionControl } from "./transition-control";
 import { EditEditionForm } from "./edit-edition-form";
 import { DeleteEditionButton } from "./delete-edition-button";
+import { ParticipantsManager } from "./participants-manager";
 import { InviteLink } from "@/components/invite-link";
 
 export const metadata: Metadata = { title: "Édition" };
@@ -45,6 +46,25 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
   if (!edition) notFound();
 
   const next = nextState(edition.state);
+
+  const { data: rawParts } = await supabase
+    .from("participants")
+    .select("id, kind, user_id, relation_label, apple_invite_url")
+    .eq("edition_id", id);
+  const userIds = [...new Set((rawParts ?? []).map((p) => p.user_id))];
+  const { data: people } = userIds.length
+    ? await supabase.from("people").select("display_name, auth_user_id").in("auth_user_id", userIds)
+    : { data: [] as { display_name: string | null; auth_user_id: string | null }[] };
+  const nameByUser = new Map((people ?? []).map((p) => [p.auth_user_id, p.display_name]));
+  const participants = (rawParts ?? []).map((p) => ({
+    id: p.id,
+    kind: (p.kind === "jury" ? "jury" : "player") as "player" | "jury",
+    name:
+      nameByUser.get(p.user_id) ??
+      p.relation_label ??
+      (p.kind === "jury" ? "Entourage" : "Joueur"),
+    apple_invite_url: p.apple_invite_url,
+  }));
 
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-10">
@@ -114,6 +134,17 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
           Partage ce lien pour que joueurs et jury rejoignent l&apos;édition.
         </p>
         <InviteLink token={edition.invite_token} />
+      </section>
+
+      <section className="mt-10">
+        <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
+          Participants & invitations Apple
+        </h2>
+        <p className="text-ivoire-muted mb-3 font-sans text-sm">
+          Colle le lien Apple Invitation personnalisé de chaque invité·e ; il ou elle verra un
+          bouton « Voir mon invitation » sur son accueil.
+        </p>
+        <ParticipantsManager participants={participants} />
       </section>
 
       <section className="mt-10">
