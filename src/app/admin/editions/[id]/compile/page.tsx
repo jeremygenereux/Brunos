@@ -130,7 +130,7 @@ export default async function CompilePage({ params }: { params: Promise<{ id: st
     .map((c) => c.id);
 
   return (
-    <main className="mx-auto w-full max-w-3xl px-6 py-10">
+    <main className="mx-auto w-full max-w-4xl px-6 py-10">
       <Link
         href={`/admin/editions/${id}`}
         className="text-ivoire-muted hover:text-or-300 font-sans text-sm transition"
