@@ -17,7 +17,7 @@ echo "▶ Ouverture des onglets dès que Next sera prêt…"
 ( sleep 3; open \
     "http://127.0.0.1:54424" \
     "http://127.0.0.1:54423" \
-    "http://brunos.localhost:3001""http://127.0.0.1:54423" ) &
+    "http://brunos.localhost:3001" ) &
 
 echo "▶ Serveur Next.js (port 3001)…"
 pnpm dev
