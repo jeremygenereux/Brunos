@@ -30,7 +30,7 @@ pnpm db:start                     # démarre Supabase en local (Docker)
 pnpm db:reset                     # applique les migrations + seed
 pnpm db:types                     # génère src/lib/types/database.types.ts
 
-pnpm dev                          # http://localhost:3000
+pnpm dev                          # http://brunos.localhost:3001
 ```
 
 Après `pnpm db:start`, le CLI affiche l'**API URL** et les **clés** locales à
@@ -41,6 +41,10 @@ copier dans `.env.local` :
 | `NEXT_PUBLIC_SUPABASE_URL`      | `API URL` affichée par `supabase start`  |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | `anon key` affichée par `supabase start` |
 | `SUPABASE_SERVICE_ROLE_KEY`     | `service_role key` (serveur uniquement)  |
+
+**Lancement tout-en-un :** `pnpm dev:local` démarre Supabase, ouvre Studio/Mailpit + l'app, puis lance le serveur.
+
+**Ports locaux dédiés** (pour tourner en parallèle d'Asteryx One) : app **3001** · Supabase API **54421** · Studio **54423** (http://127.0.0.1:54423) · Mailpit **54424** (http://127.0.0.1:54424). App : **http://brunos.localhost:3001**.
 
 ## Scripts
 

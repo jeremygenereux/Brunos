@@ -7,7 +7,8 @@
     "node": ">=20"
   },
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 3001",
+    "dev:local": "bash scripts/dev.sh",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
