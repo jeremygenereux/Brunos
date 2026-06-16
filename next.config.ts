@@ -11,15 +11,14 @@ const nextConfig: NextConfig = {
   },
   // Allow next/image to serve headshots from Supabase Storage (public bucket).
   images: {
-    remotePatterns: supabaseHost
-      ? [
-          {
-            protocol: "https",
-            hostname: supabaseHost,
-            pathname: "/storage/v1/object/public/**",
-          },
-        ]
-      : [],
+    remotePatterns: [
+      // Avatars placeholder (filet de sécurité).
+      { hostname: "placehold.co" },
+      // Headshots depuis Supabase Storage (bucket public), local ou prod.
+      ...(supabaseHost
+        ? [{ hostname: supabaseHost, pathname: "/storage/v1/object/public/**" }]
+        : []),
+    ],
   },
   experimental: {
     serverActions: {
