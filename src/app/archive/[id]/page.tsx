@@ -187,7 +187,7 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
               href={`/archive/${id}/present`}
               className="from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 inline-flex rounded-full bg-gradient-to-b px-6 py-2.5 font-sans text-sm font-semibold shadow-lg transition"
             >
-              Revoir la proclamation
+              Revoir la présentation
             </Link>
           </div>
 

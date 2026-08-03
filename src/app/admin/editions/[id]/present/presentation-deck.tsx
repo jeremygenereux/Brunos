@@ -348,7 +348,7 @@ export function PresentationDeck({
                 <ArchiveButton editionId={edition.id} />
               ) : edition.state === "ARCHIVED" ? (
                 <p className="text-ivoire-faint font-sans text-xs tracking-wide uppercase">
-                  Cérémonie archivée. La proclamation est publique.
+                  Cérémonie archivée. La présentation est publique.
                 </p>
               ) : (
                 <p className="text-ivoire-faint font-sans text-xs tracking-wide uppercase">
