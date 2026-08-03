@@ -4,6 +4,12 @@
 -- Loaded by `supabase db reset` AFTER the migrations, per
 -- supabase/config.toml -> [db.seed] sql_paths = ["./seed.sql"].
 --
+-- NOTE — auto-enrolment: this seed inserts its own `participants` rows with
+-- explicit ids (the `votes` rows below reference them), so the players →
+-- participants auto-enrolment trigger must stay out of the way. Same escape
+-- hatch as `app.allow_question_edit`.
+set app.skip_autoenroll = 'on';
+--
 -- WHAT THIS SEED DOES
 --   Populates realistic mock data covering EVERY edition lifecycle state so
 --   the whole app can be exercised locally without signing up by hand:

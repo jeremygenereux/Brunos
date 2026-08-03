@@ -162,8 +162,8 @@ export default async function AccountPage() {
                 À l&apos;année prochaine.
               </span>
               <p className="text-ivoire-muted max-w-sm font-sans text-sm">
-                Aucune édition des Brunos à l&apos;horizon pour l&apos;instant. Tu recevras un lien
-                d&apos;invitation quand la prochaine se prépare.
+                Aucune édition des Brunos à l&apos;horizon pour l&apos;instant. La prochaine
+                apparaîtra ici dès que tu y seras inscrit·e.
               </p>
               {archived.length > 0 && (
                 <Link

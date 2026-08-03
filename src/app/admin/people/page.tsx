@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CreatePersonForm } from "./create-person-form";
 import { RoleSelect } from "./role-select";
-import { renamePerson, deletePerson } from "./actions";
+import { renamePerson, deletePerson, setPersonEmail } from "./actions";
 
 export const metadata: Metadata = { title: "Banque de joueurs" };
 
@@ -24,6 +24,11 @@ export default async function PeoplePage() {
   for (const p of players ?? []) {
     editionCount.set(p.person_id, (editionCount.get(p.person_id) ?? 0) + 1);
   }
+
+  // Courriels d'invitation (table admin-seule) : c'est eux qui rattachent un
+  // futur compte à la personne déjà inscrite comme joueuse.
+  const { data: invites } = await supabase.from("person_invites").select("person_id, email");
+  const inviteByPerson = new Map((invites ?? []).map((i) => [i.person_id, i.email]));
 
   const { data: profiles } = await supabase.from("profiles").select("user_id, role, person_id");
   const accountByPerson = new Map(
@@ -70,6 +75,7 @@ export default async function PeoplePage() {
               const account = accountByPerson.get(person.id);
               const editions = editionCount.get(person.id) ?? 0;
               const email = account ? emailByUser.get(account.userId) : undefined;
+              const invitedEmail = inviteByPerson.get(person.id) ?? "";
               const isSelf = account?.userId === current?.user.id;
               return (
                 <li
@@ -86,6 +92,10 @@ export default async function PeoplePage() {
                           <>
                             <span className="text-or-300">Compte actif</span>
                             {email ? ` · ${email}` : ""} ·{" "}
+                          </>
+                        ) : invitedEmail ? (
+                          <>
+                            <span className="text-or-400/80">Invitée : {invitedEmail}</span> ·{" "}
                           </>
                         ) : (
                           "Sans compte · "
@@ -124,6 +134,24 @@ export default async function PeoplePage() {
                           Renommer
                         </button>
                       </form>
+                      {!account && (
+                        <form action={setPersonEmail} className="flex items-end gap-2">
+                          <input type="hidden" name="person_id" value={person.id} />
+                          <input
+                            name="email"
+                            type="email"
+                            defaultValue={invitedEmail}
+                            placeholder="courriel d'invitation"
+                            className="border-or-400/20 bg-noir-900/60 text-ivoire focus:border-or-400/60 rounded-lg border px-3 py-1.5 font-sans text-sm outline-none"
+                          />
+                          <button
+                            type="submit"
+                            className="border-or-400/30 text-or-300 hover:bg-noir-900 rounded-lg border px-3 py-1.5 font-sans text-sm transition"
+                          >
+                            Enregistrer
+                          </button>
+                        </form>
+                      )}
                       <form action={deletePerson}>
                         <input type="hidden" name="person_id" value={person.id} />
                         <button
@@ -148,12 +176,13 @@ export default async function PeoplePage() {
         )}
       </section>
 
-      {!process.env.SUPABASE_SERVICE_ROLE_KEY && (
-        <p className="text-ivoire-faint mt-6 font-sans text-xs">
-          Astuce : les comptes se créent quand une personne s&apos;inscrit puis rejoint via le lien
-          d&apos;invitation d&apos;une édition. Tu ajustes ensuite son rôle ici.
-        </p>
-      )}
+      <p className="text-ivoire-faint mt-6 font-sans text-xs">
+        Astuce : note le <span className="text-or-400/80">courriel d&apos;invitation</span> d&apos;une
+        personne sans compte. Quand elle s&apos;inscrira avec ce courriel, son compte sera rattaché à
+        cette fiche et elle verra automatiquement les éditions où tu l&apos;as ajoutée comme
+        joueuse — sans avoir à cliquer sur un lien. L&apos;entourage, lui, passe toujours par le
+        lien d&apos;invitation de l&apos;édition (il doit déclarer à quel joueur il se rattache).
+      </p>
     </main>
   );
 }

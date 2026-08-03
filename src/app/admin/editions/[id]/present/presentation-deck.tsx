@@ -10,6 +10,7 @@ import type {
   RecapRow,
 } from "@/lib/editions/presentation-types";
 import { ArchiveButton } from "./archive-button";
+import { ReactiveParticles, AwardCategoryReveal } from "@/components/award";
 
 export type { Category, RankRow, RecapRow };
 
@@ -38,6 +39,40 @@ function Avatar({ name, headshot, size }: { name: string; headshot: string | nul
 
 function Kicker({ children }: { children: React.ReactNode }) {
   return <p className="text-or-400/80 font-sans text-sm tracking-[0.4em] uppercase">{children}</p>;
+}
+
+/**
+ * Podium COMPLÈTEMENT inversé : tout le classement, position par position,
+ * ordonné pour que la ou les personnes qui CALENT arrivent en dernier (climax).
+ * Dérivé du flag `isShooter`, déjà calculé selon la règle EFFECTIVE de la
+ * question (`drink_rule_override` inclus) — donc juste dans les deux règles :
+ *   • ESCALATION → le shooter est le·la dernier·ère : 1re position … dernière.
+ *   • TOP_UNIQUE → le shooter est le·la gagnant·e : dernière position … 1re.
+ * `players` arrive trié par finalRank croissant.
+ */
+function cascadeOf(players: RankRow[]) {
+  const shooters = players.filter((p) => p.isShooter);
+  if (shooters.length === 0)
+    return { shooters: [], buildUp: [], penultimate: null, shooterIsLast: false };
+  const shooterIsLast = shooters[shooters.length - 1].finalRank === players.length;
+  const rest = players.filter((p) => !p.isShooter);
+  const ordered = shooterIsLast ? rest : [...rest].reverse();
+  // On RÉSERVE l'avant-dernière position pour le climax : si la liste allait
+  // jusqu'au bout, la dernière personne serait devinable par élimination.
+  const penultimate = ordered.length > 0 ? ordered[ordered.length - 1] : null;
+  const buildUp = ordered.slice(0, -1);
+  return { shooters, buildUp, penultimate, shooterIsLast };
+}
+
+/** RankRow → entrée de cascade pour le composant de révélation. */
+function toEntry(p: RankRow) {
+  return {
+    id: p.playerId,
+    name: p.name,
+    headshot: p.headshot,
+    rank: p.finalRank,
+    drinks: p.drinks,
+  };
 }
 
 export function PresentationDeck({
@@ -75,11 +110,15 @@ export function PresentationDeck({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Étapes d'une catégorie : 0 = énoncé, 1 = cascade (classement + climax),
+  // 2 = déboules SI elles existent — pas de clic mort.
   const maxStepOf = useCallback(
     (s: number) => {
       const sl = slides[s];
       if (sl?.type !== "category") return 0;
-      return sl.cat.players.length > 0 && sl.cat.drama && sl.cat.drama.length > 0 ? 3 : 2;
+      if (sl.cat.players.length === 0) return 0;
+      const hasDrama = Boolean(sl.cat.drama && sl.cat.drama.length > 0);
+      return 1 + (hasDrama ? 1 : 0);
     },
     [slides],
   );
@@ -141,14 +180,18 @@ export function PresentationDeck({
   const isRules = currentSlide?.type === "rules";
   const isRecap = currentSlide?.type === "recap";
   const cat = currentSlide?.type === "category" ? currentSlide.cat : null;
-  const winners = cat ? cat.players.filter((p) => p.isWinner) : [];
+  const cascade = cascadeOf(cat?.players ?? []);
+  const { shooters, buildUp, penultimate } = cascade;
+  // Le classement de l'entourage est mis en pause : après la cascade, seules
+  // les déboules restent.
+  const dramaStep = 2;
   const noVotes = Boolean(cat && cat.players.length === 0);
   const maxTotal = recap.length ? Math.max(...recap.map((r) => r.total)) : 0;
 
   const announce = cat
     ? `Catégorie ${cat.index + 1} sur ${categories.length}. ${cat.prompt}` +
-      (step >= 1 && winners.length ? `. ${winners.map((w) => w.name).join(", ")}.` : "") +
-      (step >= 3 && cat.drama
+      (step >= 1 && shooters.length ? `. ${shooters.map((w) => w.name).join(", ")}.` : "") +
+      (step >= dramaStep && cat.drama
         ? ` ${cat.drama.map((d) => `${d.title}. ${d.detail}`).join(" ")}`
         : "")
     : isRecap
@@ -164,6 +207,7 @@ export function PresentationDeck({
       className="bg-noir-900 text-ivoire fixed inset-0 z-50 cursor-pointer overflow-hidden select-none"
     >
       <div className="brunos-stage-glow" />
+      <ReactiveParticles pulseKey={`${slide}-${step}`} />
       <div className="sr-only" aria-live="polite" role="status">
         {announce}
       </div>
@@ -246,76 +290,29 @@ export function PresentationDeck({
         )}
 
         {cat && (
-          <div
+          <AwardCategoryReveal
             key={`cat-${cat.questionId}`}
-            className="flex w-full max-w-5xl flex-col items-center gap-8"
+            kicker={`Catégorie ${cat.index + 1}`}
+            prompt={cat.prompt}
+            step={step}
+            buildUp={buildUp.map(toEntry)}
+            penultimate={penultimate ? toEntry(penultimate) : null}
+            shooters={shooters.map(toEntry)}
+            cascadeVisible={step >= 1 && step < dramaStep}
+            teaser={
+              shooters.length > 1
+                ? "… et les Brunos reviennent à …"
+                : "… et le Bruno revient à …"
+            }
+            noVotes={noVotes}
+            noVotesLabel="Personne n'a voté dans cette catégorie 🤷"
+            renderAvatar={(p, size) => <Avatar name={p.name} headshot={p.headshot} size={size} />}
           >
-            <div className="flex flex-col items-center gap-3">
-              <Kicker>Catégorie {cat.index + 1}</Kicker>
-              <h2 className="text-ivoire font-display max-w-3xl text-4xl leading-tight font-semibold sm:text-5xl">
-                {cat.prompt}
-              </h2>
-            </div>
 
-            {step === 0 && !noVotes && (
-              <p className="text-or-400/70 brunos-fade font-sans text-sm tracking-[0.3em] uppercase">
-                {winners.length > 1
-                  ? "… et les Brunos reviennent à …"
-                  : "… et le Bruno revient à …"}
-              </p>
-            )}
-
-            {noVotes && step === 0 && (
-              <p className="brunos-fade text-ivoire-muted font-sans text-base">
-                Personne n&apos;a voté dans cette catégorie 🤷
-              </p>
-            )}
-
-            {step >= 1 && step <= 2 && winners.length > 0 && (
-              <div
-                key={`winner-${cat.questionId}`}
-                className="brunos-winner flex flex-col items-center gap-4"
-              >
-                <div className="flex flex-wrap items-center justify-center gap-8">
-                  {winners.map((w) => (
-                    <div key={w.playerId} className="flex flex-col items-center gap-3">
-                      <div className="brunos-aura">
-                        <Avatar name={w.name} headshot={w.headshot} size={150} />
-                      </div>
-                      <span className="text-or-300 font-display text-3xl font-semibold sm:text-4xl">
-                        {w.name}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <span className="text-ivoire-faint font-sans text-xs tracking-[0.3em] uppercase">
-                  {winners.length > 1 ? "Remportent la catégorie" : "Remporte la catégorie"}
-                </span>
-              </div>
-            )}
-
-            {step >= 2 && cat.players.length > 0 && (
-              <div
-                key="full"
-                className={`grid w-full gap-8 ${
-                  cat.jury.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1"
-                }`}
-              >
-                <RankColumn title="Classement des joueurs" rows={cat.players} showDrinks />
-                {cat.jury.length > 0 && (
-                  <RankColumn
-                    title="Classement de l'entourage"
-                    rows={cat.jury}
-                    showDrinks={false}
-                  />
-                )}
-              </div>
-            )}
-
-            {step >= 3 && cat.drama && cat.drama.length > 0 && (
+            {step >= dramaStep && cat.drama && cat.drama.length > 0 && (
               <div key="drama" className="flex w-full max-w-2xl flex-col items-center gap-4">
                 <p className="text-or-400/70 font-sans text-xs tracking-[0.4em] uppercase">
-                  Carte drame
+                  {cat.drama.length > 1 ? "Déboules" : "Déboule"}
                 </p>
                 {cat.drama.map((d, i) => (
                   <div
@@ -329,7 +326,7 @@ export function PresentationDeck({
                 ))}
               </div>
             )}
-          </div>
+          </AwardCategoryReveal>
         )}
 
         {isRecap && (
@@ -413,48 +410,6 @@ export function PresentationDeck({
   );
 }
 
-function RankColumn({
-  title,
-  rows,
-  showDrinks,
-}: {
-  title: string;
-  rows: RankRow[];
-  showDrinks: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <p className="text-or-400/70 mb-1 font-sans text-xs tracking-[0.25em] uppercase">{title}</p>
-      <ol className="flex flex-col gap-1.5">
-        {rows.map((r, i) => {
-          const shooter = showDrinks && Boolean(r.isShooter);
-          return (
-            <li
-              key={r.playerId}
-              className={`brunos-rise brunos-glass flex items-center gap-3 rounded-xl border px-4 py-2.5 ${
-                shooter ? "border-or-400/45 bg-or-500/10" : "border-or-400/12"
-              }`}
-              style={{ animationDelay: `${i * 70}ms` }}
-            >
-              <span className="text-ivoire-faint w-5 text-right font-sans text-sm tabular-nums">
-                {r.finalRank}
-              </span>
-              <Avatar name={r.name} headshot={r.headshot} size={36} />
-              <span className="text-ivoire flex-1 text-left font-sans text-sm">{r.name}</span>
-              {showDrinks && (
-                <span
-                  className={`font-sans text-sm tabular-nums ${
-                    shooter ? "text-or-300" : "text-ivoire-muted"
-                  }`}
-                >
-                  {shooter ? "🥃 " : ""}
-                  {r.drinks}
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-    </div>
-  );
-}
+// NOTE : le composant RankColumn (colonnes de classement joueurs / entourage)
+// a été retiré — la cascade dévoile désormais le classement des joueurs, et
+// l'affichage de l'entourage est mis en pause. Récupérable via git si besoin.
