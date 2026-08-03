@@ -21,7 +21,7 @@ export function LoginForm({ next }: { next?: string }) {
           type="email"
           autoComplete="email"
           required
-          placeholder="toi@exemple.com"
+          placeholder="vous@exemple.com"
         />
       </div>
       <div className="flex flex-col gap-1.5">
@@ -40,9 +40,9 @@ export function LoginForm({ next }: { next?: string }) {
       <SubmitButton>Se connecter</SubmitButton>
 
       <p className="text-ivoire-muted text-center font-sans text-sm">
-        Pas de compte ?{" "}
+        Vous n&apos;avez pas d&apos;accès ?{" "}
         <Link href="/signup" className="text-or-400 hover:text-or-300">
-          Créer un compte
+          En créer un
         </Link>
       </p>
     </form>

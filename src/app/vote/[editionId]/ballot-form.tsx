@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   DndContext,
   closestCenter,
@@ -19,18 +19,29 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { submitBallot, type BallotResult } from "./actions";
+import { saveDraft, submitBallot, type BallotResult } from "./actions";
+import type { DrinkRule } from "@/lib/editions/drink-rule";
 
 type Player = { id: string; display_name: string; headshot_url: string | null };
 type Question = {
   id: string;
   prompt: string;
   format: string;
+  drinkRule: DrinkRule;
   initialRanking: string[];
   initialChoice: string;
 };
 
-function Avatar({ player, size = 36 }: { player: Player; size?: number }) {
+function Avatar({
+  player,
+  size = 36,
+  rounded = false,
+}: {
+  player: Player;
+  size?: number;
+  rounded?: boolean;
+}) {
+  const shape = rounded ? "rounded-full border border-or-400/30" : "rounded-md";
   if (player.headshot_url) {
     return (
       <Image
@@ -38,17 +49,118 @@ function Avatar({ player, size = 36 }: { player: Player; size?: number }) {
         alt={player.display_name}
         width={size}
         height={size}
-        className="shrink-0 rounded-md object-cover"
+        className={`shrink-0 object-cover ${shape}`}
         style={{ width: size, height: size }}
       />
     );
   }
   return (
     <div
-      className="bg-noir-900/60 text-or-400/70 font-display flex shrink-0 items-center justify-center rounded-md"
-      style={{ width: size, height: size }}
+      className={`bg-noir-900/60 text-or-400/70 font-display flex shrink-0 items-center justify-center ${shape}`}
+      style={{ width: size, height: size, fontSize: size * 0.4 }}
     >
       {player.display_name.charAt(0).toUpperCase()}
+    </div>
+  );
+}
+
+
+/* ── Écran d'ouverture ────────────────────────────────────────────────
+   Deux pictogrammes valent mieux qu'un paragraphe : le votant doit saisir
+   d'un coup d'œil ce qu'on attend de lui, et où tombe la charge. Les glyphes
+   reprennent la géométrie réelle des deux écrans de vote (une pile ordonnée,
+   une désignation parmi un rang), pour que la promesse tienne. */
+
+/** Pile ordonnée, la barre la plus basse marquée d'un jeton. */
+function RankingGlyph() {
+  return (
+    <svg viewBox="0 0 64 48" className="h-12 w-16" fill="none" aria-hidden="true">
+      {[0, 1, 2].map((i) => (
+        <rect
+          key={i}
+          x="6"
+          y={6 + i * 14}
+          width={44 - i * 6}
+          height="8"
+          rx="4"
+          fill="currentColor"
+          opacity={0.9 - i * 0.25}
+        />
+      ))}
+      <circle cx="56" cy="40" r="5" fill="var(--or-300)" />
+    </svg>
+  );
+}
+
+/** Un rang de jetons, un seul cerclé d'or. */
+function ChoiceGlyph() {
+  return (
+    <svg viewBox="0 0 64 48" className="h-12 w-16" fill="none" aria-hidden="true">
+      {[0, 1, 2, 3].map((i) => (
+        <circle key={i} cx={10 + i * 15} cy="24" r="5" fill="currentColor" opacity={0.35} />
+      ))}
+      <circle cx="25" cy="24" r="5" fill="var(--or-300)" />
+      <circle cx="25" cy="24" r="10" stroke="var(--or-400)" strokeWidth="1.5" opacity="0.8" />
+    </svg>
+  );
+}
+
+function ModeCard({
+  glyph,
+  title,
+  count,
+  children,
+}: {
+  glyph: React.ReactNode;
+  title: string;
+  count: number;
+  children: React.ReactNode;
+}) {
+  if (count === 0) return null;
+  return (
+    <div className="border-or-400/15 bg-noir-900/40 flex flex-1 flex-col items-center gap-3 rounded-2xl border px-5 py-6 text-center">
+      <span className="text-or-400/70">{glyph}</span>
+      <div className="flex flex-col gap-0.5">
+        <span className="text-ivoire font-display text-lg font-semibold">{title}</span>
+        <span className="text-or-300 font-sans text-xs tabular-nums">
+          {count} catégorie{count > 1 ? "s" : ""}
+        </span>
+      </div>
+      <p className="text-ivoire-muted font-sans text-xs leading-relaxed">{children}</p>
+    </div>
+  );
+}
+
+/** Les nommés de la cérémonie, en suspension. */
+function PlayerGallery({ players }: { players: Player[] }) {
+  if (players.length === 0) return null;
+  return (
+    <div className="flex flex-col items-center gap-4">
+      <span className="text-or-400/70 font-sans text-[11px] tracking-[0.35em] uppercase">
+        Les nommés
+      </span>
+      <ul className="flex flex-wrap items-start justify-center gap-x-6 gap-y-5">
+        {players.map((p, i) => (
+          <li key={p.id} className="flex w-20 flex-col items-center gap-2">
+            <span
+              className="brunos-float block"
+              style={{
+                animationDelay: `${(i % 6) * 0.7}s`,
+                animationDuration: `${6 + (i % 3)}s`,
+                // Halo porté par le portrait : `brunos-aura` s'appuie sur un
+                // ::before en z-index négatif, prévu pour un fond nu, qui
+                // passerait derrière la carte ici.
+                filter: "drop-shadow(0 0 14px color-mix(in oklab, var(--or-400) 30%, transparent))",
+              }}
+            >
+              <Avatar player={p} size={64} rounded />
+            </span>
+            <span className="text-ivoire-muted text-center font-sans text-[11px] leading-tight">
+              {p.display_name}
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
@@ -76,8 +188,40 @@ export function BallotForm({
   const [result, setResult] = useState<BallotResult>({ error: null });
   const [pending, startTransition] = useTransition();
   const [page, setPage] = useState(0); // 0 = intro, 1..N = questions, N+1 = review
+  const [draftState, setDraftState] = useState<"idle" | "saving" | "saved">("idle");
+  const [draftError, setDraftError] = useState<string | null>(null);
+
+  // ── Brouillon ────────────────────────────────────────────────────────
+  // Le bulletin est enregistré sans être rendu (`submitted_at` reste nul), ce
+  // qui permet de quitter et de revenir. On temporise pour ne pas écrire à
+  // chaque pixel de glisser-déposer, et on saute le tout premier rendu :
+  // sinon on réécrirait le brouillon avec ce qu'on vient tout juste de lire.
+  const firstRender = useRef(true);
+
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    setDraftState("saving");
+    const id = window.setTimeout(async () => {
+      const answers = questions.map((qq) =>
+        qq.format === "ranking"
+          ? { questionId: qq.id, format: "ranking", ranking: rankings[qq.id] }
+          : { questionId: qq.id, format: "single_choice", choice: choices[qq.id] || null },
+      );
+      const r = await saveDraft(editionId, answers);
+      // Ne JAMAIS avaler l'échec : un brouillon qu'on croit enregistré alors
+      // qu'il ne l'est pas, c'est pire que pas de brouillon du tout.
+      setDraftError(r.error);
+      setDraftState(r.error ? "idle" : "saved");
+    }, 1200);
+    return () => window.clearTimeout(id);
+  }, [rankings, choices, editionId, questions]);
 
   const total = questions.length;
+  const rankingCount = questions.filter((qq) => qq.format === "ranking").length;
+  const choiceCount = total - rankingCount;
   const reviewPage = total + 1;
   const q = page >= 1 && page <= total ? questions[page - 1] : null;
   const canAdvance = !q || q.format === "ranking" || Boolean(choices[q.id]);
@@ -94,18 +238,18 @@ export function BallotForm({
     const pick = choices[question.id];
     return pick
       ? { text: playerById.get(pick)?.display_name ?? "—", missing: false }
-      : { text: "Pas encore répondu", missing: true };
+      : { text: "Sans réponse", missing: true };
   }
 
   function submit() {
     const missing = questions.find((qq) => qq.format === "single_choice" && !choices[qq.id]);
     if (missing) {
-      setResult({ error: "Choisis un joueur pour chaque catégorie à choix unique." });
+      setResult({ error: "Une catégorie à désignation unique demeure sans réponse." });
       return;
     }
     if (
       !window.confirm(
-        "Ton vote est définitif : une fois envoyé, tu ne pourras plus rien modifier. Envoyer ?",
+        "Votre bulletin sera déposé de façon irrévocable. Confirmez-vous ?",
       )
     ) {
       return;
@@ -123,23 +267,40 @@ export function BallotForm({
       <div className="brunos-fade flex-1" key={page}>
         {/* Intro */}
         {page === 0 && (
-          <div className="flex flex-col items-center gap-5 py-8 text-center">
-            <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">
-              Bulletin de vote
-            </p>
-            <h2 className="text-ivoire font-display text-4xl font-semibold">À toi de juger.</h2>
-            <p className="text-ivoire-muted max-w-md font-sans text-sm leading-relaxed">
-              {total} catégorie{total > 1 ? "s" : ""}. Pour certaines tu <strong>classes</strong>{" "}
-              les joueurs (glisse-dépose), pour d&apos;autres tu en <strong>choisis un</strong>.
-              Prends ton temps — ton vote est <span className="text-or-300">définitif</span> une
-              fois envoyé.
-            </p>
+          <div className="flex flex-col items-center gap-8 py-6 text-center">
+            <div className="flex flex-col items-center gap-3">
+              <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">
+                Bulletin de vote
+              </p>
+              <h2 className="text-ivoire font-display text-4xl font-semibold">
+                Le scrutin est ouvert.
+              </h2>
+              <p className="text-ivoire-muted max-w-md font-sans text-sm leading-relaxed">
+                {total} catégorie{total > 1 ? "s" : ""} vous {total > 1 ? "sont" : "est"} soumise
+                {total > 1 ? "s" : ""}. Votre bulletin est conservé à mesure que vous progressez ; il
+                ne devient <span className="text-or-300">définitif </span> qu&apos;au dépôt.
+              </p>
+            </div>
+
+            <PlayerGallery players={players} />
+
+            <div className="flex w-full flex-col gap-3 sm:flex-row">
+              <ModeCard glyph={<RankingGlyph />} title="Classement" count={rankingCount}>
+                Vous ordonnez l&apos;ensemble des nommés, du plus concerné au moins concerné. La
+                charge revient à une position précise du classement final, signalée par un shooter.
+              </ModeCard>
+              <ModeCard glyph={<ChoiceGlyph />} title="Désignation" count={choiceCount}>
+                Vous désignez une seule personne. La charge revient à celle que le suffrage place en
+                tête, ou en queue, selon le règlement de la catégorie.
+              </ModeCard>
+            </div>
+
             <button
               type="button"
               onClick={() => setPage(1)}
-              className="from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 mt-2 rounded-full bg-gradient-to-b px-8 py-3 font-sans text-sm font-semibold shadow-lg transition"
+              className="from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 rounded-full bg-gradient-to-b px-8 py-3 font-sans text-sm font-semibold shadow-lg transition"
             >
-              Commencer →
+              Ouvrir le bulletin →
             </button>
           </div>
         )}
@@ -158,21 +319,40 @@ export function BallotForm({
                 {q.format === "ranking" ? "À classer" : "Choix unique"}
               </span>
               <span className="text-ivoire-faint font-sans text-xs">
-                Question {page} / {total}
+                Catégorie {page} sur {total}
               </span>
+              {draftError ? (
+                <span className="ml-auto font-sans text-[11px] text-red-300/90">
+                  Bulletin non conservé : {draftError}
+                </span>
+              ) : (
+                <span className="text-ivoire-faint ml-auto font-sans text-[11px]">
+                  {draftState === "saving"
+                    ? "Conservation…"
+                    : draftState === "saved"
+                      ? "Bulletin conservé"
+                      : ""}
+                </span>
+              )}
             </div>
             <h3 className="text-ivoire font-display text-2xl leading-tight font-semibold">
               {q.prompt}
             </h3>
-            <p className="text-ivoire-faint font-sans text-xs">
-              {q.format === "ranking"
-                ? "Glisse pour classer, du plus probable (en haut) au moins probable."
-                : "Choisis un joueur pour avancer."}
+            <p className="text-ivoire-muted font-sans text-xs leading-relaxed">
+              {q.format === "ranking" ? (
+                <>
+                  Du plus concerné en haut au moins concerné en bas. Le 🥃 signale la position
+                  qui devra s&apos;acquitter d&apos;un shooter au dépouillement.
+                </>
+              ) : (
+                "Désignez la personne qui correspond le plus à l&apos;énoncé."
+              )}
             </p>
             {q.format === "ranking" ? (
               <RankingQuestion
                 order={rankings[q.id] ?? []}
                 playerById={playerById}
+                drinkRule={q.drinkRule}
                 onReorder={(ids) => setRankings((r) => ({ ...r, [q.id]: ids }))}
               />
             ) : (
@@ -188,9 +368,9 @@ export function BallotForm({
         {/* Review + submit */}
         {page === reviewPage && (
           <div className="flex flex-col gap-4">
-            <h2 className="text-ivoire font-display text-3xl font-semibold">Révision</h2>
+            <h2 className="text-ivoire font-display text-3xl font-semibold">Récapitulatif</h2>
             <p className="text-ivoire-muted font-sans text-sm">
-              Vérifie tes réponses avant d&apos;envoyer.
+              Relisez votre bulletin. Le dépôt est irrévocable.
             </p>
             <ul className="flex flex-col gap-2">
               {questions.map((question, i) => {
@@ -238,7 +418,7 @@ export function BallotForm({
               {pending ? "Envoi…" : "Envoyer mes réponses"}
             </button>
             <p className="text-ivoire-faint text-center font-sans text-xs">
-              ⚠️ Définitif — tu ne pourras plus rien modifier après l&apos;envoi.
+              Le dépôt est irrévocable. Aucune modification ne sera possible par la suite.
             </p>
           </div>
         )}
@@ -282,10 +462,12 @@ export function BallotForm({
 function RankingQuestion({
   order,
   playerById,
+  drinkRule,
   onReorder,
 }: {
   order: string[];
   playerById: Map<string, Player>;
+  drinkRule: DrinkRule;
   onReorder: (ids: string[]) => void;
 }) {
   const sensors = useSensors(
@@ -309,7 +491,12 @@ function RankingQuestion({
           {order.map((id, i) => {
             const player = playerById.get(id);
             if (!player) return null;
-            return <SortableRow key={id} id={id} rank={i + 1} player={player} />;
+            // Le shooter va au 1er en « Gagnant boit », au dernier sinon.
+            const drinks =
+              drinkRule === "TOP_UNIQUE" ? i === 0 : i === order.length - 1;
+            return (
+              <SortableRow key={id} id={id} rank={i + 1} player={player} drinks={drinks} />
+            );
           })}
         </ol>
       </SortableContext>
@@ -317,7 +504,17 @@ function RankingQuestion({
   );
 }
 
-function SortableRow({ id, rank, player }: { id: string; rank: number; player: Player }) {
+function SortableRow({
+  id,
+  rank,
+  player,
+  drinks,
+}: {
+  id: string;
+  rank: number;
+  player: Player;
+  drinks: boolean;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
   });
@@ -330,7 +527,9 @@ function SortableRow({ id, rank, player }: { id: string; rank: number; player: P
     <li
       ref={setNodeRef}
       style={style}
-      className="border-or-400/15 bg-noir-900/40 flex items-center gap-3 rounded-lg border px-3 py-2"
+      className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${
+        drinks ? "border-or-400/50 bg-or-500/10" : "border-or-400/15 bg-noir-900/40"
+      }`}
     >
       <button
         type="button"
@@ -343,7 +542,12 @@ function SortableRow({ id, rank, player }: { id: string; rank: number; player: P
       </button>
       <span className="text-or-300 font-display w-5 text-center text-lg">{rank}</span>
       <Avatar player={player} />
-      <span className="text-ivoire font-sans text-sm">{player.display_name}</span>
+      <span className="text-ivoire flex-1 font-sans text-sm">{player.display_name}</span>
+      {drinks && (
+        <span className="text-base" title="Cette place cale le shooter">
+          🥃
+        </span>
+      )}
     </li>
   );
 }

@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { loadPresentation } from "@/lib/editions/presentation";
 import { loadEditionVoteReveal } from "@/lib/editions/drama";
+import { cascadeOf } from "@/lib/editions/reveal-order";
 import type { Category, RankRow } from "@/lib/editions/presentation-types";
 import { Avatar } from "@/components/avatar";
 
@@ -84,6 +85,10 @@ function RankList({
 
 function CategoryCard({ c }: { c: Category }) {
   const winners = c.players.filter((p) => p.isWinner);
+  // Même règle qu'en présentation (module partagé, pour qu'elles ne divergent
+  // jamais) : en TOP_UNIQUE le classement n'est qu'un artefact du décompte des
+  // voix — on n'affiche que les gagnant·e·s, déjà mis en avant en tête de carte.
+  const { rankingMatters } = cascadeOf(c.players);
   return (
     <section className="brunos-glass border-or-400/12 flex flex-col gap-5 rounded-3xl border p-6">
       <div className="flex items-center gap-4">
@@ -113,13 +118,18 @@ function CategoryCard({ c }: { c: Category }) {
 
       {c.players.length === 0 ? (
         <p className="text-ivoire-faint font-sans text-sm">
-          Personne n&apos;a voté dans cette catégorie.
+          Aucun suffrage exprimé dans cette catégorie.
         </p>
-      ) : (
+      ) : rankingMatters ? (
         <div className={`grid gap-6 ${c.jury.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
           <RankList title="Joueurs" rows={c.players} showDrinks />
           {c.jury.length > 0 && <RankList title="Entourage" rows={c.jury} showDrinks={false} />}
         </div>
+      ) : (
+        <p className="text-ivoire-faint font-sans text-sm">
+          Catégorie à désignation unique. Seul·e{winners.length > 1 ? "s" : ""} le·la lauréat·e
+          {winners.length > 1 ? "·s" : ""} s&apos;acquitte{winners.length > 1 ? "nt" : ""} d&apos;un shooter.
+        </p>
       )}
     </section>
   );
@@ -144,12 +154,21 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
 
   return (
     <main className="mx-auto w-full max-w-4xl px-6 py-12">
-      <Link
-        href="/archive"
-        className="text-ivoire-muted hover:text-or-300 font-sans text-sm transition"
-      >
-        ← Archive
-      </Link>
+      <div className="flex items-center gap-4">
+        <Link
+          href="/archive"
+          className="text-ivoire-muted hover:text-or-300 font-sans text-sm transition"
+        >
+          ← Archive
+        </Link>
+        <span className="text-ivoire-faint">·</span>
+        <Link
+          href="/account"
+          className="text-ivoire-muted hover:text-or-300 font-sans text-sm transition"
+        >
+          Accueil
+        </Link>
+      </div>
 
       <header className="mt-4 flex flex-col gap-2">
         <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">
@@ -168,7 +187,7 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
               href={`/archive/${id}/present`}
               className="from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 inline-flex rounded-full bg-gradient-to-b px-6 py-2.5 font-sans text-sm font-semibold shadow-lg transition"
             >
-              ▶ Rejouer la présentation
+              Revoir la présentation
             </Link>
           </div>
 
@@ -176,7 +195,7 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
             <StatTile value={totalDrinks} label="Gorgées au total" />
             <StatTile value={votedCategories} label="Catégories" />
             <StatTile value={recap.length} label="Joueurs" />
-            <StatTile value={topDrinker ? topDrinker.name : "—"} label="Plus arrosé" />
+            <StatTile value={topDrinker ? topDrinker.name : "—"} label="Plus forte consommation" />
           </div>
         </>
       )}
@@ -235,7 +254,7 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
             Révélations des votes
           </h2>
           <p className="text-ivoire-faint mt-1 font-sans text-sm">
-            Qui a voté pour qui — maintenant que la soirée est archivée.
+            Le détail des suffrages, la cérémonie étant close.
           </p>
           <div className="mt-5 flex flex-col gap-6">
             {reveal.categories
@@ -249,7 +268,7 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
                       className="brunos-glass border-or-400/30 rounded-xl border px-4 py-3"
                     >
                       <span className="text-or-300 font-sans text-sm font-medium">{d.title}</span>
-                      <span className="text-ivoire-muted font-sans text-sm"> — {d.detail}</span>
+                      <span className="text-ivoire-muted font-sans text-sm"> · {d.detail}</span>
                     </div>
                   ))}
                   {c.ballots.length > 0 && (

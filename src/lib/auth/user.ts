@@ -3,11 +3,22 @@ import type { Database } from "@/lib/types/database.types";
 
 export type Role = Database["public"]["Enums"]["user_role"];
 
+
+
 export type CurrentUser = {
   user: { id: string; email: string | undefined };
   role: Role;
   personId: string | null;
   name: string | null;
+  /**
+   * Accède à l'administration.
+   *
+   * Ne se déduit PAS du rôle seul : depuis les cercles, administrer est une
+   * appartenance (`circle_admins`) et non un rôle global. Un administrateur de
+   * cercle porte le rôle « player » — le tester aurait fermé la porte à tous
+   * ceux qui ne sont pas super-admins.
+   */
+  administers: boolean;
 };
 
 function personName(people: unknown): string | null {
@@ -38,10 +49,24 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     .eq("user_id", user.id)
     .single();
 
+  const role = profile?.role ?? "player";
+
+  // Administre-t-il au moins un cercle ? La politique de lecture de
+  // circle_admins n'expose que ses propres lignes, donc un simple compte suffit.
+  let administers = role === "super_admin";
+  if (!administers) {
+    const { count } = await supabase
+      .from("circle_admins")
+      .select("circle_id", { count: "exact", head: true })
+      .eq("user_id", user.id);
+    administers = (count ?? 0) > 0;
+  }
+
   return {
     user: { id: user.id, email: user.email },
-    role: profile?.role ?? "player",
+    role,
     personId: profile?.person_id ?? null,
     name: profile ? personName(profile.people) : null,
+    administers,
   };
 }

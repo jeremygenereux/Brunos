@@ -4,8 +4,8 @@ import { getCurrentUser, type Role } from "@/lib/auth/user";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CreatePersonForm } from "./create-person-form";
-import { RoleSelect } from "./role-select";
-import { renamePerson, deletePerson } from "./actions";
+import { PersonCard, type PersonView } from "./person-card";
+import { currentCircleId } from "@/lib/editions/circle";
 
 export const metadata: Metadata = { title: "Banque de joueurs" };
 
@@ -14,16 +14,42 @@ export default async function PeoplePage() {
   const supabase = await createClient();
   const current = await getCurrentUser();
 
-  const { data: people } = await supabase
+  // Cadré sur le cercle courant. Les fiches SANS cercle (inscription hors
+  // invitation) sont récupérées à part : sans cela elles n'apparaîtraient nulle
+  // part et resteraient orphelines pour toujours.
+  const circleId = await currentCircleId(supabase);
+  const { data: people } = circleId
+    ? await supabase
+        .from("people")
+        .select("id, display_name, auth_user_id, headshot_url, kind")
+        .eq("circle_id", circleId)
+        .order("display_name")
+    : { data: [] };
+
+  const { data: unaffiliated } = await supabase
     .from("people")
-    .select("id, display_name, auth_user_id")
+    .select("id, display_name, auth_user_id, headshot_url, kind")
+    .is("circle_id", null)
     .order("display_name");
+
+  const { data: circleAdmins } = circleId
+    ? await supabase.from("circle_admins").select("user_id").eq("circle_id", circleId)
+    : { data: [] };
+  const adminUserIds = new Set((circleAdmins ?? []).map((a) => a.user_id));
+
+  const { data: circleRow } = circleId
+    ? await supabase.from("circles").select("name").eq("id", circleId).maybeSingle()
+    : { data: null };
+  const circleName = circleRow?.name ?? "ce cercle";
 
   const { data: players } = await supabase.from("players").select("person_id");
   const editionCount = new Map<string, number>();
   for (const p of players ?? []) {
     editionCount.set(p.person_id, (editionCount.get(p.person_id) ?? 0) + 1);
   }
+
+  const { data: invites } = await supabase.from("person_invites").select("person_id, email");
+  const inviteByPerson = new Map((invites ?? []).map((i) => [i.person_id, i.email]));
 
   const { data: profiles } = await supabase.from("profiles").select("user_id, role, person_id");
   const accountByPerson = new Map(
@@ -32,128 +58,146 @@ export default async function PeoplePage() {
       .map((p) => [p.person_id as string, { role: p.role as Role, userId: p.user_id }]),
   );
 
-  // Emails are a best-effort enrichment (needs the service-role key).
+  // Enrichissement au mieux : nécessite la clé service-role. `usedByUser`
+  // sépare un compte réellement utilisé d'un compte créé par invitation mais
+  // jamais activé — c'est ce qui décide entre « inviter » et « relancer ».
   const emailByUser = new Map<string, string | undefined>();
+  const usedByUser = new Map<string, boolean>();
   if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
     try {
       const admin = createAdminClient();
       const { data } = await admin.auth.admin.listUsers();
-      for (const u of data?.users ?? []) emailByUser.set(u.id, u.email);
+      for (const u of data?.users ?? []) {
+        emailByUser.set(u.id, u.email);
+        usedByUser.set(u.id, Boolean(u.last_sign_in_at));
+      }
     } catch {
-      // no-op — fall back to account badge without email
+      // On se rabat sur l'affichage sans courriel.
     }
   }
 
-  const roster = people ?? [];
+  const views: PersonView[] = (people ?? []).map((p) => {
+    const account = accountByPerson.get(p.id) ?? null;
+    return {
+      id: p.id,
+      name: p.display_name ?? "Sans nom",
+      kind: (p.kind ?? "player") as "player" | "jury",
+      headshot: p.headshot_url,
+      editions: editionCount.get(p.id) ?? 0,
+      invitedEmail: inviteByPerson.get(p.id) ?? "",
+      account,
+      accountEmail: account ? emailByUser.get(account.userId) : undefined,
+      accountUsed: account ? (usedByUser.get(account.userId) ?? true) : false,
+      isSelf: account?.userId === current?.user.id,
+      isCircleAdmin: account ? adminUserIds.has(account.userId) : false,
+      unaffiliated: false,
+    };
+  });
+
+  const joueurs = views.filter((p) => p.kind === "player");
+  const proches = views.filter((p) => p.kind === "jury");
+  const orphelins: PersonView[] = (unaffiliated ?? []).map((p) => {
+    const account = accountByPerson.get(p.id) ?? null;
+    return {
+      id: p.id,
+      name: p.display_name ?? "Sans nom",
+      kind: (p.kind ?? "player") as "player" | "jury",
+      headshot: p.headshot_url,
+      editions: editionCount.get(p.id) ?? 0,
+      invitedEmail: inviteByPerson.get(p.id) ?? "",
+      account,
+      accountEmail: account ? emailByUser.get(account.userId) : undefined,
+      accountUsed: account ? (usedByUser.get(account.userId) ?? true) : false,
+      isSelf: account?.userId === current?.user.id,
+      isCircleAdmin: false,
+      unaffiliated: true,
+    };
+  });
 
   return (
     <main className="mx-auto w-full max-w-4xl px-6 py-10">
       <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">Admin</p>
-      <h1 className="text-ivoire font-display mt-2 text-4xl font-semibold">Banque de joueurs</h1>
-      <p className="text-ivoire-muted mt-1 font-sans text-sm">
-        L&apos;annuaire pérenne des personnes. On associe ces joueurs aux éditions — leur identité
-        (et leurs stats à vie) traverse les années.
+      <h1 className="text-ivoire font-display mt-2 text-4xl font-semibold">Le répertoire</h1>
+      <p className="text-ivoire-muted mt-1 max-w-2xl font-sans text-sm">
+        L&apos;annuaire permanent. Chaque personne conserve la même fiche d&apos;une cérémonie à
+        l&apos;autre : portrait, accès et statistiques.
       </p>
 
       <section className="mt-8">
         <CreatePersonForm />
       </section>
 
-      <section className="mt-10">
-        {roster.length === 0 ? (
-          <p className="border-or-400/10 text-ivoire-muted rounded-2xl border border-dashed px-6 py-10 text-center font-sans text-sm">
-            La banque est vide. Ajoute une première personne ci-dessus.
-          </p>
-        ) : (
-          <ul className="flex flex-col gap-2">
-            {roster.map((person) => {
-              const account = accountByPerson.get(person.id);
-              const editions = editionCount.get(person.id) ?? 0;
-              const email = account ? emailByUser.get(account.userId) : undefined;
-              const isSelf = account?.userId === current?.user.id;
-              return (
-                <li
-                  key={person.id}
-                  className="border-or-400/12 bg-noir-700/40 flex flex-col gap-3 rounded-2xl border px-5 py-4"
-                >
-                  <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex flex-col gap-0.5">
-                      <span className="text-ivoire font-sans font-medium">
-                        {person.display_name ?? "Sans nom"}
-                      </span>
-                      <span className="text-ivoire-faint font-sans text-xs">
-                        {account ? (
-                          <>
-                            <span className="text-or-300">Compte actif</span>
-                            {email ? ` · ${email}` : ""} ·{" "}
-                          </>
-                        ) : (
-                          "Sans compte · "
-                        )}
-                        {editions} édition{editions > 1 ? "s" : ""}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      {account ? (
-                        <RoleSelect personId={person.id} initial={account.role} isSelf={!!isSelf} />
-                      ) : (
-                        <span className="text-ivoire-faint font-sans text-xs">
-                          Nominé (sans compte)
-                        </span>
-                      )}
-                    </div>
-                  </div>
+      <Group
+        title="Joueurs"
+        count={joueurs.length}
+        hint="Susceptibles d'être nommés dans une cérémonie et de s'acquitter des charges au classement."
+        people={joueurs}
+        empty="Aucun joueur pour l&apos;instant."
+        circleId={circleId}
+        circleName={circleName}
+      />
 
-                  <details className="group">
-                    <summary className="text-ivoire-faint hover:text-or-300 w-fit cursor-pointer font-sans text-xs transition">
-                      Modifier
-                    </summary>
-                    <div className="mt-3 flex flex-wrap items-end gap-3">
-                      <form action={renamePerson} className="flex items-end gap-2">
-                        <input type="hidden" name="person_id" value={person.id} />
-                        <input
-                          name="name"
-                          defaultValue={person.display_name ?? ""}
-                          required
-                          className="border-or-400/20 bg-noir-900/60 text-ivoire focus:border-or-400/60 rounded-lg border px-3 py-1.5 font-sans text-sm outline-none"
-                        />
-                        <button
-                          type="submit"
-                          className="border-or-400/30 text-or-300 hover:bg-noir-900 rounded-lg border px-3 py-1.5 font-sans text-sm transition"
-                        >
-                          Renommer
-                        </button>
-                      </form>
-                      <form action={deletePerson}>
-                        <input type="hidden" name="person_id" value={person.id} />
-                        <button
-                          type="submit"
-                          disabled={editions > 0}
-                          title={
-                            editions > 0
-                              ? "Retire la personne de toutes les éditions avant de la supprimer"
-                              : undefined
-                          }
-                          className="rounded-lg border border-red-400/20 px-3 py-1.5 font-sans text-sm text-red-300/80 transition hover:bg-red-500/10 disabled:cursor-not-allowed disabled:opacity-40"
-                        >
-                          Supprimer
-                        </button>
-                      </form>
-                    </div>
-                  </details>
-                </li>
-              );
-            })}
-          </ul>
-        )}
-      </section>
+      <Group
+        title="Proches"
+        count={proches.length}
+        hint="Famille et proches. Leur suffrage est consultatif et ils ne sont jamais nommés. Le rattachement s'effectue depuis la fiche de la cérémonie."
+        people={proches}
+        empty="Aucun proche pour l&apos;instant."
+        circleId={circleId}
+        circleName={circleName}
+      />
 
-      {!process.env.SUPABASE_SERVICE_ROLE_KEY && (
-        <p className="text-ivoire-faint mt-6 font-sans text-xs">
-          Astuce : les comptes se créent quand une personne s&apos;inscrit puis rejoint via le lien
-          d&apos;invitation d&apos;une édition. Tu ajustes ensuite son rôle ici.
-        </p>
+      {orphelins.length > 0 && (
+        <Group
+          title="Sans cercle"
+          count={orphelins.length}
+          hint="Comptes créés sans invitation, rattachés à aucun cercle. Ils ne voient rien et ne sont visibles d'aucun administrateur de cercle tant qu'ils ne sont pas affiliés."
+          people={orphelins}
+          empty=""
+          circleId={circleId}
+          circleName={circleName}
+        />
       )}
     </main>
+  );
+}
+
+function Group({
+  title,
+  count,
+  hint,
+  people,
+  empty,
+  circleId,
+  circleName,
+}: {
+  title: string;
+  count: number;
+  hint: string;
+  people: PersonView[];
+  empty: string;
+  circleId: string | null;
+  circleName: string;
+}) {
+  return (
+    <section className="mt-12">
+      <div className="flex flex-wrap items-baseline gap-3">
+        <h2 className="text-ivoire font-display text-2xl font-semibold">{title}</h2>
+        <span className="text-or-300 font-sans text-sm tabular-nums">{count}</span>
+      </div>
+      <p className="text-ivoire-muted mt-1 max-w-2xl font-sans text-sm">{hint}</p>
+
+      {people.length === 0 ? (
+        <p className="border-or-400/10 text-ivoire-muted mt-4 rounded-2xl border border-dashed px-6 py-8 text-center font-sans text-sm">
+          {empty}
+        </p>
+      ) : (
+        <ul className="mt-4 flex flex-col gap-2">
+          {people.map((p) => (
+            <PersonCard key={p.id} person={p} circleId={circleId} circleName={circleName} />
+          ))}
+        </ul>
+      )}
+    </section>
   );
 }

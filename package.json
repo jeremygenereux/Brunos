@@ -21,6 +21,8 @@
     "db:reset": "supabase db reset",
     "db:diff": "supabase db diff -f",
     "db:types": "supabase gen types typescript --local > src/lib/types/database.types.ts",
+    "db:history": "node scripts/import-edition.mjs supabase/backfill/2024-printemps.json && node scripts/import-edition.mjs supabase/backfill/2024-automne.json && node scripts/import-edition.mjs supabase/backfill/2025.json",
+    "db:restore": "pnpm db:reset && pnpm db:history",
     "test": "vitest run",
     "test:watch": "vitest"
   },
@@ -31,6 +33,7 @@
     "@supabase/ssr": "^0.10.3",
     "@supabase/supabase-js": "^2.108.0",
     "clsx": "^2.1.1",
+    "framer-motion": "^12.41.0",
     "next": "16.2.7",
     "react": "19.2.4",
     "react-dom": "19.2.4",

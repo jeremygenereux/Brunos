@@ -33,10 +33,12 @@ export default async function PlayersPage({ params }: { params: Promise<{ id: st
     .eq("edition_id", id)
     .order("display_order");
 
-  // People in the bank not already nominated in this edition.
+  // Les personnes du répertoire pas encore nommées ici. On n'expose que les
+  // JOUEURS : un proche ne peut pas être nommé (garde en base également).
   const { data: bank } = await supabase
     .from("people")
     .select("id, display_name")
+    .eq("kind", "player")
     .order("display_name");
   const used = new Set((players ?? []).map((p) => p.person_id));
   const available = (bank ?? [])
@@ -54,9 +56,9 @@ export default async function PlayersPage({ params }: { params: Promise<{ id: st
 
       <h1 className="text-ivoire font-display mt-4 text-4xl font-semibold">Joueurs</h1>
       <p className="text-ivoire-muted mt-1 font-sans text-sm">
-        Les nominés de cette édition — pris dans la{" "}
+        Les nommés de cette soirée, choisis dans le{" "}
         <Link href="/admin/people" className="text-or-300 hover:text-or-400 transition">
-          banque de joueurs
+          répertoire
         </Link>
         , avec leur photo.
       </p>
@@ -68,7 +70,7 @@ export default async function PlayersPage({ params }: { params: Promise<{ id: st
       <section className="mt-10">
         {!players || players.length === 0 ? (
           <p className="border-or-400/10 text-ivoire-muted rounded-2xl border border-dashed px-6 py-10 text-center font-sans text-sm">
-            Aucun joueur pour l&apos;instant. Ajoute le premier ci-dessus.
+            Aucun joueur nommé. Ajoutez le premier ci-dessus.
           </p>
         ) : (
           <ul className="grid grid-cols-2 gap-4 sm:grid-cols-3">

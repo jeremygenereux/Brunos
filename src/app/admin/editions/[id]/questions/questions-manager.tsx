@@ -19,18 +19,16 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { reorderQuestions, deleteQuestion, setQuestionRule } from "./actions";
+import { DRINK_RULE_LABEL, type DrinkRule } from "@/lib/editions/drink-rule";
 
-type Rule = "ESCALATION" | "TOP_UNIQUE";
-type Question = { id: string; prompt: string; format: string; drink_rule_override: string | null };
+type Rule = DrinkRule;
+type Question = { id: string; prompt: string; format: string; drink_rule_override: Rule | null };
 
 const FORMAT_LABEL: Record<string, string> = {
   ranking: "Classement",
   single_choice: "Choix unique",
 };
-const RULE_LABEL: Record<string, string> = {
-  ESCALATION: "Escalade",
-  TOP_UNIQUE: "Top unique",
-};
+
 
 function FormatBadge({ format }: { format: string }) {
   return (
@@ -67,8 +65,8 @@ function RuleControl({
       onPointerDown={(e) => e.stopPropagation()}
       className="border-or-400/20 bg-noir-900/60 text-ivoire focus:border-or-400/60 shrink-0 rounded-lg border px-2 py-1 font-sans text-xs outline-none disabled:opacity-60"
     >
-      <option value="ESCALATION">Escalade</option>
-      <option value="TOP_UNIQUE">Top unique</option>
+      <option value="ESCALATION">{DRINK_RULE_LABEL.ESCALATION}</option>
+      <option value="TOP_UNIQUE">{DRINK_RULE_LABEL.TOP_UNIQUE}</option>
     </select>
   );
 }
@@ -123,7 +121,7 @@ export function QuestionsManager({
             <FormatBadge format={q.format} />
             <span className="text-ivoire flex-1 font-sans text-sm">{q.prompt}</span>
             <span className="text-or-300/70 shrink-0 font-sans text-xs">
-              {RULE_LABEL[q.drink_rule_override ?? editionRule]}
+              {DRINK_RULE_LABEL[q.drink_rule_override ?? editionRule]}
             </span>
           </li>
         ))}

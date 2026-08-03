@@ -48,7 +48,7 @@ export function RevealCurator({ editionId, items }: { editionId: string; items: 
   return (
     <section className="mt-12">
       <h2 className="text-or-400/80 font-sans text-xs tracking-[0.3em] uppercase">
-        Révélations & cartes drame
+        Révélations & déboules
       </h2>
       <p className="text-ivoire-muted mt-1 mb-5 font-sans text-sm">
         Aperçu de ce qui pourra être révélé en présentation et dans l&apos;archive. Active ou
@@ -72,8 +72,8 @@ export function RevealCurator({ editionId, items }: { editionId: string; items: 
                 <span className="text-ivoire-faint font-sans text-xs">
                   {item.ballotCount} bulletin{item.ballotCount > 1 ? "s" : ""}
                   {item.drama.length > 0
-                    ? ` · ${item.drama.length} carte${item.drama.length > 1 ? "s" : ""} drame`
-                    : " · aucun drame détecté"}
+                    ? ` · ${item.drama.length} déboule${item.drama.length > 1 ? "s" : ""}`
+                    : " · pas de déboule"}
                 </span>
               </div>
               <Toggle editionId={editionId} item={item} />
@@ -86,7 +86,7 @@ export function RevealCurator({ editionId, items }: { editionId: string; items: 
                     className="brunos-glass border-or-400/20 rounded-xl border px-3 py-2"
                   >
                     <span className="text-or-300 font-sans text-sm font-medium">{d.title}</span>
-                    <span className="text-ivoire-muted font-sans text-sm"> — {d.detail}</span>
+                    <span className="text-ivoire-muted font-sans text-sm"> · {d.detail}</span>
                   </div>
                 ))}
               </div>

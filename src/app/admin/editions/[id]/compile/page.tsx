@@ -153,8 +153,8 @@ export default async function CompilePage({ params }: { params: Promise<{ id: st
       </Link>
       <h1 className="text-ivoire font-display mt-4 text-4xl font-semibold">Compilation</h1>
       <p className="text-ivoire-muted mt-1 mb-8 font-sans text-sm">
-        Choisis le nombre de questions et laisse l&apos;égaliseur répartir les gorgées le plus
-        équitablement possible — puis ajuste à la main.
+        Fixez le nombre de catégories, laissez l&apos;égaliseur répartir les charges au mieux,
+        puis ajustez à la main.
       </p>
 
       {players.length === 0 || computed.length === 0 ? (

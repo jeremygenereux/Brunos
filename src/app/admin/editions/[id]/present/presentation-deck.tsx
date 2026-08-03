@@ -10,6 +10,8 @@ import type {
   RecapRow,
 } from "@/lib/editions/presentation-types";
 import { ArchiveButton } from "./archive-button";
+import { cascadeOf } from "@/lib/editions/reveal-order";
+import { ReactiveParticles, AwardCategoryReveal } from "@/components/award";
 
 export type { Category, RankRow, RecapRow };
 
@@ -38,6 +40,17 @@ function Avatar({ name, headshot, size }: { name: string; headshot: string | nul
 
 function Kicker({ children }: { children: React.ReactNode }) {
   return <p className="text-or-400/80 font-sans text-sm tracking-[0.4em] uppercase">{children}</p>;
+}
+
+/** RankRow → entrée de cascade pour le composant de révélation. */
+function toEntry(p: RankRow) {
+  return {
+    id: p.playerId,
+    name: p.name,
+    headshot: p.headshot,
+    rank: p.finalRank,
+    drinks: p.drinks,
+  };
 }
 
 export function PresentationDeck({
@@ -75,11 +88,15 @@ export function PresentationDeck({
   const containerRef = useRef<HTMLDivElement>(null);
   const [isFullscreen, setIsFullscreen] = useState(false);
 
+  // Étapes d'une catégorie : 0 = énoncé, 1 = cascade (classement + climax),
+  // 2 = déboules SI elles existent — pas de clic mort.
   const maxStepOf = useCallback(
     (s: number) => {
       const sl = slides[s];
       if (sl?.type !== "category") return 0;
-      return sl.cat.players.length > 0 && sl.cat.drama && sl.cat.drama.length > 0 ? 3 : 2;
+      if (sl.cat.players.length === 0) return 0;
+      const hasDrama = Boolean(sl.cat.drama && sl.cat.drama.length > 0);
+      return 1 + (hasDrama ? 1 : 0);
     },
     [slides],
   );
@@ -141,18 +158,22 @@ export function PresentationDeck({
   const isRules = currentSlide?.type === "rules";
   const isRecap = currentSlide?.type === "recap";
   const cat = currentSlide?.type === "category" ? currentSlide.cat : null;
-  const winners = cat ? cat.players.filter((p) => p.isWinner) : [];
+  const cascade = cascadeOf(cat?.players ?? []);
+  const { shooters, buildUp, penultimate } = cascade;
+  // Le classement de l'entourage est mis en pause : après la cascade, seules
+  // les déboules restent.
+  const dramaStep = 2;
   const noVotes = Boolean(cat && cat.players.length === 0);
   const maxTotal = recap.length ? Math.max(...recap.map((r) => r.total)) : 0;
 
   const announce = cat
     ? `Catégorie ${cat.index + 1} sur ${categories.length}. ${cat.prompt}` +
-      (step >= 1 && winners.length ? `. ${winners.map((w) => w.name).join(", ")}.` : "") +
-      (step >= 3 && cat.drama
+      (step >= 1 && shooters.length ? `. ${shooters.map((w) => w.name).join(", ")}.` : "") +
+      (step >= dramaStep && cat.drama
         ? ` ${cat.drama.map((d) => `${d.title}. ${d.detail}`).join(" ")}`
         : "")
     : isRecap
-      ? "Récapitulatif de la soirée."
+      ? "Relevéitulatif de la soirée."
       : isRules
         ? "Les règles de la soirée."
         : `${edition.name}.`;
@@ -164,6 +185,7 @@ export function PresentationDeck({
       className="bg-noir-900 text-ivoire fixed inset-0 z-50 cursor-pointer overflow-hidden select-none"
     >
       <div className="brunos-stage-glow" />
+      <ReactiveParticles pulseKey={`${slide}-${step}`} />
       <div className="sr-only" aria-live="polite" role="status">
         {announce}
       </div>
@@ -184,9 +206,9 @@ export function PresentationDeck({
             {cat
               ? `${cat.index + 1} / ${categories.length}`
               : isRecap
-                ? "Récap"
+                ? "Relevé"
                 : isRules
-                  ? "Règles"
+                  ? "Règlement"
                   : "Ouverture"}
           </span>
           <button
@@ -211,111 +233,65 @@ export function PresentationDeck({
               <p className="text-ivoire-muted font-sans text-lg">{edition.venueName}</p>
             )}
             <p className="text-ivoire-faint mt-6 font-sans text-sm">
-              Cliquez ou appuyez sur → pour commencer
+              Cliquez ou appuyez sur → pour ouvrir la cérémonie
             </p>
           </div>
         )}
 
         {isRules && (
           <div key="rules" className="brunos-fade flex max-w-2xl flex-col items-center gap-6">
-            <Kicker>Les règles</Kicker>
+            <Kicker>Règlement</Kicker>
             <h2 className="text-ivoire font-display text-4xl leading-tight font-semibold sm:text-5xl">
               {edition.drinkRule === "TOP_UNIQUE"
-                ? "Le ou la gagnant·e cale."
-                : "Plus bas tu finis, plus tu bois."}
+                ? "Le lauréat s'acquitte du shooter."
+                : "La charge revient au dernier rang."}
             </h2>
             <p className="text-ivoire-muted font-sans text-lg leading-relaxed">
               {edition.drinkRule === "TOP_UNIQUE" ? (
                 <>
-                  Pour chaque catégorie, seul·e le·la gagnant·e descend un shooter — soit{" "}
-                  <span className="text-or-300">{edition.shooterValue} gorgées</span>. Les ex æquo
-                  trinquent ensemble.
+                  Dans chaque catégorie, seul·e le·la lauréat·e s&apos;acquitte d&apos;un shooter,
+                  soit <span className="text-or-300">{edition.shooterValue} gorgées</span>. En cas
+                  d&apos;ex æquo, la charge est partagée.
                 </>
               ) : (
                 <>
-                  Pour chaque catégorie, on boit selon son rang : 1 gorgée pour la 1re place, 2 pour
-                  la 2e, et ainsi de suite. Le·la dernier·ère cale un shooter —{" "}
+                  Dans chaque catégorie, la consommation suit le rang : une gorgée pour la première
+                  place, deux pour la deuxième, et ainsi de suite. Le dernier rang s&apos;acquitte
+                  d&apos;un shooter, soit{" "}
                   <span className="text-or-300">{edition.shooterValue} gorgées</span>.
                 </>
               )}
             </p>
             <p className="text-or-400/60 font-sans text-sm tracking-[0.2em] uppercase">
-              Que le meilleur perde 🥃
+              Que le meilleur perde.
             </p>
           </div>
         )}
 
         {cat && (
-          <div
+          <AwardCategoryReveal
             key={`cat-${cat.questionId}`}
-            className="flex w-full max-w-5xl flex-col items-center gap-8"
+            kicker={`Catégorie ${cat.index + 1}`}
+            prompt={cat.prompt}
+            step={step}
+            buildUp={buildUp.map(toEntry)}
+            penultimate={penultimate ? toEntry(penultimate) : null}
+            shooters={shooters.map(toEntry)}
+            cascadeVisible={step >= 1 && step < dramaStep}
+            teaser={
+              shooters.length > 1
+                ? "Les Brunos reviennent à"
+                : "Le Bruno revient à"
+            }
+            noVotes={noVotes}
+            noVotesLabel="Aucun vote dans cette catégorie."
+            renderAvatar={(p, size) => <Avatar name={p.name} headshot={p.headshot} size={size} />}
           >
-            <div className="flex flex-col items-center gap-3">
-              <Kicker>Catégorie {cat.index + 1}</Kicker>
-              <h2 className="text-ivoire font-display max-w-3xl text-4xl leading-tight font-semibold sm:text-5xl">
-                {cat.prompt}
-              </h2>
-            </div>
 
-            {step === 0 && !noVotes && (
-              <p className="text-or-400/70 brunos-fade font-sans text-sm tracking-[0.3em] uppercase">
-                {winners.length > 1
-                  ? "… et les Brunos reviennent à …"
-                  : "… et le Bruno revient à …"}
-              </p>
-            )}
-
-            {noVotes && step === 0 && (
-              <p className="brunos-fade text-ivoire-muted font-sans text-base">
-                Personne n&apos;a voté dans cette catégorie 🤷
-              </p>
-            )}
-
-            {step >= 1 && step <= 2 && winners.length > 0 && (
-              <div
-                key={`winner-${cat.questionId}`}
-                className="brunos-winner flex flex-col items-center gap-4"
-              >
-                <div className="flex flex-wrap items-center justify-center gap-8">
-                  {winners.map((w) => (
-                    <div key={w.playerId} className="flex flex-col items-center gap-3">
-                      <div className="brunos-aura">
-                        <Avatar name={w.name} headshot={w.headshot} size={150} />
-                      </div>
-                      <span className="text-or-300 font-display text-3xl font-semibold sm:text-4xl">
-                        {w.name}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-                <span className="text-ivoire-faint font-sans text-xs tracking-[0.3em] uppercase">
-                  {winners.length > 1 ? "Remportent la catégorie" : "Remporte la catégorie"}
-                </span>
-              </div>
-            )}
-
-            {step >= 2 && cat.players.length > 0 && (
-              <div
-                key="full"
-                className={`grid w-full gap-8 ${
-                  cat.jury.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1"
-                }`}
-              >
-                <RankColumn title="Classement des joueurs" rows={cat.players} showDrinks />
-                {cat.jury.length > 0 && (
-                  <RankColumn
-                    title="Classement de l'entourage"
-                    rows={cat.jury}
-                    showDrinks={false}
-                  />
-                )}
-              </div>
-            )}
-
-            {step >= 3 && cat.drama && cat.drama.length > 0 && (
+            {step >= dramaStep && cat.drama && cat.drama.length > 0 && (
               <div key="drama" className="flex w-full max-w-2xl flex-col items-center gap-4">
                 <p className="text-or-400/70 font-sans text-xs tracking-[0.4em] uppercase">
-                  Carte drame
+                  {cat.drama.length > 1 ? "Déboules" : "Déboule"}
                 </p>
                 {cat.drama.map((d, i) => (
                   <div
@@ -329,7 +305,7 @@ export function PresentationDeck({
                 ))}
               </div>
             )}
-          </div>
+          </AwardCategoryReveal>
         )}
 
         {isRecap && (
@@ -337,8 +313,8 @@ export function PresentationDeck({
             key="recap"
             className="brunos-fade flex w-full max-w-2xl flex-col items-center gap-6"
           >
-            <Kicker>La note de la soirée</Kicker>
-            <h2 className="text-ivoire font-display text-5xl font-semibold">Qui a le plus bu</h2>
+            <Kicker>Relevé de la soirée</Kicker>
+            <h2 className="text-ivoire font-display text-5xl font-semibold">Consommation totale</h2>
             <ol className="mt-2 flex w-full flex-col gap-2">
               {recap.map((r, i) => {
                 const champ = r.total === maxTotal && maxTotal > 0;
@@ -357,7 +333,7 @@ export function PresentationDeck({
                     <span className="text-ivoire flex-1 text-left font-sans">{r.name}</span>
                     {champ && (
                       <span className="text-or-300 font-sans text-xs tracking-wide uppercase">
-                        🥃 Champion des gorgées
+                        Plus forte consommation
                       </span>
                     )}
                     <span className="text-or-300 font-display text-2xl tabular-nums">
@@ -372,11 +348,11 @@ export function PresentationDeck({
                 <ArchiveButton editionId={edition.id} />
               ) : edition.state === "ARCHIVED" ? (
                 <p className="text-ivoire-faint font-sans text-xs tracking-wide uppercase">
-                  Édition archivée — présentation publique
+                  Cérémonie archivée. La présentation est publique.
                 </p>
               ) : (
                 <p className="text-ivoire-faint font-sans text-xs tracking-wide uppercase">
-                  Aperçu — passez l&apos;édition « En direct » pour archiver depuis ici
+                  Aperçu. Passez la cérémonie « En direct » pour pouvoir archiver depuis cet écran.
                 </p>
               )}
             </div>
@@ -413,48 +389,6 @@ export function PresentationDeck({
   );
 }
 
-function RankColumn({
-  title,
-  rows,
-  showDrinks,
-}: {
-  title: string;
-  rows: RankRow[];
-  showDrinks: boolean;
-}) {
-  return (
-    <div className="flex flex-col gap-2">
-      <p className="text-or-400/70 mb-1 font-sans text-xs tracking-[0.25em] uppercase">{title}</p>
-      <ol className="flex flex-col gap-1.5">
-        {rows.map((r, i) => {
-          const shooter = showDrinks && Boolean(r.isShooter);
-          return (
-            <li
-              key={r.playerId}
-              className={`brunos-rise brunos-glass flex items-center gap-3 rounded-xl border px-4 py-2.5 ${
-                shooter ? "border-or-400/45 bg-or-500/10" : "border-or-400/12"
-              }`}
-              style={{ animationDelay: `${i * 70}ms` }}
-            >
-              <span className="text-ivoire-faint w-5 text-right font-sans text-sm tabular-nums">
-                {r.finalRank}
-              </span>
-              <Avatar name={r.name} headshot={r.headshot} size={36} />
-              <span className="text-ivoire flex-1 text-left font-sans text-sm">{r.name}</span>
-              {showDrinks && (
-                <span
-                  className={`font-sans text-sm tabular-nums ${
-                    shooter ? "text-or-300" : "text-ivoire-muted"
-                  }`}
-                >
-                  {shooter ? "🥃 " : ""}
-                  {r.drinks}
-                </span>
-              )}
-            </li>
-          );
-        })}
-      </ol>
-    </div>
-  );
-}
+// NOTE : le composant RankColumn (colonnes de classement joueurs / entourage)
+// a été retiré — la cascade dévoile désormais le classement des joueurs, et
+// l'affichage de l'entourage est mis en pause. Récupérable via git si besoin.

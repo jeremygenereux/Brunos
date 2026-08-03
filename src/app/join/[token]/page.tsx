@@ -35,7 +35,7 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
       <Shell>
         <h1 className="text-ivoire font-display text-3xl font-semibold">Rejoindre les Brunos</h1>
         <p className="text-ivoire-muted mt-2 font-sans text-sm">
-          Connecte-toi ou crée un compte pour rejoindre cette édition et voter.
+          Identifiez-vous ou créez votre accès pour prendre part au scrutin.
         </p>
         <div className="mt-6 flex flex-col gap-3">
           <Link
@@ -64,10 +64,11 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
       <Shell>
         <h1 className="text-ivoire font-display text-3xl font-semibold">Invitation invalide</h1>
         <p className="text-ivoire-muted mt-2 font-sans text-sm">
-          Ce lien ne correspond à aucune édition. Demande un lien à jour à l&apos;organisateur.
+          Ce lien ne correspond à aucune cérémonie. Veuillez en demander un nouveau à
+          l&apos;organisateur.
         </p>
         <Link href="/account" className="text-or-300 mt-6 inline-block font-sans text-sm">
-          ← Mon compte
+          ← Mon espace
         </Link>
       </Shell>
     );
@@ -81,10 +82,10 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
         </p>
         <h1 className="text-ivoire font-display mt-2 text-3xl font-semibold">{info.name}</h1>
         <p className="text-ivoire-muted mt-2 font-sans text-sm">
-          Tu participes déjà à cette édition.
+          Votre participation est déjà enregistrée.
         </p>
         <Link href="/account" className="text-or-300 mt-6 inline-block font-sans text-sm">
-          ← Mon compte
+          ← Mon espace
         </Link>
       </Shell>
     );
@@ -95,7 +96,7 @@ export default async function JoinPage({ params }: { params: Promise<{ token: st
       <p className="text-or-400/80 font-sans text-xs tracking-[0.3em] uppercase">Invitation</p>
       <h1 className="text-ivoire font-display mt-2 text-3xl font-semibold">{info.name}</h1>
       <p className="text-ivoire-muted mt-2 mb-6 font-sans text-sm">
-        Rejoins cette édition des Brunos pour voter.
+        Prenez part au scrutin de cette cérémonie.
       </p>
       <JoinForm token={token} players={info.players} />
     </Shell>

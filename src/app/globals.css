@@ -217,6 +217,24 @@ body {
   animation: brunos-fade 1.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
+/* Portraits en suspension sur l'écran d'ouverture du bulletin. Amplitude
+   volontairement faible : on cherche la respiration, pas le rebond. Chaque
+   portrait reçoit un délai différent pour éviter l'effet « métronome ». */
+@keyframes brunos-float {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.5rem);
+  }
+}
+
+.brunos-float {
+  animation: brunos-float 6s ease-in-out infinite;
+  will-change: transform;
+}
+
 /* « Liquid glass » card — glassmorphism for the presentation surfaces
    (spec §13). Uses the --glass-* tokens; pairs with a gold border class. */
 .brunos-glass {

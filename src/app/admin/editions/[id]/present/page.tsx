@@ -38,8 +38,8 @@ export default async function PresentPage({ params }: { params: Promise<{ id: st
   if (STATE_ORDER.indexOf(edition.state) < STATE_ORDER.indexOf("LOCKED")) {
     return (
       <Notice id={id} name={edition.name}>
-        La présentation devient disponible une fois l&apos;édition verrouillée (les résultats sont
-        figés au passage en « Verrouillée »).
+        La présentation s&apos;ouvre une fois la soirée verrouillée : c&apos;est à ce moment que
+        les résultats sont figés.
       </Notice>
     );
   }
@@ -53,7 +53,8 @@ export default async function PresentPage({ params }: { params: Promise<{ id: st
   if (!data.categories.some((c) => c.players.length > 0)) {
     return (
       <Notice id={id} name={edition.name}>
-        Aucun résultat à présenter — il faut des joueurs, des questions sélectionnées et des votes.
+        Rien à présenter pour l&apos;instant : il faut des joueurs, des questions retenues et des
+        votes.
       </Notice>
     );
   }
