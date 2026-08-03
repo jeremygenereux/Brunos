@@ -42,15 +42,6 @@ function Kicker({ children }: { children: React.ReactNode }) {
   return <p className="text-or-400/80 font-sans text-sm tracking-[0.4em] uppercase">{children}</p>;
 }
 
-/**
- * Podium COMPLÈTEMENT inversé : tout le classement, position par position,
- * ordonné pour que la ou les personnes qui CALENT arrivent en dernier (climax).
- * Dérivé du flag `isShooter`, déjà calculé selon la règle EFFECTIVE de la
- * question (`drink_rule_override` inclus) — donc juste dans les deux règles :
- *   • ESCALATION → le shooter est le·la dernier·ère : 1re position … dernière.
- *   • TOP_UNIQUE → le shooter est le·la gagnant·e : dernière position … 1re.
- * `players` arrive trié par finalRank croissant.
- */
 /** RankRow → entrée de cascade pour le composant de révélation. */
 function toEntry(p: RankRow) {
   return {
@@ -182,7 +173,7 @@ export function PresentationDeck({
         ? ` ${cat.drama.map((d) => `${d.title}. ${d.detail}`).join(" ")}`
         : "")
     : isRecap
-      ? "Récapitulatif de la soirée."
+      ? "Relevéitulatif de la soirée."
       : isRules
         ? "Les règles de la soirée."
         : `${edition.name}.`;
@@ -215,9 +206,9 @@ export function PresentationDeck({
             {cat
               ? `${cat.index + 1} / ${categories.length}`
               : isRecap
-                ? "Récap"
+                ? "Relevé"
                 : isRules
-                  ? "Règles"
+                  ? "Règlement"
                   : "Ouverture"}
           </span>
           <button
@@ -242,36 +233,37 @@ export function PresentationDeck({
               <p className="text-ivoire-muted font-sans text-lg">{edition.venueName}</p>
             )}
             <p className="text-ivoire-faint mt-6 font-sans text-sm">
-              Cliquez ou appuyez sur → pour commencer
+              Cliquez ou appuyez sur → pour ouvrir la cérémonie
             </p>
           </div>
         )}
 
         {isRules && (
           <div key="rules" className="brunos-fade flex max-w-2xl flex-col items-center gap-6">
-            <Kicker>Les règles</Kicker>
+            <Kicker>Règlement</Kicker>
             <h2 className="text-ivoire font-display text-4xl leading-tight font-semibold sm:text-5xl">
               {edition.drinkRule === "TOP_UNIQUE"
-                ? "Le ou la gagnant·e cale."
-                : "Plus bas tu finis, plus tu bois."}
+                ? "Le lauréat s'acquitte du shooter."
+                : "La charge revient au dernier rang."}
             </h2>
             <p className="text-ivoire-muted font-sans text-lg leading-relaxed">
               {edition.drinkRule === "TOP_UNIQUE" ? (
                 <>
-                  Pour chaque catégorie, seul·e le·la gagnant·e descend un shooter — soit{" "}
-                  <span className="text-or-300">{edition.shooterValue} gorgées</span>. Les ex æquo
-                  trinquent ensemble.
+                  Dans chaque catégorie, seul·e le·la lauréat·e s&apos;acquitte d&apos;un shooter,
+                  soit <span className="text-or-300">{edition.shooterValue} gorgées</span>. En cas
+                  d&apos;ex æquo, la charge est partagée.
                 </>
               ) : (
                 <>
-                  Pour chaque catégorie, on boit selon son rang : 1 gorgée pour la 1re place, 2 pour
-                  la 2e, et ainsi de suite. Le·la dernier·ère cale un shooter —{" "}
+                  Dans chaque catégorie, la consommation suit le rang : une gorgée pour la première
+                  place, deux pour la deuxième, et ainsi de suite. Le dernier rang s&apos;acquitte
+                  d&apos;un shooter, soit{" "}
                   <span className="text-or-300">{edition.shooterValue} gorgées</span>.
                 </>
               )}
             </p>
             <p className="text-or-400/60 font-sans text-sm tracking-[0.2em] uppercase">
-              Que le meilleur perde 🥃
+              Que le meilleur perde.
             </p>
           </div>
         )}
@@ -288,11 +280,11 @@ export function PresentationDeck({
             cascadeVisible={step >= 1 && step < dramaStep}
             teaser={
               shooters.length > 1
-                ? "… et les Brunos reviennent à …"
-                : "… et le Bruno revient à …"
+                ? "Les Brunos reviennent à"
+                : "Le Bruno revient à"
             }
             noVotes={noVotes}
-            noVotesLabel="Personne n'a voté dans cette catégorie 🤷"
+            noVotesLabel="Aucun vote dans cette catégorie."
             renderAvatar={(p, size) => <Avatar name={p.name} headshot={p.headshot} size={size} />}
           >
 
@@ -321,8 +313,8 @@ export function PresentationDeck({
             key="recap"
             className="brunos-fade flex w-full max-w-2xl flex-col items-center gap-6"
           >
-            <Kicker>La note de la soirée</Kicker>
-            <h2 className="text-ivoire font-display text-5xl font-semibold">Qui a le plus bu</h2>
+            <Kicker>Relevé de la soirée</Kicker>
+            <h2 className="text-ivoire font-display text-5xl font-semibold">Consommation totale</h2>
             <ol className="mt-2 flex w-full flex-col gap-2">
               {recap.map((r, i) => {
                 const champ = r.total === maxTotal && maxTotal > 0;
@@ -341,7 +333,7 @@ export function PresentationDeck({
                     <span className="text-ivoire flex-1 text-left font-sans">{r.name}</span>
                     {champ && (
                       <span className="text-or-300 font-sans text-xs tracking-wide uppercase">
-                        🥃 Champion des gorgées
+                        Plus forte consommation
                       </span>
                     )}
                     <span className="text-or-300 font-display text-2xl tabular-nums">
@@ -356,11 +348,11 @@ export function PresentationDeck({
                 <ArchiveButton editionId={edition.id} />
               ) : edition.state === "ARCHIVED" ? (
                 <p className="text-ivoire-faint font-sans text-xs tracking-wide uppercase">
-                  Édition archivée — présentation publique
+                  Cérémonie archivée. La proclamation est publique.
                 </p>
               ) : (
                 <p className="text-ivoire-faint font-sans text-xs tracking-wide uppercase">
-                  Aperçu — passez l&apos;édition « En direct » pour archiver depuis ici
+                  Aperçu. Passez la cérémonie « En direct » pour pouvoir archiver depuis cet écran.
                 </p>
               )}
             </div>

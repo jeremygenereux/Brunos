@@ -97,14 +97,15 @@ export default async function VotePage({ params }: { params: Promise<{ editionId
   const nameById = new Map(playerList.map((p) => [p.id, p.display_name]));
 
   return (
-    <main className="mx-auto w-full max-w-2xl px-6 py-10">
+    <main className="mx-auto w-full max-w-2xl px-6 py-6">
+      {/* Pas de titre d'édition : il n'y a jamais qu'un scrutin ouvert à la
+          fois, et cette place gagnée évite de faire défiler le bulletin. */}
       <Link
         href="/account"
         className="text-ivoire-muted hover:text-or-300 font-sans text-sm transition"
       >
-        ← Mon compte
+        ← Mon espace
       </Link>
-      <h1 className="text-ivoire font-display mt-4 text-4xl font-semibold">{edition.name}</h1>
 
       {submitted ? (
         <LockedBallot
@@ -114,11 +115,11 @@ export default async function VotePage({ params }: { params: Promise<{ editionId
         />
       ) : !open ? (
         <p className="border-or-400/15 bg-noir-700/40 text-ivoire-muted mt-6 rounded-2xl border px-6 py-10 text-center font-sans text-sm">
-          Le vote n&apos;est pas ouvert pour cette édition.
+          Le scrutin n&apos;est pas ouvert pour cette édition.
         </p>
       ) : playerList.length === 0 || questions.length === 0 ? (
         <p className="border-or-400/15 bg-noir-700/40 text-ivoire-muted mt-6 rounded-2xl border px-6 py-10 text-center font-sans text-sm">
-          Le bulletin n&apos;est pas encore prêt.
+          Le bulletin n&apos;est pas encore constitué.
         </p>
       ) : (
         <div className="mt-6">
@@ -144,7 +145,7 @@ function LockedBallot({
   return (
     <div className="mt-6 flex flex-col gap-5">
       <p className="brunos-glass border-or-400/30 text-or-300 rounded-2xl border px-5 py-4 font-sans text-sm">
-        ✓ Ton vote a été envoyé{when ? ` le ${when}` : ""}. Il est définitif — merci !
+        Bulletin déposé{when ? ` le ${when}` : ""}. Nous vous remercions.
       </p>
       {questions.map((q, i) => (
         <div key={q.id} className="border-or-400/12 bg-noir-700/40 rounded-2xl border p-5">

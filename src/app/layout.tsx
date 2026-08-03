@@ -21,7 +21,7 @@ export const metadata: Metadata = {
     default: "Les Brunos",
     template: "%s · Les Brunos",
   },
-  description: "Le gala annuel des Brunos — votes, classements et révélations en grand écran.",
+  description: "Le gala annuel des Brunos. Votes, classements et révélations en grand écran.",
 };
 
 export const viewport: Viewport = {

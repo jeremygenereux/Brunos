@@ -31,10 +31,12 @@ export async function createPerson(_prev: PeopleState, formData: FormData): Prom
   const email = normalizeEmail(formData.get("email"));
   if (email && invalidEmail(email)) return { error: "Courriel invalide." };
 
+  const kind = String(formData.get("kind") ?? "player") === "jury" ? "jury" : "player";
+
   const supabase = await createClient();
   const { data: person, error } = await supabase
     .from("people")
-    .insert({ display_name: name })
+    .insert({ display_name: name, kind })
     .select("id")
     .single();
   if (error) return { error: error.message };
@@ -213,6 +215,38 @@ export async function invitePerson(personId: string): Promise<PeopleState> {
     redirectTo: `${origin}/bienvenue`,
     data: { display_name: person.display_name },
   });
+  if (error) return { error: error.message };
+
+  revalidatePath("/admin/people");
+  return { error: null, success: true };
+}
+
+
+/**
+ * Bascule une personne entre « joueur » et « proche ».
+ *
+ * Un proche ne peut pas être nommé dans une édition (garde en base) : on
+ * refuse donc la bascule si la personne figure déjà comme nommée quelque part,
+ * plutôt que de laisser l'admin découvrir l'erreur plus tard.
+ */
+export async function setPersonKind(personId: string, kind: "player" | "jury"): Promise<PeopleState> {
+  await requireAdmin();
+  if (!personId) return { error: "Personne introuvable." };
+
+  const supabase = await createClient();
+  if (kind === "jury") {
+    const { count } = await supabase
+      .from("players")
+      .select("id", { count: "exact", head: true })
+      .eq("person_id", personId);
+    if ((count ?? 0) > 0) {
+      return {
+        error: `Impossible : cette personne est nommée dans ${count} édition${(count ?? 0) > 1 ? "s" : ""}. Retire-la d'abord.`,
+      };
+    }
+  }
+
+  const { error } = await supabase.from("people").update({ kind }).eq("id", personId);
   if (error) return { error: error.message };
 
   revalidatePath("/admin/people");

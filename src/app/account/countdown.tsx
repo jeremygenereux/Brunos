@@ -47,7 +47,7 @@ export function Countdown({ target }: { target: string }) {
 
   if (left <= 0) {
     return (
-      <p className="text-or-300 font-display text-2xl font-semibold">C&apos;est ce soir 🎉</p>
+      <p className="text-or-300 font-display text-2xl font-semibold">La cérémonie a lieu ce soir.</p>
     );
   }
 

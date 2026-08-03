@@ -2,7 +2,7 @@
 
 import { useActionState, useEffect, useRef } from "react";
 import { createPerson, type PeopleState } from "./actions";
-import { Input, Label, SubmitButton } from "@/components/ui";
+import { Input, Label, Select, SubmitButton } from "@/components/ui";
 
 const initialState: PeopleState = { error: null };
 
@@ -27,6 +27,13 @@ export function CreatePersonForm() {
       <div className="flex flex-1 flex-col gap-1.5">
         <Label htmlFor="email">Courriel d&apos;invitation (optionnel)</Label>
         <Input id="email" name="email" type="email" placeholder="prenom@exemple.com" />
+      </div>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="kind">Type</Label>
+        <Select id="kind" name="kind" defaultValue="player">
+          <option value="player">Joueur</option>
+          <option value="jury">Proche</option>
+        </Select>
       </div>
       <SubmitButton className="w-auto">Ajouter</SubmitButton>
       {state.error && <p className="font-sans text-sm text-red-300/90 sm:w-full">{state.error}</p>}

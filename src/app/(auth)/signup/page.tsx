@@ -16,7 +16,7 @@ export default async function SignupPage({
   return (
     <>
       <h1 className="text-ivoire font-display mb-1 text-3xl font-semibold">Créer un compte</h1>
-      <p className="text-ivoire-muted mb-6 font-sans text-sm">Rejoins la soirée des Brunos.</p>
+      <p className="text-ivoire-muted mb-6 font-sans text-sm">Création de votre accès.</p>
       <SignupForm next={next} />
     </>
   );

@@ -39,8 +39,8 @@ export default async function QuestionsPage({ params }: { params: Promise<{ id: 
       <h1 className="text-ivoire font-display mt-4 text-4xl font-semibold">Questions</h1>
       <p className="text-ivoire-muted mt-1 font-sans text-sm">
         {editable
-          ? "Crée tes catégories « who's most likely to » et réordonne-les par glisser-déposer. Tu peux en créer plus que ce qui sera présenté."
-          : "Les questions sont gelées : l'édition n'est plus en construction."}
+          ? "Rédigez les catégories et ordonnez-les par glisser-déposer. Vous pouvez en prévoir davantage que ce qui sera proclamé."
+          : "Les catégories sont figées : la cérémonie n'est plus en préparation."}
       </p>
 
       {editable && (

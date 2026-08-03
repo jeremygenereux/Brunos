@@ -30,13 +30,13 @@ export default async function ArchivePage() {
         href="/account"
         className="text-ivoire-muted hover:text-or-300 mb-6 inline-block font-sans text-sm transition"
       >
-        ← Accueil
+        ← Mon espace
       </Link>
       <header className="flex flex-col gap-2">
         <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">Les Brunos</p>
         <h1 className="text-ivoire font-display text-5xl font-semibold">Archive</h1>
         <p className="text-ivoire-muted font-sans text-sm">
-          Les galas passés — palmarès par catégorie et présentations rejouables.
+          Les cérémonies passées, leurs palmarès et leurs proclamations, consultables à volonté.
         </p>
       </header>
 
@@ -50,14 +50,14 @@ export default async function ArchivePage() {
       )}
 
       {list.length > 0 && (
-        <h2 className="text-ivoire font-display mt-14 text-3xl font-semibold">Les éditions</h2>
+        <h2 className="text-ivoire font-display mt-14 text-3xl font-semibold">Les cérémonies</h2>
       )}
 
       {list.length === 0 ? (
         <div className="border-or-400/15 bg-noir-700/40 mt-10 flex flex-col items-center gap-3 rounded-3xl border px-6 py-16 text-center">
           <p className="text-or-400/60 font-display text-2xl">À l&apos;année prochaine.</p>
           <p className="text-ivoire-muted font-sans text-sm">
-            L&apos;archive se remplira après la première soirée.
+            L&apos;archive s&apos;ouvrira après la première cérémonie.
           </p>
         </div>
       ) : (

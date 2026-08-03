@@ -118,7 +118,7 @@ function CategoryCard({ c }: { c: Category }) {
 
       {c.players.length === 0 ? (
         <p className="text-ivoire-faint font-sans text-sm">
-          Personne n&apos;a voté dans cette catégorie.
+          Aucun suffrage exprimé dans cette catégorie.
         </p>
       ) : rankingMatters ? (
         <div className={`grid gap-6 ${c.jury.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
@@ -127,8 +127,8 @@ function CategoryCard({ c }: { c: Category }) {
         </div>
       ) : (
         <p className="text-ivoire-faint font-sans text-sm">
-          Catégorie à choix unique — seul·e{winners.length > 1 ? "s" : ""} le·la gagnant·e
-          {winners.length > 1 ? "·s" : ""} cale{winners.length > 1 ? "nt" : ""} un shooter.
+          Catégorie à désignation unique. Seul·e{winners.length > 1 ? "s" : ""} le·la lauréat·e
+          {winners.length > 1 ? "·s" : ""} s&apos;acquitte{winners.length > 1 ? "nt" : ""} d&apos;un shooter.
         </p>
       )}
     </section>
@@ -187,7 +187,7 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
               href={`/archive/${id}/present`}
               className="from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 inline-flex rounded-full bg-gradient-to-b px-6 py-2.5 font-sans text-sm font-semibold shadow-lg transition"
             >
-              ▶ Rejouer la présentation
+              Revoir la proclamation
             </Link>
           </div>
 
@@ -195,7 +195,7 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
             <StatTile value={totalDrinks} label="Gorgées au total" />
             <StatTile value={votedCategories} label="Catégories" />
             <StatTile value={recap.length} label="Joueurs" />
-            <StatTile value={topDrinker ? topDrinker.name : "—"} label="Plus arrosé" />
+            <StatTile value={topDrinker ? topDrinker.name : "—"} label="Plus forte consommation" />
           </div>
         </>
       )}
@@ -254,7 +254,7 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
             Révélations des votes
           </h2>
           <p className="text-ivoire-faint mt-1 font-sans text-sm">
-            Qui a voté pour qui — maintenant que la soirée est archivée.
+            Le détail des suffrages, la cérémonie étant close.
           </p>
           <div className="mt-5 flex flex-col gap-6">
             {reveal.categories
@@ -268,7 +268,7 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
                       className="brunos-glass border-or-400/30 rounded-xl border px-4 py-3"
                     >
                       <span className="text-or-300 font-sans text-sm font-medium">{d.title}</span>
-                      <span className="text-ivoire-muted font-sans text-sm"> — {d.detail}</span>
+                      <span className="text-ivoire-muted font-sans text-sm"> · {d.detail}</span>
                     </div>
                   ))}
                   {c.ballots.length > 0 && (

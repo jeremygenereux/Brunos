@@ -18,7 +18,7 @@ export function JoinForm({ token, players }: { token: string; players: Player[] 
 
       <fieldset className="flex flex-col gap-2">
         <legend className="text-ivoire-muted mb-1 font-sans text-xs tracking-wider uppercase">
-          Tu participes comme
+          Vous participez à titre de
         </legend>
         <label className="border-or-400/20 bg-noir-900/40 flex cursor-pointer items-start gap-3 rounded-lg border p-3">
           <input
@@ -32,7 +32,7 @@ export function JoinForm({ token, players }: { token: string; players: Player[] 
           <span className="font-sans text-sm">
             <span className="text-ivoire">Joueur</span>
             <span className="text-ivoire-muted block text-xs">
-              Tu es nominé : ton vote est officiel et tu peux devoir boire.
+              Vous êtes nommé·e : votre suffrage est officiel et vous êtes soumis·e aux charges.
             </span>
           </span>
         </label>
@@ -48,7 +48,7 @@ export function JoinForm({ token, players }: { token: string; players: Player[] 
           <span className="font-sans text-sm">
             <span className="text-ivoire">Jury / entourage</span>
             <span className="text-ivoire-muted block text-xs">
-              Tu votes pour le drame, mais ça ne fait boire personne.
+              Votre suffrage est consultatif : il ne fait boire personne.
             </span>
           </span>
         </label>
@@ -57,7 +57,7 @@ export function JoinForm({ token, players }: { token: string; players: Player[] 
       {kind === "jury" && (
         <div className="flex flex-col gap-4">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="linked_player">Tu es proche de quel joueur ?</Label>
+            <Label htmlFor="linked_player">À quel joueur êtes-vous rattaché·e ?</Label>
             <Select id="linked_player" name="linked_player" required defaultValue="">
               <option value="" disabled>
                 Choisir un joueur…
@@ -70,7 +70,7 @@ export function JoinForm({ token, players }: { token: string; players: Player[] 
             </Select>
           </div>
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="relation">Ton lien</Label>
+            <Label htmlFor="relation">Lien de parenté</Label>
             <Input id="relation" name="relation" required placeholder="Mère de Raphaël" />
           </div>
         </div>

@@ -19,11 +19,11 @@ export function LifetimeBoard({
 
   return (
     <section>
-      <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">Inter-éditions</p>
-      <h2 className="text-ivoire font-display mt-2 text-3xl font-semibold">Le palmarès à vie</h2>
+      <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">Toutes cérémonies</p>
+      <h2 className="text-ivoire font-display mt-2 text-3xl font-semibold">Palmarès général</h2>
       <p className="text-ivoire-muted mt-1 font-sans text-sm">
-        Cumul sur {editionsCount} édition{editionsCount > 1 ? "s" : ""} archivée
-        {editionsCount > 1 ? "s" : ""}. Clique sur quelqu&apos;un pour voir sa fiche complète.
+        Cumul sur {editionsCount} cérémonie{editionsCount > 1 ? "s" : ""} archivée
+        {editionsCount > 1 ? "s" : ""}. Chaque nom ouvre une fiche détaillée.
       </p>
 
       <ol className="mt-5 flex flex-col gap-2">
@@ -46,7 +46,7 @@ export function LifetimeBoard({
                   {d.name}
                 </span>
                 <span className="text-ivoire-faint font-sans text-xs">
-                  {d.titleCount} titre{d.titleCount > 1 ? "s" : ""} · {d.editionCount} édition
+                  {d.titleCount} titre{d.titleCount > 1 ? "s" : ""} · {d.editionCount} cérémonie
                   {d.editionCount > 1 ? "s" : ""}
                 </span>
               </div>
@@ -79,13 +79,13 @@ export function FunAwards({ awards }: { awards: FunAward[] }) {
   return (
     <section>
       <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">
-        Les trophées officieux
+        Distinctions honorifiques
       </p>
       <h2 className="text-ivoire font-display mt-2 text-3xl font-semibold">
-        Ce que les bulletins racontent
+        Ce que révèlent les bulletins
       </h2>
       <p className="text-ivoire-muted mt-1 font-sans text-sm">
-        Lu entre les lignes des votes de toutes les éditions archivées.
+        Établies d&apos;après l&apos;ensemble des scrutins archivés.
       </p>
 
       <ul className="mt-5 grid gap-3 sm:grid-cols-2">

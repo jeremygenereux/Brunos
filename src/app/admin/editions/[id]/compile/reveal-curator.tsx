@@ -86,7 +86,7 @@ export function RevealCurator({ editionId, items }: { editionId: string; items: 
                     className="brunos-glass border-or-400/20 rounded-xl border px-3 py-2"
                   >
                     <span className="text-or-300 font-sans text-sm font-medium">{d.title}</span>
-                    <span className="text-ivoire-muted font-sans text-sm"> — {d.detail}</span>
+                    <span className="text-ivoire-muted font-sans text-sm"> · {d.detail}</span>
                   </div>
                 ))}
               </div>

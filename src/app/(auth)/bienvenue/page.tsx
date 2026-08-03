@@ -18,10 +18,10 @@ export default async function BienvenuePage() {
     <>
       <p className="text-or-400/80 font-sans text-xs tracking-[0.3em] uppercase">Bienvenue</p>
       <h1 className="text-ivoire font-display mt-2 mb-1 text-3xl font-semibold">
-        {current.name ? `Salut, ${current.name}` : "Salut"}
+        {current.name ? `Bienvenue, ${current.name}` : "Bienvenue"}
       </h1>
       <p className="text-ivoire-muted mb-6 font-sans text-sm">
-        Dernière étape : choisis un mot de passe pour accéder à ton espace Brunos.
+        Il ne reste qu&apos;à définir votre mot de passe.
       </p>
       <WelcomeForm />
     </>

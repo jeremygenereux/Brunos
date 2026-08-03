@@ -12,7 +12,7 @@ export function WelcomeForm() {
   return (
     <form action={formAction} className="flex flex-col gap-4">
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="password">Choisis ton mot de passe</Label>
+        <Label htmlFor="password">Mot de passe</Label>
         <Input
           id="password"
           name="password"
@@ -24,7 +24,7 @@ export function WelcomeForm() {
         />
       </div>
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="confirm">Confirme-le</Label>
+        <Label htmlFor="confirm">Confirmation</Label>
         <Input
           id="confirm"
           name="confirm"
@@ -35,7 +35,7 @@ export function WelcomeForm() {
         />
       </div>
       {state.error && <p className="font-sans text-sm text-red-300/90">{state.error}</p>}
-      <SubmitButton>Entrer</SubmitButton>
+      <SubmitButton>Valider</SubmitButton>
     </form>
   );
 }

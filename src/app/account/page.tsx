@@ -46,17 +46,17 @@ function ctaFor(e: Edition): { label: string; href?: string; primary?: boolean }
   switch (e.state) {
     case "SENT_FOR_VOTE":
       return deadlinePassed
-        ? { label: "Le vote est fermé" }
-        : { label: "Voter maintenant", href: `/vote/${e.id}`, primary: true };
+        ? { label: "Scrutin clos" }
+        : { label: "Accéder au scrutin", href: `/vote/${e.id}`, primary: true };
     case "CONSTRUCTION":
-      return { label: "L'édition se prépare" };
+      return { label: "Cérémonie en préparation" };
     case "COMPILATION":
     case "LOCKED":
-      return { label: "Les résultats se préparent" };
+      return { label: "Dépouillement en cours" };
     case "LIVE":
-      return { label: "C'est ce soir 🎉" };
+      return { label: "Ce soir" };
     default:
-      return { label: "Voir les résultats", href: `/archive/${e.id}`, primary: true };
+      return { label: "Consulter le palmarès", href: `/archive/${e.id}`, primary: true };
   }
 }
 
@@ -137,7 +137,7 @@ export default async function AccountPage() {
         <div className="flex items-center gap-4 font-sans text-sm">
           {current.role === "admin" && (
             <Link href="/admin/editions" className="text-or-300 hover:text-or-400 transition">
-              Espace admin →
+              Administration →
             </Link>
           )}
           <form action={signOut}>
@@ -166,18 +166,17 @@ export default async function AccountPage() {
           ) : (
             <section className="border-or-400/15 bg-noir-700/40 relative flex min-h-[22rem] flex-col items-center justify-center gap-4 overflow-hidden rounded-3xl border p-10 text-center backdrop-blur-md">
               <span className="text-or-400/60 font-display text-3xl">
-                À l&apos;année prochaine.
+                À l&apos;an prochain.
               </span>
               <p className="text-ivoire-muted max-w-sm font-sans text-sm">
-                Aucune édition des Brunos à l&apos;horizon pour l&apos;instant. La prochaine
-                apparaîtra ici dès que tu y seras inscrit·e.
+                Aucune cérémonie annoncée. La prochaine paraîtra ici dès votre inscription.
               </p>
               {archived.length > 0 && (
                 <Link
                   href={`/archive/${archived[0].id}`}
                   className="text-or-300 hover:text-or-400 mt-2 font-sans text-sm transition"
                 >
-                  Revoir la dernière soirée →
+                  Revoir la dernière cérémonie →
                 </Link>
               )}
             </section>
@@ -192,28 +191,27 @@ export default async function AccountPage() {
           <Panel title="Palmarès">
             {drinkers.length === 0 ? (
               <p className="text-ivoire-faint font-sans text-sm">
-                Les statistiques arriveront après la première soirée.
+                Le palmarès s&apos;établira après la première cérémonie.
               </p>
             ) : (
               <div className="flex flex-col gap-4">
                 {me ? (
                   <div className="flex flex-col gap-2">
                     <span className="text-ivoire-faint font-sans text-xs tracking-wide uppercase">
-                      🥃 Tes gorgées à vie
+                      Vos gorgées à ce jour
                     </span>
                     <div className="flex items-baseline gap-2">
                       <span className="text-or-300 font-display text-5xl leading-none tabular-nums">
                         {me.totalDrinks}
                       </span>
                       <span className="text-ivoire-faint font-sans text-xs">
-                        sur {me.editionCount} édition{me.editionCount > 1 ? "s" : ""}
+                        en {me.editionCount} cérémonie{me.editionCount > 1 ? "s" : ""}
                       </span>
                     </div>
                     <p className="text-ivoire-muted font-sans text-sm">
                       {myIndex === 0 ? (
                         <>
-                          Tu es <span className="text-or-300">en tête</span> du classement des
-                          gorgées.
+                          Vous êtes en tête du classement.
                         </>
                       ) : (
                         <>
@@ -236,7 +234,7 @@ export default async function AccountPage() {
                     <div className="flex items-baseline justify-between gap-3">
                       <div className="flex flex-col">
                         <span className="text-ivoire-faint font-sans text-xs tracking-wide uppercase">
-                          🥃 A le plus bu
+                          Plus forte consommation
                         </span>
                         <span className="text-ivoire font-display text-2xl font-semibold">
                           {topDrinker.name}
@@ -249,14 +247,14 @@ export default async function AccountPage() {
                   )
                 )}
                 <p className="text-ivoire-faint font-sans text-xs">
-                  Sur {editionsCount} édition{editionsCount > 1 ? "s" : ""} archivée
+                  Sur {editionsCount} soirée{editionsCount > 1 ? "s" : ""} archivée
                   {editionsCount > 1 ? "s" : ""}.
                 </p>
                 <Link
                   href="/archive"
                   className="text-or-300 hover:text-or-400 font-sans text-sm transition"
                 >
-                  Tout le palmarès →
+                  Le palmarès complet →
                 </Link>
               </div>
             )}
@@ -296,7 +294,7 @@ function UpcomingCard({
 
       <div className="relative flex flex-wrap items-center gap-3">
         <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">
-          Prochaine soirée
+          Prochaine cérémonie
         </p>
         <StateBadge state={edition.state} />
       </div>
@@ -309,10 +307,10 @@ function UpcomingCard({
       </div>
 
       <dl className="relative grid grid-cols-1 gap-x-8 gap-y-3 font-sans text-sm sm:grid-cols-2">
-        <Fact label="Quand" value={fmtDate(edition.event_at) ?? "À confirmer"} />
-        <Fact label="Où" value={edition.venue_name ?? "À confirmer"} />
+        <Fact label="Date" value={fmtDate(edition.event_at) ?? "À confirmer"} />
+        <Fact label="Lieu" value={edition.venue_name ?? "À confirmer"} />
         {edition.venue_address && <Fact label="Adresse" value={edition.venue_address} />}
-        <Fact label="Tu participes comme" value={kind === "jury" ? "Entourage" : "Joueur"} />
+        <Fact label="Vous y siégez comme" value={kind === "jury" ? "Entourage" : "Joueur"} />
       </dl>
 
       {edition.description && (
@@ -351,13 +349,13 @@ function UpcomingCard({
               className="border-or-400/30 text-or-300 hover:bg-noir-900 inline-flex items-center gap-2 rounded-full border px-6 py-3 font-sans text-sm transition"
             >
               <AppleLogo />
-              Voir mon invitation
+              Consulter l&apos;invitation
             </a>
           )}
 
           {showDeadline && edition.vote_deadline && (
             <span className="text-ivoire-faint font-sans text-xs">
-              Date limite : {fmtDateTime(edition.vote_deadline)}
+              Scrutin ouvert jusqu&apos;au {fmtDateTime(edition.vote_deadline)}
             </span>
           )}
         </div>

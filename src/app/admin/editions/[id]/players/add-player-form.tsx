@@ -34,7 +34,7 @@ export function AddPlayerForm({
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="person_id">Depuis la banque</Label>
           <Select id="person_id" name="person_id" defaultValue="">
-            <option value="">— choisir une personne —</option>
+            <option value="">Choisir une personne…</option>
             {available.map((p) => (
               <option key={p.id} value={p.id}>
                 {p.name}

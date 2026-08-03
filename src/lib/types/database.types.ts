@@ -34,6 +34,55 @@ export type Database = {
   }
   public: {
     Tables: {
+      edition_entourage: {
+        Row: {
+          created_at: string
+          edition_id: string
+          linked_player_id: string
+          person_id: string
+          relation_label: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          edition_id: string
+          linked_player_id: string
+          person_id: string
+          relation_label: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          edition_id?: string
+          linked_player_id?: string
+          person_id?: string
+          relation_label?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edition_entourage_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edition_entourage_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edition_entourage_player_fk"
+            columns: ["linked_player_id", "edition_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id", "edition_id"]
+          },
+        ]
+      }
       editions: {
         Row: {
           created_at: string
@@ -191,6 +240,7 @@ export type Database = {
           display_name: string
           headshot_url: string | null
           id: string
+          kind: Database["public"]["Enums"]["participant_kind"]
           updated_at: string
         }
         Insert: {
@@ -199,6 +249,7 @@ export type Database = {
           display_name: string
           headshot_url?: string | null
           id?: string
+          kind?: Database["public"]["Enums"]["participant_kind"]
           updated_at?: string
         }
         Update: {
@@ -207,6 +258,7 @@ export type Database = {
           display_name?: string
           headshot_url?: string | null
           id?: string
+          kind?: Database["public"]["Enums"]["participant_kind"]
           updated_at?: string
         }
         Relationships: []

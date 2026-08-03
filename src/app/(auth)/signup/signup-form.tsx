@@ -13,9 +13,9 @@ export function SignupForm({ next }: { next?: string }) {
   if (state.success) {
     return (
       <p className="text-ivoire-muted text-center font-sans text-sm">
-        Presque ! Vérifie ta boîte courriel pour confirmer ton inscription, puis{" "}
+        Un courriel de confirmation vient de vous être adressé. Confirmez votre inscription, puis{" "}
         <Link href="/login" className="text-or-400 hover:text-or-300">
-          connecte-toi
+          identifiez-vous
         </Link>
         .
       </p>
@@ -43,7 +43,7 @@ export function SignupForm({ next }: { next?: string }) {
           type="email"
           autoComplete="email"
           required
-          placeholder="toi@exemple.com"
+          placeholder="vous@exemple.com"
         />
       </div>
       <div className="flex flex-col gap-1.5">
@@ -60,7 +60,7 @@ export function SignupForm({ next }: { next?: string }) {
 
       {state.error && <p className="font-sans text-sm text-red-300/90">{state.error}</p>}
 
-      <SubmitButton>Créer mon compte</SubmitButton>
+      <SubmitButton>Créer mon accès</SubmitButton>
 
       <p className="text-ivoire-muted text-center font-sans text-sm">
         Déjà inscrit ?{" "}

@@ -109,6 +109,9 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
         <Link href={`/admin/editions/${edition.id}/questions`} className={SECONDARY}>
           Questions
         </Link>
+        <Link href={`/admin/editions/${edition.id}/entourage`} className={SECONDARY}>
+          Entourage
+        </Link>
         {edition.state === "COMPILATION" && (
           <Link href={`/admin/editions/${edition.id}/compile`} className={PRIMARY}>
             Compiler →
@@ -136,18 +139,18 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
           Lien d&apos;invitation
         </h2>
         <p className="text-ivoire-muted mb-3 font-sans text-sm">
-          Partage ce lien pour que joueurs et jury rejoignent l&apos;édition.
+          Transmettez ce lien aux joueurs et aux proches pour qu&apos;ils rejoignent la cérémonie.
         </p>
         <InviteLink token={edition.invite_token} />
       </section>
 
       <section className="mt-10">
         <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
-          Participants & invitations Apple
+          Participants et invitations Apple
         </h2>
         <p className="text-ivoire-muted mb-3 font-sans text-sm">
-          Colle le lien Apple Invitation personnalisé de chaque invité·e ; il ou elle verra un
-          bouton « Voir mon invitation » sur son accueil.
+          Renseignez le lien Apple Invitation de chaque invité·e. Un bouton « Consulter
+          l&apos;invitation » apparaîtra sur son espace.
         </p>
         <ParticipantsManager participants={participants} />
       </section>
@@ -155,11 +158,11 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
       {STATE_ORDER.indexOf(edition.state) >= STATE_ORDER.indexOf("SENT_FOR_VOTE") && (
         <section className="mt-10">
           <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
-            Suivi du vote
+            Suivi du scrutin
           </h2>
           <p className="text-ivoire-muted mb-3 font-sans text-sm">
-            Qui a déposé son bulletin. Le détail des bulletins n&apos;est visible que de
-            l&apos;admin — à n&apos;ouvrir que pour vérifier une incohérence.
+            État des dépôts. Le détail des bulletins reste réservé à l&apos;administration : à
+            n&apos;ouvrir qu&apos;en cas d&apos;anomalie.
           </p>
           <VoteTracker editionId={edition.id} />
         </section>
@@ -167,7 +170,7 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
 
       <section className="mt-10">
         <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
-          État de l&apos;édition
+          État de la cérémonie
         </h2>
         {next ? (
           <TransitionControl
@@ -179,7 +182,7 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
           />
         ) : (
           <p className="text-ivoire-muted font-sans text-sm">
-            Édition archivée — les résultats sont publics et l&apos;édition est close.
+            Cérémonie archivée. Les résultats sont publics et la cérémonie est close.
           </p>
         )}
 
@@ -190,8 +193,8 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
         {STATE_ORDER.indexOf(edition.state) >= STATE_ORDER.indexOf("COMPILATION") && (
           <div className="border-or-400/12 mt-5 flex flex-col gap-2 rounded-xl border px-4 py-3">
             <p className="text-ivoire-muted font-sans text-xs">
-              Une donnée a changé depuis le verrouillage (valeur du shooter, règle, questions
-              sélectionnées, bulletins) ? Recalcule les classements figés sans toucher à
+              Si une donnée a changé depuis le verrouillage (valeur du shooter, règlement,
+              catégories retenues, bulletins), recalculez les classements sans modifier
               l&apos;état.
             </p>
             <RecompileButton editionId={edition.id} />

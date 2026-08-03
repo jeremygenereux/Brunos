@@ -16,7 +16,7 @@ export default async function LoginPage({
   return (
     <>
       <h1 className="text-ivoire font-display mb-1 text-3xl font-semibold">Connexion</h1>
-      <p className="text-ivoire-muted mb-6 font-sans text-sm">Accède à ton espace Brunos.</p>
+      <p className="text-ivoire-muted mb-6 font-sans text-sm">Veuillez vous identifier.</p>
       <LoginForm next={next} />
     </>
   );

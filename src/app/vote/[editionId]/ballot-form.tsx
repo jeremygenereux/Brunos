@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { useState, useTransition } from "react";
+import { useEffect, useRef, useState, useTransition } from "react";
 import {
   DndContext,
   closestCenter,
@@ -19,8 +19,8 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { submitBallot, type BallotResult } from "./actions";
-import { DRINK_RULE_LABEL, type DrinkRule } from "@/lib/editions/drink-rule";
+import { saveDraft, submitBallot, type BallotResult } from "./actions";
+import type { DrinkRule } from "@/lib/editions/drink-rule";
 
 type Player = { id: string; display_name: string; headshot_url: string | null };
 type Question = {
@@ -31,50 +31,6 @@ type Question = {
   initialRanking: string[];
   initialChoice: string;
 };
-
-/**
- * L'enjeu de la catégorie, dit sans détour.
- *
- * On classe TOUJOURS du plus concerné (en haut) au moins concerné. Ce qui
- * change d'une catégorie à l'autre, c'est qui trinque au bout — et ça, le
- * votant doit le savoir avant de classer, sinon il vote à l'aveugle.
- *
- * Nuance importante : c'est le classement COLLECTIF final qui décide, pas le
- * bulletin de la personne. On le formule donc ainsi.
- */
-function StakeNotice({ rule, format }: { rule: DrinkRule; format: string }) {
-  const winnerDrinks = rule === "TOP_UNIQUE";
-  return (
-    <div
-      className={`flex flex-col gap-1 rounded-xl border px-4 py-3 ${
-        winnerDrinks ? "border-or-400/35 bg-or-500/10" : "border-or-400/20 bg-noir-900/40"
-      }`}
-    >
-      <span className="text-or-300 font-sans text-[11px] tracking-[0.25em] uppercase">
-        🥃 {DRINK_RULE_LABEL[rule]}
-      </span>
-      <p className="text-ivoire font-sans text-xs leading-relaxed">
-        {winnerDrinks ? (
-          <>
-            C&apos;est la personne arrivée <strong>1re</strong> au classement final — celle que le
-            groupe juge la plus concernée — qui <strong>cale le shooter</strong>.
-          </>
-        ) : (
-          <>
-            C&apos;est la personne arrivée <strong>dernière</strong> au classement final — celle que
-            le groupe juge la moins concernée — qui <strong>cale le shooter</strong>.
-            {format === "ranking" && " Les autres boivent selon leur rang."}
-          </>
-        )}
-      </p>
-      <p className="text-ivoire-faint font-sans text-[11px]">
-        {format === "ranking"
-          ? "Classe quand même du plus concerné au moins concerné : c'est le total du groupe qui tranche."
-          : "Choisis la personne la plus concernée : c'est le total des voix qui tranche."}
-      </p>
-    </div>
-  );
-}
 
 function Avatar({ player, size = 36 }: { player: Player; size?: number }) {
   if (player.headshot_url) {
@@ -122,6 +78,36 @@ export function BallotForm({
   const [result, setResult] = useState<BallotResult>({ error: null });
   const [pending, startTransition] = useTransition();
   const [page, setPage] = useState(0); // 0 = intro, 1..N = questions, N+1 = review
+  const [draftState, setDraftState] = useState<"idle" | "saving" | "saved">("idle");
+  const [draftError, setDraftError] = useState<string | null>(null);
+
+  // ── Brouillon ────────────────────────────────────────────────────────
+  // Le bulletin est enregistré sans être rendu (`submitted_at` reste nul), ce
+  // qui permet de quitter et de revenir. On temporise pour ne pas écrire à
+  // chaque pixel de glisser-déposer, et on saute le tout premier rendu :
+  // sinon on réécrirait le brouillon avec ce qu'on vient tout juste de lire.
+  const firstRender = useRef(true);
+
+  useEffect(() => {
+    if (firstRender.current) {
+      firstRender.current = false;
+      return;
+    }
+    setDraftState("saving");
+    const id = window.setTimeout(async () => {
+      const answers = questions.map((qq) =>
+        qq.format === "ranking"
+          ? { questionId: qq.id, format: "ranking", ranking: rankings[qq.id] }
+          : { questionId: qq.id, format: "single_choice", choice: choices[qq.id] || null },
+      );
+      const r = await saveDraft(editionId, answers);
+      // Ne JAMAIS avaler l'échec : un brouillon qu'on croit enregistré alors
+      // qu'il ne l'est pas, c'est pire que pas de brouillon du tout.
+      setDraftError(r.error);
+      setDraftState(r.error ? "idle" : "saved");
+    }, 1200);
+    return () => window.clearTimeout(id);
+  }, [rankings, choices, editionId, questions]);
 
   const total = questions.length;
   const reviewPage = total + 1;
@@ -140,18 +126,18 @@ export function BallotForm({
     const pick = choices[question.id];
     return pick
       ? { text: playerById.get(pick)?.display_name ?? "—", missing: false }
-      : { text: "Pas encore répondu", missing: true };
+      : { text: "Sans réponse", missing: true };
   }
 
   function submit() {
     const missing = questions.find((qq) => qq.format === "single_choice" && !choices[qq.id]);
     if (missing) {
-      setResult({ error: "Choisis un joueur pour chaque catégorie à choix unique." });
+      setResult({ error: "Une catégorie à désignation unique demeure sans réponse." });
       return;
     }
     if (
       !window.confirm(
-        "Ton vote est définitif : une fois envoyé, tu ne pourras plus rien modifier. Envoyer ?",
+        "Votre bulletin sera déposé de façon irrévocable. Confirmez-vous ?",
       )
     ) {
       return;
@@ -173,19 +159,19 @@ export function BallotForm({
             <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">
               Bulletin de vote
             </p>
-            <h2 className="text-ivoire font-display text-4xl font-semibold">À toi de juger.</h2>
+            <h2 className="text-ivoire font-display text-4xl font-semibold">Le scrutin est ouvert.</h2>
             <p className="text-ivoire-muted max-w-md font-sans text-sm leading-relaxed">
-              {total} catégorie{total > 1 ? "s" : ""}. Pour certaines tu <strong>classes</strong>{" "}
-              les joueurs (glisse-dépose), pour d&apos;autres tu en <strong>choisis un</strong>.
-              Prends ton temps — ton vote est <span className="text-or-300">définitif</span> une
-              fois envoyé.
+              {total} catégorie{total > 1 ? "s" : ""} vous sont soumises. Certaines appellent un{" "}
+              <strong>classement</strong> complet, les autres la <strong>désignation</strong>{" "}
+              d&apos;une seule personne. Votre bulletin est conservé à mesure que vous progressez ;
+              il ne devient <span className="text-or-300">définitif</span> qu&apos;au dépôt.
             </p>
             <button
               type="button"
               onClick={() => setPage(1)}
               className="from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 mt-2 rounded-full bg-gradient-to-b px-8 py-3 font-sans text-sm font-semibold shadow-lg transition"
             >
-              Commencer →
+              Ouvrir le bulletin →
             </button>
           </div>
         )}
@@ -204,22 +190,40 @@ export function BallotForm({
                 {q.format === "ranking" ? "À classer" : "Choix unique"}
               </span>
               <span className="text-ivoire-faint font-sans text-xs">
-                Question {page} / {total}
+                Catégorie {page} sur {total}
               </span>
+              {draftError ? (
+                <span className="ml-auto font-sans text-[11px] text-red-300/90">
+                  Bulletin non conservé : {draftError}
+                </span>
+              ) : (
+                <span className="text-ivoire-faint ml-auto font-sans text-[11px]">
+                  {draftState === "saving"
+                    ? "Conservation…"
+                    : draftState === "saved"
+                      ? "Bulletin conservé"
+                      : ""}
+                </span>
+              )}
             </div>
             <h3 className="text-ivoire font-display text-2xl leading-tight font-semibold">
               {q.prompt}
             </h3>
-            <p className="text-ivoire-faint font-sans text-xs">
-              {q.format === "ranking"
-                ? "Glisse pour classer : en haut, celui ou celle qui correspond LE PLUS à l'énoncé ; en bas, le moins."
-                : "Choisis la personne qui correspond le plus à l'énoncé."}
+            <p className="text-ivoire-muted font-sans text-xs leading-relaxed">
+              {q.format === "ranking" ? (
+                <>
+                  Du plus concerné en haut au moins concerné en bas. Le 🥃 signale la position
+                  qui devra s&apos;acquitter d&apos;un shooter au dépouillement.
+                </>
+              ) : (
+                "Désignez la personne qui correspond le plus à l&apos;énoncé."
+              )}
             </p>
-            <StakeNotice rule={q.drinkRule} format={q.format} />
             {q.format === "ranking" ? (
               <RankingQuestion
                 order={rankings[q.id] ?? []}
                 playerById={playerById}
+                drinkRule={q.drinkRule}
                 onReorder={(ids) => setRankings((r) => ({ ...r, [q.id]: ids }))}
               />
             ) : (
@@ -235,9 +239,9 @@ export function BallotForm({
         {/* Review + submit */}
         {page === reviewPage && (
           <div className="flex flex-col gap-4">
-            <h2 className="text-ivoire font-display text-3xl font-semibold">Révision</h2>
+            <h2 className="text-ivoire font-display text-3xl font-semibold">Récapitulatif</h2>
             <p className="text-ivoire-muted font-sans text-sm">
-              Vérifie tes réponses avant d&apos;envoyer.
+              Relisez votre bulletin. Le dépôt est irrévocable.
             </p>
             <ul className="flex flex-col gap-2">
               {questions.map((question, i) => {
@@ -285,7 +289,7 @@ export function BallotForm({
               {pending ? "Envoi…" : "Envoyer mes réponses"}
             </button>
             <p className="text-ivoire-faint text-center font-sans text-xs">
-              ⚠️ Définitif — tu ne pourras plus rien modifier après l&apos;envoi.
+              Le dépôt est irrévocable. Aucune modification ne sera possible par la suite.
             </p>
           </div>
         )}
@@ -329,10 +333,12 @@ export function BallotForm({
 function RankingQuestion({
   order,
   playerById,
+  drinkRule,
   onReorder,
 }: {
   order: string[];
   playerById: Map<string, Player>;
+  drinkRule: DrinkRule;
   onReorder: (ids: string[]) => void;
 }) {
   const sensors = useSensors(
@@ -356,7 +362,12 @@ function RankingQuestion({
           {order.map((id, i) => {
             const player = playerById.get(id);
             if (!player) return null;
-            return <SortableRow key={id} id={id} rank={i + 1} player={player} />;
+            // Le shooter va au 1er en « Gagnant boit », au dernier sinon.
+            const drinks =
+              drinkRule === "TOP_UNIQUE" ? i === 0 : i === order.length - 1;
+            return (
+              <SortableRow key={id} id={id} rank={i + 1} player={player} drinks={drinks} />
+            );
           })}
         </ol>
       </SortableContext>
@@ -364,7 +375,17 @@ function RankingQuestion({
   );
 }
 
-function SortableRow({ id, rank, player }: { id: string; rank: number; player: Player }) {
+function SortableRow({
+  id,
+  rank,
+  player,
+  drinks,
+}: {
+  id: string;
+  rank: number;
+  player: Player;
+  drinks: boolean;
+}) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
   });
@@ -377,7 +398,9 @@ function SortableRow({ id, rank, player }: { id: string; rank: number; player: P
     <li
       ref={setNodeRef}
       style={style}
-      className="border-or-400/15 bg-noir-900/40 flex items-center gap-3 rounded-lg border px-3 py-2"
+      className={`flex items-center gap-3 rounded-lg border px-3 py-2 ${
+        drinks ? "border-or-400/50 bg-or-500/10" : "border-or-400/15 bg-noir-900/40"
+      }`}
     >
       <button
         type="button"
@@ -390,7 +413,12 @@ function SortableRow({ id, rank, player }: { id: string; rank: number; player: P
       </button>
       <span className="text-or-300 font-display w-5 text-center text-lg">{rank}</span>
       <Avatar player={player} />
-      <span className="text-ivoire font-sans text-sm">{player.display_name}</span>
+      <span className="text-ivoire flex-1 font-sans text-sm">{player.display_name}</span>
+      {drinks && (
+        <span className="text-base" title="Cette place cale le shooter">
+          🥃
+        </span>
+      )}
     </li>
   );
 }

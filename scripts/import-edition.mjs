@@ -298,6 +298,24 @@ if (manquants.length) {
   console.log(`\n👤 ${manquants.length} personne(s) créée(s) : ${manquants.join(", ")}`);
 }
 
+// Garde-fou : l'import n'est PAS idempotent (chaque exécution crée une
+// nouvelle édition). Le rejouer par mégarde — typiquement sur la prod — ferait
+// apparaître un doublon complet, pénible à démêler ensuite.
+const { data: deja } = await db
+  .from("editions")
+  .select("id, state")
+  .eq("name", cfg.name)
+  .eq("year", cfg.year);
+if ((deja ?? []).length > 0 && !process.argv.includes("--force")) {
+  console.error(
+    `\n❌ « ${cfg.name} » (${cfg.year}) existe déjà sur cette base :` +
+      `\n   ${deja.map((e) => `${e.id} [${e.state}]`).join("\n   ")}` +
+      `\n\n   L'import créerait un DOUBLON. Supprime l'édition existante, ou relance` +
+      `\n   avec --force si tu veux vraiment une seconde copie.\n`,
+  );
+  process.exit(1);
+}
+
 // On crée en CONSTRUCTION : le trigger `questions_edit_lock` interdit de créer
 // des questions dès que l'édition a quitté cet état. La bascule vers
 // COMPILATION se fait tout à la fin, une fois les bulletins écrits.

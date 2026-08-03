@@ -21,19 +21,23 @@ export default async function AdminLayout({ children }: { children: React.ReactN
 
   return (
     <div className="flex min-h-full flex-1 flex-col">
-      <header className="border-or-400/15 bg-noir-800/70 flex items-center justify-between gap-6 border-b px-6 py-4 backdrop-blur-md">
+      {/* `relative z-50` : le backdrop-blur crée un contexte d'empilement, et
+          sans z-index propre l'en-tête passait DERRIÈRE le contenu qui le suit
+          dans le DOM — le panneau de notifications se retrouvait masqué par les
+          cartes, quel que soit son propre z-index. */}
+      <header className="border-or-400/15 bg-noir-800/70 relative z-50 flex items-center justify-between gap-6 border-b px-6 py-4 backdrop-blur-md">
         <Link href="/admin" className="text-ivoire font-display text-lg font-semibold">
           Les Brunos <span className="text-or-400/70 font-sans text-xs">· Admin</span>
         </Link>
         <nav className="flex items-center gap-6 font-sans text-sm">
+          <Link href="/account" className="text-ivoire-muted hover:text-or-300 transition">
+            Accueil
+          </Link>
           <Link href="/admin/editions" className="text-ivoire-muted hover:text-or-300 transition">
             Éditions
           </Link>
           <Link href="/admin/people" className="text-ivoire-muted hover:text-or-300 transition">
             Banque de joueurs
-          </Link>
-          <Link href="/account" className="text-ivoire-muted hover:text-or-300 transition">
-            Accueil
           </Link>
           <NotificationBell notifications={notifications ?? []} unread={unread} />
           <form action={signOut}>
