@@ -5,6 +5,9 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CreatePersonForm } from "./create-person-form";
 import { RoleSelect } from "./role-select";
+import { InviteButton } from "./invite-button";
+import { HeadshotForm } from "./headshot-form";
+import { Avatar } from "@/components/avatar";
 import { renamePerson, deletePerson, setPersonEmail } from "./actions";
 
 export const metadata: Metadata = { title: "Banque de joueurs" };
@@ -16,7 +19,7 @@ export default async function PeoplePage() {
 
   const { data: people } = await supabase
     .from("people")
-    .select("id, display_name, auth_user_id")
+    .select("id, display_name, auth_user_id, headshot_url")
     .order("display_name");
 
   const { data: players } = await supabase.from("players").select("person_id");
@@ -38,12 +41,19 @@ export default async function PeoplePage() {
   );
 
   // Emails are a best-effort enrichment (needs the service-role key).
+  // `usedByUser` distingue un compte réellement utilisé d'un compte créé par
+  // invitation mais jamais activé — c'est ce qui décide entre « inviter » et
+  // « relancer ».
   const emailByUser = new Map<string, string | undefined>();
+  const usedByUser = new Map<string, boolean>();
   if (process.env.SUPABASE_SERVICE_ROLE_KEY) {
     try {
       const admin = createAdminClient();
       const { data } = await admin.auth.admin.listUsers();
-      for (const u of data?.users ?? []) emailByUser.set(u.id, u.email);
+      for (const u of data?.users ?? []) {
+        emailByUser.set(u.id, u.email);
+        usedByUser.set(u.id, Boolean(u.last_sign_in_at));
+      }
     } catch {
       // no-op — fall back to account badge without email
     }
@@ -77,31 +87,46 @@ export default async function PeoplePage() {
               const email = account ? emailByUser.get(account.userId) : undefined;
               const invitedEmail = inviteByPerson.get(person.id) ?? "";
               const isSelf = account?.userId === current?.user.id;
+              // Compte créé par invitation mais jamais utilisé → on peut relancer.
+              const accountUsed = account ? (usedByUser.get(account.userId) ?? true) : false;
+              const canInvite = Boolean(invitedEmail) && !accountUsed;
               return (
                 <li
                   key={person.id}
                   className="border-or-400/12 bg-noir-700/40 flex flex-col gap-3 rounded-2xl border px-5 py-4"
                 >
                   <div className="flex flex-wrap items-center justify-between gap-3">
-                    <div className="flex flex-col gap-0.5">
+                    <div className="flex items-center gap-3">
+                      <Avatar
+                        name={person.display_name ?? "?"}
+                        headshot={person.headshot_url}
+                        size={40}
+                      />
+                      <div className="flex flex-col gap-0.5">
                       <span className="text-ivoire font-sans font-medium">
                         {person.display_name ?? "Sans nom"}
                       </span>
                       <span className="text-ivoire-faint font-sans text-xs">
-                        {account ? (
+                        {account && accountUsed ? (
                           <>
                             <span className="text-or-300">Compte actif</span>
                             {email ? ` · ${email}` : ""} ·{" "}
                           </>
+                        ) : account ? (
+                          <>
+                            <span className="text-or-400/80">Invitation en attente</span>
+                            {email ? ` · ${email}` : ""} ·{" "}
+                          </>
                         ) : invitedEmail ? (
                           <>
-                            <span className="text-or-400/80">Invitée : {invitedEmail}</span> ·{" "}
+                            <span className="text-or-400/80">À inviter : {invitedEmail}</span> ·{" "}
                           </>
                         ) : (
                           "Sans compte · "
                         )}
                         {editions} édition{editions > 1 ? "s" : ""}
                       </span>
+                      </div>
                     </div>
                     <div className="flex items-center gap-3">
                       {account ? (
@@ -152,6 +177,14 @@ export default async function PeoplePage() {
                           </button>
                         </form>
                       )}
+                      {!accountUsed && (
+                        <InviteButton
+                          personId={person.id}
+                          disabled={!canInvite}
+                          label={account ? "Renvoyer l'invitation" : "Envoyer l'invitation"}
+                        />
+                      )}
+                      <HeadshotForm personId={person.id} hasPhoto={Boolean(person.headshot_url)} />
                       <form action={deletePerson}>
                         <input type="hidden" name="person_id" value={person.id} />
                         <button

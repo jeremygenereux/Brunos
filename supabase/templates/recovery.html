@@ -1,0 +1,55 @@
+<!--
+  Gabarit du courriel de récupération / relance d'invitation.
+
+  Même motif que invite.html : lien vers /auth/confirm avec `token_hash`, que
+  src/app/auth/confirm/route.ts sait vérifier côté serveur. Sert aussi de
+  RELANCE quand quelqu'un a été invité mais n'a jamais posé son mot de passe.
+-->
+<table
+  role="presentation"
+  width="100%"
+  cellpadding="0"
+  cellspacing="0"
+  style="background:#0a0a0b;padding:40px 0;font-family:Helvetica,Arial,sans-serif"
+>
+  <tr>
+    <td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:520px">
+        <tr>
+          <td style="padding:0 32px 8px;text-align:center">
+            <p style="margin:0;color:#e8c87e;font-size:11px;letter-spacing:4px;text-transform:uppercase">
+              Gala annuel
+            </p>
+            <h1 style="margin:12px 0 0;color:#f4efe6;font-family:Georgia,serif;font-size:40px;font-weight:600">
+              Les Brunos
+            </h1>
+          </td>
+        </tr>
+        <tr>
+          <td
+            style="padding:28px 32px;background:#121214;border:1px solid rgba(232,200,126,.22);border-radius:16px"
+          >
+            <p style="margin:0 0 16px;color:#f4efe6;font-size:16px;line-height:1.6">
+              Voici ton accès aux Brunos.
+            </p>
+            <p style="margin:0 0 24px;color:#b9b2a4;font-size:14px;line-height:1.6">
+              Clique ci-dessous pour choisir ton mot de passe. Tu retrouveras ensuite les éditions
+              auxquelles tu participes.
+            </p>
+            <p style="margin:0 0 24px;text-align:center">
+              <a
+                href="{{ .SiteURL }}/auth/confirm?token_hash={{ .TokenHash }}&type=recovery&next=/bienvenue"
+                style="display:inline-block;padding:14px 32px;background:#d4af37;color:#0a0a0b;font-size:14px;font-weight:600;text-decoration:none;border-radius:999px"
+              >
+                Choisir mon mot de passe
+              </a>
+            </p>
+            <p style="margin:0;color:#6f6a60;font-size:12px;line-height:1.6">
+              Si tu n'as rien demandé, ignore simplement ce message.
+            </p>
+          </td>
+        </tr>
+      </table>
+    </td>
+  </tr>
+</table>

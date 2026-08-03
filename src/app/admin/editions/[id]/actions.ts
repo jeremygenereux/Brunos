@@ -8,6 +8,32 @@ import { snapshotEditionResults } from "@/lib/editions/snapshot";
 
 export type ActionState = { error: string | null; success?: boolean };
 
+/**
+ * Recalcule et refige les résultats d'une édition, sans toucher à son état.
+ *
+ * Le figeage normal n'a lieu qu'à la transition COMPILATION → LOCKED. Or tout
+ * ce qui nourrit le calcul peut changer APRÈS : la valeur d'un shooter, la
+ * règle de consommation, la sélection des questions, un bulletin corrigé.
+ * Sans ce bouton, il fallait faire reculer l'édition puis la refaire avancer
+ * pour que le cache reflète la réalité.
+ *
+ * `snapshotEditionResults` est idempotent (il purge tout le cache de l'édition
+ * avant de réinsérer), donc l'opération est rejouable sans risque.
+ */
+export async function recompileEdition(editionId: string): Promise<ActionState> {
+  await requireAdmin();
+  if (!editionId) return { error: "Édition introuvable." };
+
+  const supabase = await createClient();
+  const { error } = await snapshotEditionResults(supabase, editionId);
+  if (error) return { error };
+
+  revalidatePath(`/admin/editions/${editionId}`);
+  revalidatePath(`/archive/${editionId}`);
+  revalidatePath("/archive");
+  return { error: null, success: true };
+}
+
 /** Set (or clear) a participant's personalized Apple Invitation URL. */
 export async function setAppleInvite(participantId: string, url: string): Promise<ActionState> {
   await requireAdmin();

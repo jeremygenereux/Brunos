@@ -32,6 +32,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           <Link href="/admin/people" className="text-ivoire-muted hover:text-or-300 transition">
             Banque de joueurs
           </Link>
+          <Link href="/account" className="text-ivoire-muted hover:text-or-300 transition">
+            Accueil
+          </Link>
           <NotificationBell notifications={notifications ?? []} unread={unread} />
           <form action={signOut}>
             <button

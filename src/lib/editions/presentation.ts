@@ -20,6 +20,15 @@ function personName(people: unknown): string {
   return (people as { display_name?: string }).display_name ?? "Sans nom";
 }
 
+/** Portrait de référence de la personne (persiste entre les éditions). */
+function personHeadshot(people: unknown): string | null {
+  if (!people) return null;
+  const p = Array.isArray(people)
+    ? (people[0] as { headshot_url?: string | null } | undefined)
+    : (people as { headshot_url?: string | null });
+  return p?.headshot_url ?? null;
+}
+
 /**
  * Load + shape an edition's presentation (categories with explicit
  * winner/shooter flags + the night's recap), reading the frozen `results`
@@ -67,13 +76,19 @@ export async function loadPresentation(
 
   const { data: rawPlayers } = await supabase
     .from("players")
-    .select("id, person_id, headshot_url, people(display_name)")
+    .select("id, person_id, headshot_url, people(display_name, headshot_url)")
     .eq("edition_id", editionId)
     .order("display_order");
   const playersById = new Map(
     (rawPlayers ?? []).map((p) => [
       p.id,
-      { personId: p.person_id, name: personName(p.people), headshot: p.headshot_url },
+      {
+        personId: p.person_id,
+        name: personName(p.people),
+        // La photo de l'édition prime ; à défaut, le portrait de la personne
+        // (qui suit d'une année à l'autre).
+        headshot: p.headshot_url ?? personHeadshot(p.people),
+      },
     ]),
   );
 

@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { createEdition, type EditionFormState } from "./actions";
 import { Input, Label, Select, Textarea, SubmitButton } from "@/components/ui";
+import { DRINK_RULE_HINT } from "@/lib/editions/drink-rule";
 
 const initialState: EditionFormState = { error: null };
 
@@ -48,8 +49,8 @@ export function NewEditionForm({ defaultYear }: { defaultYear: number }) {
       <div className="flex flex-col gap-1.5">
         <Label htmlFor="drink_rule">Règle de consommation</Label>
         <Select id="drink_rule" name="drink_rule" defaultValue="ESCALATION">
-          <option value="ESCALATION">Escalade par classement</option>
-          <option value="TOP_UNIQUE">Top unique</option>
+          <option value="ESCALATION">{DRINK_RULE_HINT.ESCALATION}</option>
+          <option value="TOP_UNIQUE">{DRINK_RULE_HINT.TOP_UNIQUE}</option>
         </Select>
       </div>
 

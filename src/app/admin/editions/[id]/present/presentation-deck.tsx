@@ -10,6 +10,7 @@ import type {
   RecapRow,
 } from "@/lib/editions/presentation-types";
 import { ArchiveButton } from "./archive-button";
+import { cascadeOf } from "@/lib/editions/reveal-order";
 import { ReactiveParticles, AwardCategoryReveal } from "@/components/award";
 
 export type { Category, RankRow, RecapRow };
@@ -50,20 +51,6 @@ function Kicker({ children }: { children: React.ReactNode }) {
  *   • TOP_UNIQUE → le shooter est le·la gagnant·e : dernière position … 1re.
  * `players` arrive trié par finalRank croissant.
  */
-function cascadeOf(players: RankRow[]) {
-  const shooters = players.filter((p) => p.isShooter);
-  if (shooters.length === 0)
-    return { shooters: [], buildUp: [], penultimate: null, shooterIsLast: false };
-  const shooterIsLast = shooters[shooters.length - 1].finalRank === players.length;
-  const rest = players.filter((p) => !p.isShooter);
-  const ordered = shooterIsLast ? rest : [...rest].reverse();
-  // On RÉSERVE l'avant-dernière position pour le climax : si la liste allait
-  // jusqu'au bout, la dernière personne serait devinable par élimination.
-  const penultimate = ordered.length > 0 ? ordered[ordered.length - 1] : null;
-  const buildUp = ordered.slice(0, -1);
-  return { shooters, buildUp, penultimate, shooterIsLast };
-}
-
 /** RankRow → entrée de cascade pour le composant de révélation. */
 function toEntry(p: RankRow) {
   return {

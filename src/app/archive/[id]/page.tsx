@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { loadPresentation } from "@/lib/editions/presentation";
 import { loadEditionVoteReveal } from "@/lib/editions/drama";
+import { cascadeOf } from "@/lib/editions/reveal-order";
 import type { Category, RankRow } from "@/lib/editions/presentation-types";
 import { Avatar } from "@/components/avatar";
 
@@ -84,6 +85,10 @@ function RankList({
 
 function CategoryCard({ c }: { c: Category }) {
   const winners = c.players.filter((p) => p.isWinner);
+  // Même règle qu'en présentation (module partagé, pour qu'elles ne divergent
+  // jamais) : en TOP_UNIQUE le classement n'est qu'un artefact du décompte des
+  // voix — on n'affiche que les gagnant·e·s, déjà mis en avant en tête de carte.
+  const { rankingMatters } = cascadeOf(c.players);
   return (
     <section className="brunos-glass border-or-400/12 flex flex-col gap-5 rounded-3xl border p-6">
       <div className="flex items-center gap-4">
@@ -115,11 +120,16 @@ function CategoryCard({ c }: { c: Category }) {
         <p className="text-ivoire-faint font-sans text-sm">
           Personne n&apos;a voté dans cette catégorie.
         </p>
-      ) : (
+      ) : rankingMatters ? (
         <div className={`grid gap-6 ${c.jury.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
           <RankList title="Joueurs" rows={c.players} showDrinks />
           {c.jury.length > 0 && <RankList title="Entourage" rows={c.jury} showDrinks={false} />}
         </div>
+      ) : (
+        <p className="text-ivoire-faint font-sans text-sm">
+          Catégorie à choix unique — seul·e{winners.length > 1 ? "s" : ""} le·la gagnant·e
+          {winners.length > 1 ? "·s" : ""} cale{winners.length > 1 ? "nt" : ""} un shooter.
+        </p>
       )}
     </section>
   );
@@ -144,12 +154,21 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
 
   return (
     <main className="mx-auto w-full max-w-4xl px-6 py-12">
-      <Link
-        href="/archive"
-        className="text-ivoire-muted hover:text-or-300 font-sans text-sm transition"
-      >
-        ← Archive
-      </Link>
+      <div className="flex items-center gap-4">
+        <Link
+          href="/archive"
+          className="text-ivoire-muted hover:text-or-300 font-sans text-sm transition"
+        >
+          ← Archive
+        </Link>
+        <span className="text-ivoire-faint">·</span>
+        <Link
+          href="/account"
+          className="text-ivoire-muted hover:text-or-300 font-sans text-sm transition"
+        >
+          Accueil
+        </Link>
+      </div>
 
       <header className="mt-4 flex flex-col gap-2">
         <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">

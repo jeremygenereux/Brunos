@@ -1,0 +1,32 @@
+{
+  "_comment": "Les Brunos 2024 Automne — single_choice. 25 questions, 20 présentées.",
+  "data_dir": "/chemin/local/vers/vos-exports",
+  "name": "Les Brunos 2024 (Automne)",
+  "year": 2024,
+  "event_at": "2024-08-24T19:00:00-04:00",
+  "venue_name": "Sherbrooke (lieu prive)",
+  "drink_rule": "TOP_UNIQUE",
+  "shooter_value": 8,
+  "edition_code": "B2024A",
+  "votes_csv": "votes_A2024_categories.csv",
+  "columns": {
+    "edition": "edition",
+    "votant": "votant_joueur",
+    "categorie": "question",
+    "joueur": "joueur_choisi"
+  },
+  "questions_csv": "questions_par_edition.csv",
+  "questions_columns": {
+    "edition": "edition",
+    "enonce": "enonce",
+    "format": "format",
+    "presente": "presente_au_gala",
+    "no": "no"
+  },
+  "jury": {},
+  "substitute_email_domain": "brunos.invalid",
+  "players_csv": "joueurs_reference.csv",
+  "players_columns": {
+    "nom": "nom_canonique"
+  }
+}

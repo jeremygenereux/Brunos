@@ -1,0 +1,27 @@
+{
+  "name": "Les Brunos 2024",
+  "year": 2024,
+  "event_at": "2024-08-29T19:00:00-04:00",
+  "venue_name": "Chez Raphaël",
+  "description": null,
+
+  "drink_rule": "ESCALATION",
+  "shooter_value": 8,
+
+  "votes_csv": "exemple-votes.csv",
+
+  "columns": {
+    "votant": "votant",
+    "categorie": "categorie",
+    "joueur": "joueur",
+    "rang": "rang"
+  },
+
+  "formats": {},
+
+  "jury": {
+    "Danielle Tremblay": { "joueur": "Raphaël Tremblay", "relation": "Mère de Raphaël" }
+  },
+
+  "substitute_email_domain": "brunos.invalid"
+}

@@ -1,6 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { loadArchiveStats, loadFunStats } from "@/lib/editions/stats";
+import { LifetimeBoard, FunAwards } from "./stats-panels";
 
 export const metadata: Metadata = { title: "Archive" };
 
@@ -11,30 +13,45 @@ function fmtDate(value: string | null) {
 
 export default async function ArchivePage() {
   const supabase = await createClient();
-  const { data: editions } = await supabase
-    .from("editions")
-    .select("id, name, year, event_at, venue_name")
-    .eq("state", "ARCHIVED")
-    .order("year", { ascending: false });
+  const [{ data: editions }, { drinkers, editionsCount }, funAwards] = await Promise.all([
+    supabase
+      .from("editions")
+      .select("id, name, year, event_at, venue_name")
+      .eq("state", "ARCHIVED")
+      .order("year", { ascending: false }),
+    loadArchiveStats(supabase),
+    loadFunStats(supabase),
+  ]);
   const list = editions ?? [];
 
   return (
     <main className="mx-auto w-full max-w-3xl px-6 py-12">
+      <Link
+        href="/account"
+        className="text-ivoire-muted hover:text-or-300 mb-6 inline-block font-sans text-sm transition"
+      >
+        ← Accueil
+      </Link>
       <header className="flex flex-col gap-2">
         <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">Les Brunos</p>
         <h1 className="text-ivoire font-display text-5xl font-semibold">Archive</h1>
         <p className="text-ivoire-muted font-sans text-sm">
           Les galas passés — palmarès par catégorie et présentations rejouables.
         </p>
-        {list.length > 0 && (
-          <Link
-            href="/archive/stats"
-            className="text-or-300 hover:text-or-400 mt-2 font-sans text-sm transition"
-          >
-            Statistiques inter-éditions →
-          </Link>
-        )}
       </header>
+
+      {/* Les statistiques d'abord : c'est ce qui se lit, pas ce qui se navigue.
+          Le choix d'une édition vient ensuite. */}
+      {list.length > 0 && (
+        <div className="mt-10 flex flex-col gap-12">
+          <LifetimeBoard drinkers={drinkers} editionsCount={editionsCount} />
+          <FunAwards awards={funAwards} />
+        </div>
+      )}
+
+      {list.length > 0 && (
+        <h2 className="text-ivoire font-display mt-14 text-3xl font-semibold">Les éditions</h2>
+      )}
 
       {list.length === 0 ? (
         <div className="border-or-400/15 bg-noir-700/40 mt-10 flex flex-col items-center gap-3 rounded-3xl border px-6 py-16 text-center">

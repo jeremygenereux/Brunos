@@ -20,15 +20,61 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { submitBallot, type BallotResult } from "./actions";
+import { DRINK_RULE_LABEL, type DrinkRule } from "@/lib/editions/drink-rule";
 
 type Player = { id: string; display_name: string; headshot_url: string | null };
 type Question = {
   id: string;
   prompt: string;
   format: string;
+  drinkRule: DrinkRule;
   initialRanking: string[];
   initialChoice: string;
 };
+
+/**
+ * L'enjeu de la catégorie, dit sans détour.
+ *
+ * On classe TOUJOURS du plus concerné (en haut) au moins concerné. Ce qui
+ * change d'une catégorie à l'autre, c'est qui trinque au bout — et ça, le
+ * votant doit le savoir avant de classer, sinon il vote à l'aveugle.
+ *
+ * Nuance importante : c'est le classement COLLECTIF final qui décide, pas le
+ * bulletin de la personne. On le formule donc ainsi.
+ */
+function StakeNotice({ rule, format }: { rule: DrinkRule; format: string }) {
+  const winnerDrinks = rule === "TOP_UNIQUE";
+  return (
+    <div
+      className={`flex flex-col gap-1 rounded-xl border px-4 py-3 ${
+        winnerDrinks ? "border-or-400/35 bg-or-500/10" : "border-or-400/20 bg-noir-900/40"
+      }`}
+    >
+      <span className="text-or-300 font-sans text-[11px] tracking-[0.25em] uppercase">
+        🥃 {DRINK_RULE_LABEL[rule]}
+      </span>
+      <p className="text-ivoire font-sans text-xs leading-relaxed">
+        {winnerDrinks ? (
+          <>
+            C&apos;est la personne arrivée <strong>1re</strong> au classement final — celle que le
+            groupe juge la plus concernée — qui <strong>cale le shooter</strong>.
+          </>
+        ) : (
+          <>
+            C&apos;est la personne arrivée <strong>dernière</strong> au classement final — celle que
+            le groupe juge la moins concernée — qui <strong>cale le shooter</strong>.
+            {format === "ranking" && " Les autres boivent selon leur rang."}
+          </>
+        )}
+      </p>
+      <p className="text-ivoire-faint font-sans text-[11px]">
+        {format === "ranking"
+          ? "Classe quand même du plus concerné au moins concerné : c'est le total du groupe qui tranche."
+          : "Choisis la personne la plus concernée : c'est le total des voix qui tranche."}
+      </p>
+    </div>
+  );
+}
 
 function Avatar({ player, size = 36 }: { player: Player; size?: number }) {
   if (player.headshot_url) {
@@ -166,9 +212,10 @@ export function BallotForm({
             </h3>
             <p className="text-ivoire-faint font-sans text-xs">
               {q.format === "ranking"
-                ? "Glisse pour classer, du plus probable (en haut) au moins probable."
-                : "Choisis un joueur pour avancer."}
+                ? "Glisse pour classer : en haut, celui ou celle qui correspond LE PLUS à l'énoncé ; en bas, le moins."
+                : "Choisis la personne qui correspond le plus à l'énoncé."}
             </p>
+            <StakeNotice rule={q.drinkRule} format={q.format} />
             {q.format === "ranking" ? (
               <RankingQuestion
                 order={rankings[q.id] ?? []}

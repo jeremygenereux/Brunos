@@ -3,12 +3,20 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { StateBadge } from "@/components/state-badge";
-import { nextState, TRANSITION_LABEL, TRANSITION_NOTE } from "@/lib/editions/state-machine";
+import {
+  nextState,
+  STATE_ORDER,
+  TRANSITION_LABEL,
+  TRANSITION_NOTE,
+} from "@/lib/editions/state-machine";
 import { TransitionControl } from "./transition-control";
 import { EditEditionForm } from "./edit-edition-form";
 import { DeleteEditionButton } from "./delete-edition-button";
+import { RecompileButton } from "./recompile-button";
+import { VoteTracker } from "./vote-tracker";
 import { ParticipantsManager } from "./participants-manager";
 import { InviteLink } from "@/components/invite-link";
+import { DRINK_RULE_LABEL } from "@/lib/editions/drink-rule";
 
 export const metadata: Metadata = { title: "Édition" };
 
@@ -17,10 +25,7 @@ const PRIMARY =
 const SECONDARY =
   "border-or-400/25 text-ivoire hover:border-or-400/50 hover:text-or-300 rounded-lg border px-4 py-2 font-sans text-sm transition";
 
-const DRINK_RULE_LABEL: Record<string, string> = {
-  ESCALATION: "Escalade par classement",
-  TOP_UNIQUE: "Top unique",
-};
+
 
 function fmt(value: string | null) {
   if (!value) return "—";
@@ -147,6 +152,19 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
         <ParticipantsManager participants={participants} />
       </section>
 
+      {STATE_ORDER.indexOf(edition.state) >= STATE_ORDER.indexOf("SENT_FOR_VOTE") && (
+        <section className="mt-10">
+          <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
+            Suivi du vote
+          </h2>
+          <p className="text-ivoire-muted mb-3 font-sans text-sm">
+            Qui a déposé son bulletin. Le détail des bulletins n&apos;est visible que de
+            l&apos;admin — à n&apos;ouvrir que pour vérifier une incohérence.
+          </p>
+          <VoteTracker editionId={edition.id} />
+        </section>
+      )}
+
       <section className="mt-10">
         <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
           État de l&apos;édition
@@ -163,6 +181,21 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
           <p className="text-ivoire-muted font-sans text-sm">
             Édition archivée — les résultats sont publics et l&apos;édition est close.
           </p>
+        )}
+
+        {/* Les classements sont figés au passage en « Verrouillée ». Tout ce qui
+            les nourrit peut bouger ensuite (valeur du shooter, règle, sélection
+            des questions, bulletin corrigé) — d'où ce recalcul à la demande,
+            qui évite de faire reculer puis réavancer l'édition. */}
+        {STATE_ORDER.indexOf(edition.state) >= STATE_ORDER.indexOf("COMPILATION") && (
+          <div className="border-or-400/12 mt-5 flex flex-col gap-2 rounded-xl border px-4 py-3">
+            <p className="text-ivoire-muted font-sans text-xs">
+              Une donnée a changé depuis le verrouillage (valeur du shooter, règle, questions
+              sélectionnées, bulletins) ? Recalcule les classements figés sans toucher à
+              l&apos;état.
+            </p>
+            <RecompileButton editionId={edition.id} />
+          </div>
         )}
       </section>
 

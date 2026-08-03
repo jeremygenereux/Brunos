@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { requireUser } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { BallotForm } from "./ballot-form";
+import type { DrinkRule } from "@/lib/editions/drink-rule";
 
 export const metadata: Metadata = { title: "Voter" };
 
@@ -11,6 +12,8 @@ type Question = {
   id: string;
   prompt: string;
   format: string;
+  /** Règle EFFECTIVE : la surcharge de la question, sinon celle de l'édition. */
+  drinkRule: DrinkRule;
   initialRanking: string[];
   initialChoice: string;
 };
@@ -30,7 +33,7 @@ export default async function VotePage({ params }: { params: Promise<{ editionId
 
   const { data: edition } = await supabase
     .from("editions")
-    .select("id, name, state, vote_deadline")
+    .select("id, name, state, vote_deadline, drink_rule")
     .eq("id", editionId)
     .single();
   if (!edition) redirect("/account");
@@ -56,7 +59,7 @@ export default async function VotePage({ params }: { params: Promise<{ editionId
 
   const { data: rawQuestions } = await supabase
     .from("questions")
-    .select("id, prompt, format")
+    .select("id, prompt, format, drink_rule_override")
     .eq("edition_id", editionId)
     .order("position");
 
@@ -75,16 +78,19 @@ export default async function VotePage({ params }: { params: Promise<{ editionId
     : { data: [] };
 
   const allPlayerIds = playerList.map((p) => p.id);
+  const editionRule = edition.drink_rule as DrinkRule;
   const questions: Question[] = (rawQuestions ?? []).map((q) => {
     const mine = (answers ?? [])
       .filter((a) => a.question_id === q.id)
       .sort((a, b) => a.rank - b.rank);
+    // La surcharge par question l'emporte sur la règle de l'édition.
+    const drinkRule = (q.drink_rule_override ?? editionRule) as DrinkRule;
     if (q.format === "ranking") {
       const ranked = mine.map((a) => a.player_id).filter((id) => allPlayerIds.includes(id));
       const missing = allPlayerIds.filter((id) => !ranked.includes(id));
-      return { ...q, initialRanking: [...ranked, ...missing], initialChoice: "" };
+      return { ...q, drinkRule, initialRanking: [...ranked, ...missing], initialChoice: "" };
     }
-    return { ...q, initialRanking: [], initialChoice: mine[0]?.player_id ?? "" };
+    return { ...q, drinkRule, initialRanking: [], initialChoice: mine[0]?.player_id ?? "" };
   });
 
   const submitted = Boolean(vote?.submitted_at);

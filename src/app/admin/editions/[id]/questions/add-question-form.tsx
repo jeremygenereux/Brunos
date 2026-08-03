@@ -3,6 +3,7 @@
 import { useActionState, useEffect, useRef } from "react";
 import { addQuestion, type QuestionState } from "./actions";
 import { Input, Label, Select, SubmitButton } from "@/components/ui";
+import { DRINK_RULE_HINT } from "@/lib/editions/drink-rule";
 
 const initialState: QuestionState = { error: null };
 
@@ -49,8 +50,8 @@ export function AddQuestionForm({
         <div className="flex flex-col gap-1.5">
           <Label htmlFor="drink_rule">Règle de gorgées</Label>
           <Select id="drink_rule" name="drink_rule" defaultValue={editionRule}>
-            <option value="ESCALATION">Escalade (rang = gorgées, dernier cale)</option>
-            <option value="TOP_UNIQUE">Top unique (le·la gagnant·e cale)</option>
+            <option value="ESCALATION">{DRINK_RULE_HINT.ESCALATION}</option>
+            <option value="TOP_UNIQUE">{DRINK_RULE_HINT.TOP_UNIQUE}</option>
           </Select>
         </div>
       </div>

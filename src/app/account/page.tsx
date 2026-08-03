@@ -7,6 +7,7 @@ import { StateBadge } from "@/components/state-badge";
 import { createClient } from "@/lib/supabase/server";
 import { loadArchiveStats } from "@/lib/editions/stats";
 import { ArchiveRolodex } from "./archive-rolodex";
+import { Countdown } from "./countdown";
 import type { Database } from "@/lib/types/database.types";
 
 export const metadata: Metadata = { title: "Accueil" };
@@ -113,6 +114,12 @@ export default async function AccountPage() {
 
   const { drinkers, editionsCount } = await loadArchiveStats(supabase);
   const topDrinker = drinkers[0];
+  // Le palmarès personnel se lit dans le même classement — aucune requête de
+  // plus : `drinkers` est déjà trié par gorgées cumulées.
+  const myIndex = current.personId
+    ? drinkers.findIndex((d) => d.personId === current.personId)
+    : -1;
+  const me = myIndex >= 0 ? drinkers[myIndex] : null;
 
   return (
     <main className="mx-auto w-full max-w-6xl px-6 py-10">
@@ -188,28 +195,65 @@ export default async function AccountPage() {
                 Les statistiques arriveront après la première soirée.
               </p>
             ) : (
-              <div className="flex flex-col gap-3">
-                {topDrinker && (
-                  <div className="flex items-baseline justify-between gap-3">
-                    <div className="flex flex-col">
-                      <span className="text-ivoire-faint font-sans text-xs tracking-wide uppercase">
-                        🥃 A le plus bu
+              <div className="flex flex-col gap-4">
+                {me ? (
+                  <div className="flex flex-col gap-2">
+                    <span className="text-ivoire-faint font-sans text-xs tracking-wide uppercase">
+                      🥃 Tes gorgées à vie
+                    </span>
+                    <div className="flex items-baseline gap-2">
+                      <span className="text-or-300 font-display text-5xl leading-none tabular-nums">
+                        {me.totalDrinks}
                       </span>
-                      <span className="text-ivoire font-display text-2xl font-semibold">
-                        {topDrinker.name}
+                      <span className="text-ivoire-faint font-sans text-xs">
+                        sur {me.editionCount} édition{me.editionCount > 1 ? "s" : ""}
                       </span>
                     </div>
-                    <span className="text-or-300 font-display text-3xl tabular-nums">
-                      {topDrinker.totalDrinks}
-                    </span>
+                    <p className="text-ivoire-muted font-sans text-sm">
+                      {myIndex === 0 ? (
+                        <>
+                          Tu es <span className="text-or-300">en tête</span> du classement des
+                          gorgées.
+                        </>
+                      ) : (
+                        <>
+                          <span className="text-or-300">
+                            {myIndex + 1}
+                            <sup>e</sup>
+                          </span>{" "}
+                          sur {drinkers.length} · {drinkers[0].totalDrinks - me.totalDrinks} gorgées
+                          derrière {drinkers[0].name}
+                        </>
+                      )}
+                    </p>
+                    <p className="text-ivoire-faint font-sans text-xs">
+                      {me.titleCount} titre{me.titleCount > 1 ? "s" : ""} remporté
+                      {me.titleCount > 1 ? "s" : ""}.
+                    </p>
                   </div>
+                ) : (
+                  topDrinker && (
+                    <div className="flex items-baseline justify-between gap-3">
+                      <div className="flex flex-col">
+                        <span className="text-ivoire-faint font-sans text-xs tracking-wide uppercase">
+                          🥃 A le plus bu
+                        </span>
+                        <span className="text-ivoire font-display text-2xl font-semibold">
+                          {topDrinker.name}
+                        </span>
+                      </div>
+                      <span className="text-or-300 font-display text-3xl tabular-nums">
+                        {topDrinker.totalDrinks}
+                      </span>
+                    </div>
+                  )
                 )}
                 <p className="text-ivoire-faint font-sans text-xs">
                   Sur {editionsCount} édition{editionsCount > 1 ? "s" : ""} archivée
                   {editionsCount > 1 ? "s" : ""}.
                 </p>
                 <Link
-                  href="/archive/stats"
+                  href="/archive"
                   className="text-or-300 hover:text-or-400 font-sans text-sm transition"
                 >
                   Tout le palmarès →
@@ -278,18 +322,10 @@ function UpcomingCard({
       )}
 
       <div className="relative mt-auto flex flex-col gap-5">
-        {appleInvite && (
-          <a
-            href={appleInvite}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="border-or-400/30 text-or-300 hover:bg-noir-900 inline-flex w-fit items-center gap-2 rounded-full border px-5 py-2.5 font-sans text-sm transition"
-          >
-            🍎 Voir mon invitation
-          </a>
-        )}
+        {edition.event_at && <Countdown target={edition.event_at} />}
 
-        <div className="flex flex-wrap items-center gap-4">
+        {/* Action principale puis invitation, sur une seule ligne. */}
+        <div className="flex flex-wrap items-center gap-3">
           {cta.href ? (
             <Link
               href={cta.href}
@@ -306,6 +342,19 @@ function UpcomingCard({
               {cta.label}
             </span>
           )}
+
+          {appleInvite && (
+            <a
+              href={appleInvite}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="border-or-400/30 text-or-300 hover:bg-noir-900 inline-flex items-center gap-2 rounded-full border px-6 py-3 font-sans text-sm transition"
+            >
+              <AppleLogo />
+              Voir mon invitation
+            </a>
+          )}
+
           {showDeadline && edition.vote_deadline && (
             <span className="text-ivoire-faint font-sans text-xs">
               Date limite : {fmtDateTime(edition.vote_deadline)}
@@ -314,6 +363,23 @@ function UpcomingCard({
         </div>
       </div>
     </section>
+  );
+}
+
+/** Logo Apple (glyphe officiel). Apple Invites n'a pas de marque distincte
+ *  distribuable : on utilise donc la pomme, en usage nominatif — le bouton
+ *  pointe vers le service Apple lui-même. `currentColor` pour rester dans la
+ *  direction artistique dorée. */
+function AppleLogo() {
+  return (
+    <svg
+      aria-hidden="true"
+      viewBox="0 0 814 1000"
+      className="h-[1.05em] w-auto shrink-0"
+      fill="currentColor"
+    >
+      <path d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76.5 0-103.7 40.8-165.9 40.8s-105.6-57-155.5-127C46.7 790.7 0 663 0 541.8c0-194.4 126.4-297.5 250.8-297.5 66.1 0 121.2 43.4 162.7 43.4 39.5 0 101.1-46 176.3-46 28.5 0 130.9 2.6 198.3 99.2zM554 159.4c31.1-36.9 53.1-88.1 53.1-139.3 0-7.1-.6-14.3-1.9-20.1-50.6 1.9-110.8 33.7-147.1 75.8-28.5 32.4-55.1 83.6-55.1 135.5 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 45.4 0 102.5-30.4 135.5-71.3z" />
+    </svg>
   );
 }
 
