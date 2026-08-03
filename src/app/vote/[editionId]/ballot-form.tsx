@@ -287,7 +287,7 @@ export function BallotForm({
             <div className="flex w-full flex-col gap-3 sm:flex-row">
               <ModeCard glyph={<RankingGlyph />} title="Classement" count={rankingCount}>
                 Vous ordonnez l&apos;ensemble des nommés, du plus concerné au moins concerné. La
-                charge revient à une position précise du classement final, signalée par un jeton.
+                charge revient à une position précise du classement final, signalée par un shooter.
               </ModeCard>
               <ModeCard glyph={<ChoiceGlyph />} title="Désignation" count={choiceCount}>
                 Vous désignez une seule personne. La charge revient à celle que le suffrage place en
