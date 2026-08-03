@@ -1,12 +1,13 @@
 {
   "_comment": "Les Brunos 2024 Printemps — single_choice. 19 questions, 15 présentées. Vincent Beaulieu n'était pas présent : ni nommé, ni votant (son bulletin était un artefact de compilation).",
   "data_dir": "/chemin/local/vers/vos-exports",
+  "circle": "Les Brunos",
   "name": "Les Brunos 2024 (Printemps)",
   "year": 2024,
   "event_at": "2024-03-21T19:00:00-04:00",
   "venue_name": "Sherbrooke (lieu prive)",
   "drink_rule": "TOP_UNIQUE",
-  "shooter_value": 8,
+  "shooter_value": 10,
   "edition_code": "B2024P",
   "votes_csv": "votes_2024P_categories.csv",
   "columns": {

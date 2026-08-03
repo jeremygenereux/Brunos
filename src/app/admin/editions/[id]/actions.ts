@@ -34,6 +34,55 @@ export async function recompileEdition(editionId: string): Promise<ActionState> 
   return { error: null, success: true };
 }
 
+/**
+ * Rouvre le scrutin, y compris après échéance ou après verrouillage.
+ *
+ * `edition_accepts_votes()` exige DEUX conditions : l'état SENT_FOR_VOTE et une
+ * échéance non dépassée. Repasser l'état sans toucher à la date laisserait donc
+ * le scrutin fermé — c'est pourquoi on écrit les deux ensemble.
+ *
+ * Les classements figés ne sont pas touchés : ils deviennent simplement
+ * périmés, et « Recompiler les résultats » les remettra à jour.
+ */
+export async function reopenVoting(editionId: string, deadline: string | null) {
+  await requireAdmin();
+  if (!editionId) return { error: "Édition introuvable." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("editions")
+    .update({ state: "SENT_FOR_VOTE", vote_deadline: deadline })
+    .eq("id", editionId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/editions/${editionId}`);
+  revalidatePath("/account");
+  return { error: null, success: true };
+}
+
+/**
+ * Efface le bulletin d'un participant pour qu'il puisse voter de nouveau.
+ *
+ * La policy `votes_delete_admin` autorise cette suppression, et les réponses
+ * suivent par cascade. Un bulletin déposé étant verrouillé pour son auteur,
+ * c'est la seule façon de corriger une erreur signalée après coup.
+ */
+export async function resetBallot(editionId: string, participantId: string) {
+  await requireAdmin();
+  if (!editionId || !participantId) return { error: "Participant introuvable." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("votes")
+    .delete()
+    .eq("edition_id", editionId)
+    .eq("participant_id", participantId);
+  if (error) return { error: error.message };
+
+  revalidatePath(`/admin/editions/${editionId}`);
+  return { error: null, success: true };
+}
+
 /** Set (or clear) a participant's personalized Apple Invitation URL. */
 export async function setAppleInvite(participantId: string, url: string): Promise<ActionState> {
   await requireAdmin();

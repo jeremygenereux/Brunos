@@ -18,13 +18,33 @@ et figer les classements. Deux raisons :
 
 ## Utilisation
 
+Le raccourci, qui rejoue les trois éditions dans l'ordre chronologique :
+
+```bash
+pnpm db:history
+```
+
+Et, si la base locale doit repartir de zéro, l'enchaînement complet
+`reset` + ré-import :
+
+```bash
+pnpm db:restore
+```
+
+Édition par édition :
+
 ```bash
 # 1. Vérifier sans rien écrire (à faire systématiquement)
-node --env-file=.env.local scripts/import-edition.mjs supabase/backfill/2025.json --dry-run
+node scripts/import-edition.mjs supabase/backfill/2025.json --dry-run
 
 # 2. Importer pour de vrai
-node --env-file=.env.local scripts/import-edition.mjs supabase/backfill/2025.json
+node scripts/import-edition.mjs supabase/backfill/2025.json
 ```
+
+Le script lit `.env.local` **lui-même** (`--env <fichier>` pour en viser un
+autre) et affiche la base visée avant d'écrire. Une cible distante exige
+`--confirm-remote` : un `NEXT_PUBLIC_SUPABASE_URL` traînant dans le profil du
+shell ne peut donc pas détourner l'import en silence.
 
 Puis, dans `/admin/editions/<id>`, enchaîner :
 
@@ -48,6 +68,10 @@ Une par édition. Elles pointent vers les CSV de `_preparation_BD` :
 
 Champs utiles :
 
+- `circle` — le **cercle** d'accueil, par son nom ; il est créé s'il n'existe
+  pas. Tout en dépend : les fiches `people` sont propres à un cercle, et deux
+  cercles peuvent abriter deux homonymes distincts. Les trois configs visent
+  `Les Brunos`.
 - `data_dir` — dossier des CSV sources.
 - `edition_code` — filtre les lignes (les CSV contiennent plusieurs éditions).
 - `columns` — correspondance des colonnes du CSV de votes. `rang` peut être
@@ -74,6 +98,41 @@ Champs utiles :
   script fait donc un `upsert` sur les participants pour ne pas se heurter à
   ces lignes déjà créées.
 - **`vote_answers.edition_id` est rempli par un trigger** depuis le vote parent.
+
+## Vers la production
+
+Vercel ne touche jamais la base : le passage en prod se fait en deux temps.
+
+1. **Le schéma** — `supabase db push` (ou l'intégration GitHub) applique les
+   migrations. Rien d'autre ne part avec.
+2. **Les données historiques** — depuis le poste, en visant la base distante :
+
+   ```bash
+   node scripts/import-edition.mjs supabase/backfill/2024-printemps.json --env .env.production --confirm-remote
+   node scripts/import-edition.mjs supabase/backfill/2024-automne.json  --env .env.production --confirm-remote
+   node scripts/import-edition.mjs supabase/backfill/2025.json          --env .env.production --confirm-remote
+   ```
+
+   Le fichier d'env doit porter l'URL du projet distant et sa
+   `SUPABASE_SERVICE_ROLE_KEY`. Un import déjà passé est refusé (garde-fou
+   nom + année + cercle), sauf `--force`.
+
+3. Puis les trois transitions dans `/admin/editions/<id>` pour chacune.
+
+## Le tour complet a été vérifié
+
+`pnpm db:restore` a été rejoué sur la base locale et comparé, ligne à ligne,
+à l'état d'avant : mêmes questions (énoncé, format, présentation au gala,
+ordre, règle de gorgée), mêmes joueurs, mêmes bulletins — empreinte MD5 de
+l'ensemble des réponses identique pour les trois éditions (95, 150 et 540).
+
+Deux écarts, tous deux voulus :
+
+- **2024 Printemps** compte 5 votants au lieu de 6. Vincent Beaulieu n'était
+  pas de cette soirée ; son bulletin vide était un artefact de compilation.
+  `players_exclude` l'écarte désormais dès l'import.
+- `show_order` repart de 1 au lieu de 0. Seul l'ordre relatif compte —
+  l'application trie sur cette colonne, elle n'en lit jamais la valeur.
 
 ## Hors périmètre pour l'instant
 

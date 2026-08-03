@@ -13,6 +13,7 @@ import { TransitionControl } from "./transition-control";
 import { EditEditionForm } from "./edit-edition-form";
 import { DeleteEditionButton } from "./delete-edition-button";
 import { RecompileButton } from "./recompile-button";
+import { ReopenVoting } from "./reopen-voting";
 import { VoteTracker } from "./vote-tracker";
 import { ParticipantsManager } from "./participants-manager";
 import { InviteLink } from "@/components/invite-link";
@@ -190,6 +191,19 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
             les nourrit peut bouger ensuite (valeur du shooter, règle, sélection
             des questions, bulletin corrigé) — d'où ce recalcul à la demande,
             qui évite de faire reculer puis réavancer l'édition. */}
+        {/* Rouvrir reste possible tant que la cérémonie n'est pas archivée :
+            c'est la soupape quand un bulletin doit être corrigé après coup. */}
+        {STATE_ORDER.indexOf(edition.state) >= STATE_ORDER.indexOf("SENT_FOR_VOTE") &&
+          edition.state !== "ARCHIVED" && (
+            <ReopenVoting
+              editionId={edition.id}
+              currentDeadline={edition.vote_deadline}
+              resultsAreFrozen={
+                STATE_ORDER.indexOf(edition.state) >= STATE_ORDER.indexOf("LOCKED")
+              }
+            />
+          )}
+
         {STATE_ORDER.indexOf(edition.state) >= STATE_ORDER.indexOf("COMPILATION") && (
           <div className="border-or-400/12 mt-5 flex flex-col gap-2 rounded-xl border px-4 py-3">
             <p className="text-ivoire-muted font-sans text-xs">

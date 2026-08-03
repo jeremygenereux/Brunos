@@ -285,14 +285,36 @@ if (!local && !process.argv.includes("--confirm-remote")) {
 const db = createClient(URL, KEY, { auth: { autoRefreshToken: false, persistSession: false } });
 const die = (label, error) => { if (error) { console.error(`\n❌ ${label} :`, error.message ?? error); process.exit(1); } };
 
-const { data: existingPeople, error: peopleErr } = await db.from("people").select("id, display_name");
+// ── Cercle ───────────────────────────────────────────────────────────
+// Une cérémonie appartient toujours à un cercle, et les personnes lui sont
+// PROPRES : deux cercles peuvent abriter deux « Raphaël Tremblay » distincts.
+// Tout ce qui suit est donc cadré sur ce cercle, sans quoi l'import
+// rattacherait les bulletins aux fiches d'un autre groupe.
+const circleName = cfg.circle ?? "Les Brunos";
+const { data: foundCircle, error: circleErr } = await db
+  .from("circles").select("id, name").eq("name", circleName).maybeSingle();
+die("lecture du cercle", circleErr);
+
+let circleId = foundCircle?.id;
+if (!circleId) {
+  const { data: made, error } = await db
+    .from("circles").insert({ name: circleName }).select("id").single();
+  die(`création du cercle « ${circleName} »`, error);
+  circleId = made.id;
+  console.log(`\n⭕ Cercle « ${circleName} » créé`);
+} else {
+  console.log(`\n⭕ Cercle « ${circleName} »`);
+}
+
+const { data: existingPeople, error: peopleErr } = await db
+  .from("people").select("id, display_name").eq("circle_id", circleId);
 die("lecture des personnes", peopleErr);
 const personByName = new Map((existingPeople ?? []).map((p) => [norm(p.display_name), p.id]));
 
 const manquants = uniqInOrder([...joueurs, ...votants]).filter((n) => !personByName.has(norm(n)));
 if (manquants.length) {
   const { data: created, error } = await db.from("people")
-    .insert(manquants.map((display_name) => ({ display_name }))).select("id, display_name");
+    .insert(manquants.map((display_name) => ({ display_name, circle_id: circleId }))).select("id, display_name");
   die("création des personnes", error);
   for (const p of created ?? []) personByName.set(norm(p.display_name), p.id);
   console.log(`\n👤 ${manquants.length} personne(s) créée(s) : ${manquants.join(", ")}`);
@@ -305,7 +327,8 @@ const { data: deja } = await db
   .from("editions")
   .select("id, state")
   .eq("name", cfg.name)
-  .eq("year", cfg.year);
+  .eq("year", cfg.year)
+  .eq("circle_id", circleId);
 if ((deja ?? []).length > 0 && !process.argv.includes("--force")) {
   console.error(
     `\n❌ « ${cfg.name} » (${cfg.year}) existe déjà sur cette base :` +
@@ -323,7 +346,7 @@ const { data: edition, error: edErr } = await db.from("editions").insert({
   name: cfg.name, year: cfg.year, event_at: cfg.event_at ?? null,
   venue_name: cfg.venue_name ?? null, description: cfg.description ?? null,
   state: "CONSTRUCTION", drink_rule: cfg.drink_rule ?? "ESCALATION",
-  shooter_value: cfg.shooter_value ?? 8,
+  shooter_value: cfg.shooter_value ?? 8, circle_id: circleId,
 }).select("id").single();
 die("création de l'édition", edErr);
 console.log(`\n🎬 Édition créée : ${edition.id}`);

@@ -1,12 +1,13 @@
 {
   "_comment": "Les Brunos 2025 — ranking (Borda). L'édition la plus propre : 540 bulletins, 0 invalide.",
   "data_dir": "/chemin/local/vers/vos-exports",
+  "circle": "Les Brunos",
   "name": "Les Brunos 2025",
   "year": 2025,
   "event_at": "2025-08-30T19:00:00-04:00",
   "venue_name": "Boucherville (lieu prive)",
   "drink_rule": "ESCALATION",
-  "shooter_value": 8,
+  "shooter_value": 10,
   "edition_code": "B2025",
   "votes_csv": "votes_2025_ranking.csv",
   "columns": {

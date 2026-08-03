@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { ResetBallotButton } from "./reset-ballot-button";
 
 /**
  * Suivi du scrutin pendant que le vote est ouvert : qui a déposé son bulletin,
@@ -103,6 +104,9 @@ export async function VoteTracker({ editionId }: { editionId: string }) {
                 <span className="text-ivoire-faint font-sans text-xs tabular-nums">
                   {r.vote ? `${answered}/${totalQuestions} catégories` : "n'a pas encore voté"}
                 </span>
+                {r.vote && (
+                  <ResetBallotButton editionId={editionId} participantId={r.id} name={r.name} />
+                )}
               </div>
 
               {r.vote && mine.length > 0 && (

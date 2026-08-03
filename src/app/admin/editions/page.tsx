@@ -5,6 +5,7 @@ import { StateBadge } from "@/components/state-badge";
 import { NewEditionForm } from "./new-edition-form";
 import { DeleteEditionButton } from "./[id]/delete-edition-button";
 import type { Database } from "@/lib/types/database.types";
+import { currentCircleId } from "@/lib/editions/circle";
 
 export const metadata: Metadata = { title: "Éditions" };
 
@@ -42,11 +43,17 @@ function primaryAction(e: {
 
 export default async function EditionsPage() {
   const supabase = await createClient();
-  const { data: editions } = await supabase
-    .from("editions")
-    .select("id, name, year, event_at, venue_name, state, drink_rule, shooter_value")
-    .order("year", { ascending: false })
-    .order("created_at", { ascending: false });
+  // Cadré sur le cercle courant : un super-admin verrait sinon les cérémonies
+  // de tous les cercles mélangées dans une même liste.
+  const circleId = await currentCircleId(supabase);
+  const { data: editions } = circleId
+    ? await supabase
+        .from("editions")
+        .select("id, name, year, event_at, venue_name, state, drink_rule, shooter_value")
+        .eq("circle_id", circleId)
+        .order("year", { ascending: false })
+        .order("created_at", { ascending: false })
+    : { data: [] };
   const list = editions ?? [];
 
   const defaultYear = (list[0]?.year ?? new Date().getFullYear()) + (list.length ? 1 : 0);

@@ -4,6 +4,8 @@ import { KindSelect } from "./kind-select";
 import { InviteButton } from "./invite-button";
 import { HeadshotForm } from "./headshot-form";
 import { renamePerson, deletePerson, setPersonEmail } from "./actions";
+import { AdminToggle } from "../cercles/admin-toggle";
+import { AffiliateButton } from "./affiliate-button";
 import type { Role } from "@/lib/auth/user";
 
 export type PersonView = {
@@ -18,6 +20,10 @@ export type PersonView = {
   /** Compte réellement utilisé (au moins une connexion). */
   accountUsed: boolean;
   isSelf: boolean;
+  /** Administre le cercle en cours. */
+  isCircleAdmin: boolean;
+  /** Fiche sans cercle : elle attend un rattachement. */
+  unaffiliated: boolean;
 };
 
 const INPUT =
@@ -47,7 +53,15 @@ function AccountStatus({ p }: { p: PersonView }) {
   return <span className="text-ivoire-faint">Aucun compte</span>;
 }
 
-export function PersonCard({ person }: { person: PersonView }) {
+export function PersonCard({
+  person,
+  circleId,
+  circleName,
+}: {
+  person: PersonView;
+  circleId: string | null;
+  circleName: string;
+}) {
   return (
     <li className="border-or-400/12 bg-noir-700/40 flex flex-col gap-3 rounded-2xl border px-5 py-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -113,6 +127,45 @@ export function PersonCard({ person }: { person: PersonView }) {
               </span>
             )}
           </Field>
+
+          {/* L'administration d'un cercle se délègue à quelqu'un qui a déjà un
+              compte : circle_admins référence auth.users, pas la fiche. */}
+          {circleId && !person.unaffiliated && (
+            <Field
+              label="Administration"
+              hint={
+                person.account
+                  ? `Un administrateur gère les cérémonies, le répertoire et les scrutins de « ${circleName} ».`
+                  : "Cette personne doit d'abord disposer d'un compte."
+              }
+            >
+              {person.account ? (
+                <AdminToggle
+                  circleId={circleId}
+                  userId={person.account.userId}
+                  isAdmin={person.isCircleAdmin}
+                  label="administrateur"
+                />
+              ) : (
+                <span className="text-ivoire-faint font-sans text-xs">
+                  Invitez-la, puis revenez ici.
+                </span>
+              )}
+            </Field>
+          )}
+
+          {circleId && person.unaffiliated && (
+            <Field
+              label="Rattachement"
+              hint="Cette fiche n'appartient à aucun cercle : elle ne voit rien et n'apparaît dans aucun répertoire."
+            >
+              <AffiliateButton
+                personId={person.id}
+                circleId={circleId}
+                circleName={circleName}
+              />
+            </Field>
+          )}
 
           <Field label="Portrait" hint="Conservé d'une cérémonie à l'autre.">
             <HeadshotForm personId={person.id} hasPhoto={Boolean(person.headshot)} />

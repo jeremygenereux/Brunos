@@ -3,11 +3,17 @@ import { requireAdmin } from "@/lib/auth/guards";
 import { signOut } from "@/app/(auth)/actions";
 import { createClient } from "@/lib/supabase/server";
 import { NotificationBell } from "./notification-bell";
+import { CircleSwitcher } from "./circle-switcher";
+import { currentCircleId, listCircles } from "@/lib/editions/circle";
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
-  await requireAdmin();
+  const current = await requireAdmin();
 
   const supabase = await createClient();
+  const [circles, circleId] = await Promise.all([
+    listCircles(supabase),
+    currentCircleId(supabase),
+  ]);
   const { data: notifications } = await supabase
     .from("notifications")
     .select("id, message, created_at, read_at, edition_id")
@@ -26,9 +32,12 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           dans le DOM — le panneau de notifications se retrouvait masqué par les
           cartes, quel que soit son propre z-index. */}
       <header className="border-or-400/15 bg-noir-800/70 relative z-50 flex items-center justify-between gap-6 border-b px-6 py-4 backdrop-blur-md">
-        <Link href="/admin" className="text-ivoire font-display text-lg font-semibold">
-          Les Brunos <span className="text-or-400/70 font-sans text-xs">· Admin</span>
-        </Link>
+        <div className="flex items-center gap-3">
+          <Link href="/admin" className="text-ivoire font-display text-lg font-semibold">
+            Les Brunos <span className="text-or-400/70 font-sans text-xs">· Admin</span>
+          </Link>
+          <CircleSwitcher circles={circles} currentId={circleId} />
+        </div>
         <nav className="flex items-center gap-6 font-sans text-sm">
           <Link href="/account" className="text-ivoire-muted hover:text-or-300 transition">
             Accueil
@@ -37,8 +46,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
             Éditions
           </Link>
           <Link href="/admin/people" className="text-ivoire-muted hover:text-or-300 transition">
-            Banque de joueurs
+            Répertoire
           </Link>
+          {current.role === "super_admin" && (
+            <Link href="/admin/cercles" className="text-ivoire-muted hover:text-or-300 transition">
+              Cercles
+            </Link>
+          )}
           <NotificationBell notifications={notifications ?? []} unread={unread} />
           <form action={signOut}>
             <button

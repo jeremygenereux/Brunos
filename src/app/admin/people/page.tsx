@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { CreatePersonForm } from "./create-person-form";
 import { PersonCard, type PersonView } from "./person-card";
+import { currentCircleId } from "@/lib/editions/circle";
 
 export const metadata: Metadata = { title: "Banque de joueurs" };
 
@@ -13,10 +14,33 @@ export default async function PeoplePage() {
   const supabase = await createClient();
   const current = await getCurrentUser();
 
-  const { data: people } = await supabase
+  // Cadré sur le cercle courant. Les fiches SANS cercle (inscription hors
+  // invitation) sont récupérées à part : sans cela elles n'apparaîtraient nulle
+  // part et resteraient orphelines pour toujours.
+  const circleId = await currentCircleId(supabase);
+  const { data: people } = circleId
+    ? await supabase
+        .from("people")
+        .select("id, display_name, auth_user_id, headshot_url, kind")
+        .eq("circle_id", circleId)
+        .order("display_name")
+    : { data: [] };
+
+  const { data: unaffiliated } = await supabase
     .from("people")
     .select("id, display_name, auth_user_id, headshot_url, kind")
+    .is("circle_id", null)
     .order("display_name");
+
+  const { data: circleAdmins } = circleId
+    ? await supabase.from("circle_admins").select("user_id").eq("circle_id", circleId)
+    : { data: [] };
+  const adminUserIds = new Set((circleAdmins ?? []).map((a) => a.user_id));
+
+  const { data: circleRow } = circleId
+    ? await supabase.from("circles").select("name").eq("id", circleId).maybeSingle()
+    : { data: null };
+  const circleName = circleRow?.name ?? "ce cercle";
 
   const { data: players } = await supabase.from("players").select("person_id");
   const editionCount = new Map<string, number>();
@@ -65,11 +89,30 @@ export default async function PeoplePage() {
       accountEmail: account ? emailByUser.get(account.userId) : undefined,
       accountUsed: account ? (usedByUser.get(account.userId) ?? true) : false,
       isSelf: account?.userId === current?.user.id,
+      isCircleAdmin: account ? adminUserIds.has(account.userId) : false,
+      unaffiliated: false,
     };
   });
 
   const joueurs = views.filter((p) => p.kind === "player");
   const proches = views.filter((p) => p.kind === "jury");
+  const orphelins: PersonView[] = (unaffiliated ?? []).map((p) => {
+    const account = accountByPerson.get(p.id) ?? null;
+    return {
+      id: p.id,
+      name: p.display_name ?? "Sans nom",
+      kind: (p.kind ?? "player") as "player" | "jury",
+      headshot: p.headshot_url,
+      editions: editionCount.get(p.id) ?? 0,
+      invitedEmail: inviteByPerson.get(p.id) ?? "",
+      account,
+      accountEmail: account ? emailByUser.get(account.userId) : undefined,
+      accountUsed: account ? (usedByUser.get(account.userId) ?? true) : false,
+      isSelf: account?.userId === current?.user.id,
+      isCircleAdmin: false,
+      unaffiliated: true,
+    };
+  });
 
   return (
     <main className="mx-auto w-full max-w-4xl px-6 py-10">
@@ -90,6 +133,8 @@ export default async function PeoplePage() {
         hint="Susceptibles d'être nommés dans une cérémonie et de s'acquitter des charges au classement."
         people={joueurs}
         empty="Aucun joueur pour l&apos;instant."
+        circleId={circleId}
+        circleName={circleName}
       />
 
       <Group
@@ -98,7 +143,21 @@ export default async function PeoplePage() {
         hint="Famille et proches. Leur suffrage est consultatif et ils ne sont jamais nommés. Le rattachement s'effectue depuis la fiche de la cérémonie."
         people={proches}
         empty="Aucun proche pour l&apos;instant."
+        circleId={circleId}
+        circleName={circleName}
       />
+
+      {orphelins.length > 0 && (
+        <Group
+          title="Sans cercle"
+          count={orphelins.length}
+          hint="Comptes créés sans invitation, rattachés à aucun cercle. Ils ne voient rien et ne sont visibles d'aucun administrateur de cercle tant qu'ils ne sont pas affiliés."
+          people={orphelins}
+          empty=""
+          circleId={circleId}
+          circleName={circleName}
+        />
+      )}
     </main>
   );
 }
@@ -109,12 +168,16 @@ function Group({
   hint,
   people,
   empty,
+  circleId,
+  circleName,
 }: {
   title: string;
   count: number;
   hint: string;
   people: PersonView[];
   empty: string;
+  circleId: string | null;
+  circleName: string;
 }) {
   return (
     <section className="mt-12">
@@ -131,7 +194,7 @@ function Group({
       ) : (
         <ul className="mt-4 flex flex-col gap-2">
           {people.map((p) => (
-            <PersonCard key={p.id} person={p} />
+            <PersonCard key={p.id} person={p} circleId={circleId} circleName={circleName} />
           ))}
         </ul>
       )}

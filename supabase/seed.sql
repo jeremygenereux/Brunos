@@ -194,10 +194,29 @@ where pe.auth_user_id = u.id
   );
 
 update public.profiles p
-set role = 'admin'::public.user_role
+set role = 'super_admin'::public.user_role
 from public.people pe
 where p.person_id = pe.id
   and pe.auth_user_id = 'a17e0000-0000-4000-8000-000000000001';
+
+-- ---------------------------------------------------------------------
+-- 0b-bis) LE CERCLE
+--     Depuis le multi-tenant, tout appartient à un cercle : les éditions
+--     l'exigent (NOT NULL) et une fiche sans cercle reste invisible pour
+--     les administrateurs de cercle. On le pose donc AVANT les éditions,
+--     et on y rattache tout le monde.
+-- ---------------------------------------------------------------------
+insert into public.circles (id, name)
+values ('c1c1e000-0000-4000-8000-000000000001', 'Les Brunos')
+on conflict (id) do nothing;
+
+update public.people set circle_id = 'c1c1e000-0000-4000-8000-000000000001' where circle_id is null;
+
+-- Le super-admin est aussi administrateur de ce cercle : les deux voies
+-- d'accès (rôle global, appartenance) sont ainsi exercées en local.
+insert into public.circle_admins (circle_id, user_id)
+values ('c1c1e000-0000-4000-8000-000000000001', 'a17e0000-0000-4000-8000-000000000001')
+on conflict do nothing;
 
 -- ---------------------------------------------------------------------
 -- 0c) (Removed) A helper table mapping short key -> people.id used to live
@@ -225,7 +244,7 @@ where p.person_id = pe.id
 -- =====================================================================
 insert into public.editions
   (id, name, year, event_at, venue_name, venue_address, description, state,
-   vote_deadline, drink_rule, shooter_value, invite_token)
+   vote_deadline, drink_rule, shooter_value, invite_token, circle_id)
 values
   -- 2028 — CONSTRUCTION (draft). No deadline yet.
   ('ed170000-0000-4000-8000-000000002028',
@@ -234,7 +253,8 @@ values
    '45 chemin du Tour-du-Lac, Sainte-Adèle, QC',
    'Édition en préparation. Le maître de jeu rédige encore les questions.',
    'CONSTRUCTION', null, 'ESCALATION', 8,
-   '1271770e-0000-4000-8000-000000002028'),
+   '1271770e-0000-4000-8000-000000002028',
+   'c1c1e000-0000-4000-8000-000000000001'),
 
   -- 2027 — will become SENT_FOR_VOTE. Deadline ~2.5 months out (open now).
   ('ed170000-0000-4000-8000-000000002027',
@@ -243,7 +263,8 @@ values
    '801 chemin du Vieux-Moulin, Sainte-Adèle, QC',
    'Le vote est ouvert ! Désigne qui est le plus susceptible de…',
    'CONSTRUCTION', '2026-08-28 23:59:59-04', 'ESCALATION', 8,
-   '1271770e-0000-4000-8000-000000002027'),
+   '1271770e-0000-4000-8000-000000002027',
+   'c1c1e000-0000-4000-8000-000000000001'),
 
   -- 2026 — will become COMPILATION. Deadline already passed (vote closed).
   ('ed170000-0000-4000-8000-000000002026',
@@ -252,16 +273,18 @@ values
    '1200 avenue de la Fête, Sainte-Adèle, QC',
    'Le vote est clos. Compilation des classements en cours.',
    'CONSTRUCTION', '2026-06-10 23:59:59-04', 'ESCALATION', 8,
-   '1271770e-0000-4000-8000-000000002026'),
+   '1271770e-0000-4000-8000-000000002026',
+   'c1c1e000-0000-4000-8000-000000000001'),
 
   -- 2025 — will become ARCHIVED. Everything in the past.
   ('ed170000-0000-4000-8000-000000002025',
-   'Les Brunos 2025', 2025,
+   'Les Brunos 2025 (démonstration)', 2025,
    '2025-08-29 18:00:00-04', 'Auberge des Trois-Pins',
    '14 chemin des Bouleaux, Sainte-Adèle, QC',
    'Édition archivée. La présentation a eu lieu, les résultats sont publics.',
    'CONSTRUCTION', '2025-08-22 23:59:59-04', 'ESCALATION', 10,
-   '1271770e-0000-4000-8000-000000002025')
+   '1271770e-0000-4000-8000-000000002025',
+   'c1c1e000-0000-4000-8000-000000000001')
 on conflict (id) do nothing;
 
 
@@ -1000,3 +1023,11 @@ update public.editions set state = 'ARCHIVED'::public.edition_state
 --            frozen Borda + drink results, family ballots, post-archive vote
 --            transparency ("qui a voté pour qui") visible to participants.
 -- =====================================================================
+
+-- =====================================================================
+-- 10) FILET — RATTACHEMENT AU CERCLE
+--     Les fiches `people` naissent de déclencheurs (création de compte,
+--     auto-inscription) qui ignorent tout des cercles. On ramasse ici
+--     celles qui seraient apparues après la section 0b-bis.
+-- =====================================================================
+update public.people set circle_id = 'c1c1e000-0000-4000-8000-000000000001' where circle_id is null;

@@ -34,6 +34,53 @@ export type Database = {
   }
   public: {
     Tables: {
+      circle_admins: {
+        Row: {
+          circle_id: string
+          created_at: string
+          user_id: string
+        }
+        Insert: {
+          circle_id: string
+          created_at?: string
+          user_id: string
+        }
+        Update: {
+          circle_id?: string
+          created_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "circle_admins_circle_id_fkey"
+            columns: ["circle_id"]
+            isOneToOne: false
+            referencedRelation: "circles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      circles: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          updated_at?: string
+        }
+        Relationships: []
+      }
       edition_entourage: {
         Row: {
           created_at: string
@@ -85,6 +132,7 @@ export type Database = {
       }
       editions: {
         Row: {
+          circle_id: string
           created_at: string
           description: string | null
           drink_rule: Database["public"]["Enums"]["drink_rule"]
@@ -101,6 +149,7 @@ export type Database = {
           year: number
         }
         Insert: {
+          circle_id: string
           created_at?: string
           description?: string | null
           drink_rule?: Database["public"]["Enums"]["drink_rule"]
@@ -117,6 +166,7 @@ export type Database = {
           year: number
         }
         Update: {
+          circle_id?: string
           created_at?: string
           description?: string | null
           drink_rule?: Database["public"]["Enums"]["drink_rule"]
@@ -132,7 +182,15 @@ export type Database = {
           vote_deadline?: string | null
           year?: number
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "editions_circle_id_fkey"
+            columns: ["circle_id"]
+            isOneToOne: false
+            referencedRelation: "circles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       notifications: {
         Row: {
@@ -236,6 +294,7 @@ export type Database = {
       people: {
         Row: {
           auth_user_id: string | null
+          circle_id: string | null
           created_at: string
           display_name: string
           headshot_url: string | null
@@ -245,6 +304,7 @@ export type Database = {
         }
         Insert: {
           auth_user_id?: string | null
+          circle_id?: string | null
           created_at?: string
           display_name: string
           headshot_url?: string | null
@@ -254,6 +314,7 @@ export type Database = {
         }
         Update: {
           auth_user_id?: string | null
+          circle_id?: string | null
           created_at?: string
           display_name?: string
           headshot_url?: string | null
@@ -261,7 +322,15 @@ export type Database = {
           kind?: Database["public"]["Enums"]["participant_kind"]
           updated_at?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "people_circle_id_fkey"
+            columns: ["circle_id"]
+            isOneToOne: false
+            referencedRelation: "circles"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       person_invites: {
         Row: {
@@ -589,6 +658,8 @@ export type Database = {
         }[]
       }
       autoenroll_person: { Args: { p_person_id: string }; Returns: undefined }
+      circle_of_edition: { Args: { p_edition: string }; Returns: string }
+      circle_of_person: { Args: { p_person: string }; Returns: string }
       current_participant_id: { Args: { p_edition: string }; Returns: string }
       current_person_id: { Args: never; Returns: string }
       edition_accepts_votes: { Args: { p_edition: string }; Returns: boolean }
@@ -596,7 +667,11 @@ export type Database = {
       edition_join_info: { Args: { p_token: string }; Returns: Json }
       edition_of_question: { Args: { p_question: string }; Returns: string }
       is_admin: { Args: never; Returns: boolean }
+      is_admin_of_edition: { Args: { p_edition: string }; Returns: boolean }
+      is_admin_of_person: { Args: { p_person: string }; Returns: boolean }
+      is_circle_admin: { Args: { p_circle: string }; Returns: boolean }
       is_edition_participant: { Args: { p_edition: string }; Returns: boolean }
+      is_super_admin: { Args: never; Returns: boolean }
       join_edition: {
         Args: {
           p_kind: Database["public"]["Enums"]["participant_kind"]
@@ -647,7 +722,7 @@ export type Database = {
       question_format: "ranking" | "single_choice"
       result_audience: "players" | "jury"
       rsvp_status: "yes" | "no" | "maybe"
-      user_role: "admin" | "player" | "jury"
+      user_role: "admin" | "player" | "jury" | "super_admin"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -791,7 +866,7 @@ export const Constants = {
       question_format: ["ranking", "single_choice"],
       result_audience: ["players", "jury"],
       rsvp_status: ["yes", "no", "maybe"],
-      user_role: ["admin", "player", "jury"],
+      user_role: ["admin", "player", "jury", "super_admin"],
     },
   },
 } as const

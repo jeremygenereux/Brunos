@@ -2,6 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { currentCircleId } from "@/lib/editions/circle";
 import { requireAdmin } from "@/lib/auth/guards";
 
 export type EditionFormState = { error: string | null; success?: boolean };
@@ -29,6 +30,9 @@ export async function createEdition(
   }
 
   const supabase = await createClient();
+  // Une cérémonie appartient toujours à un cercle.
+  const circleId = await currentCircleId(supabase);
+  if (!circleId) return { error: "Aucun cercle à administrer." };
   const { error } = await supabase.from("editions").insert({
     name,
     year,
@@ -38,6 +42,7 @@ export async function createEdition(
     description: description || null,
     drink_rule: drinkRule,
     shooter_value: shooterValue,
+    circle_id: circleId,
   });
 
   // RLS (editions_insert_admin) is the real gate; surface any failure.

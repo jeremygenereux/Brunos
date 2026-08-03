@@ -15,6 +15,7 @@ export const metadata: Metadata = { title: "Accueil" };
 type EditionState = Database["public"]["Enums"]["edition_state"];
 
 const ROLE_LABEL: Record<Role, string> = {
+  super_admin: "Intendant général",
   admin: "Administrateur",
   player: "Joueur",
   jury: "Entourage",
@@ -135,7 +136,7 @@ export default async function AccountPage() {
           </p>
         </div>
         <div className="flex items-center gap-4 font-sans text-sm">
-          {current.role === "admin" && (
+          {current.administers && (
             <Link href="/admin/editions" className="text-or-300 hover:text-or-400 transition">
               Administration →
             </Link>
