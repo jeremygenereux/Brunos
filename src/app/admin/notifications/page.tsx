@@ -50,7 +50,7 @@ export default async function NotificationsPage() {
       <section className="mt-8">
         {list.length === 0 ? (
           <p className="border-or-400/10 text-ivoire-muted rounded-2xl border border-dashed px-6 py-12 text-center font-sans text-sm">
-            Aucune notification pour l&apos;instant. Les réponses des votant·e·s apparaîtront ici.
+            Aucune notification pour l&apos;instant. Les bulletins déposés apparaîtront ici.
           </p>
         ) : (
           <ul className="flex flex-col gap-2">

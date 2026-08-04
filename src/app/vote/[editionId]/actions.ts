@@ -57,7 +57,7 @@ export async function saveDraft(
     .eq("edition_id", editionId)
     .eq("user_id", user.id)
     .maybeSingle();
-  if (!participant) return { error: "Tu ne participes pas à cette édition." };
+  if (!participant) return { error: "Vous ne participez pas à cette édition." };
 
   // Un seul bulletin par (édition, participant) : on récupère ou on crée.
   const { data: existing } = await supabase
@@ -66,7 +66,7 @@ export async function saveDraft(
     .eq("edition_id", editionId)
     .eq("participant_id", participant.id)
     .maybeSingle();
-  if (existing?.submitted_at) return { error: "Ton vote a déjà été envoyé." };
+  if (existing?.submitted_at) return { error: "Votre bulletin a déjà été déposé." };
 
   let voteId = existing?.id;
   if (!voteId) {

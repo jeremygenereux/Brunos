@@ -34,7 +34,7 @@ export async function computeEditionResultRows(
 
   // Fail closed: a transient read error must not silently produce a ranking
   // computed from partial ballots. Surface it so the caller shows an error.
-  const failed = "Lecture des votes impossible. Réessaie.";
+  const failed = "Lecture des votes impossible. Réessayez.";
 
   const { data: rawPlayers, error: pErr } = await supabase
     .from("players")

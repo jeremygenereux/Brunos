@@ -60,24 +60,55 @@ export async function createPerson(_prev: PeopleState, formData: FormData): Prom
 }
 
 /**
- * Enregistre (ou efface) le courriel d'invitation d'une personne. C'est lui
- * qui permet, à l'inscription, de rattacher le compte à CETTE personne au lieu
- * d'en créer une nouvelle — et donc de retrouver les éditions où elle est déjà
- * inscrite comme joueuse.
+ * Enregistre (ou efface) le courriel d'accès d'une personne.
+ *
+ * Sans compte, ce courriel sert d'aiguillage : à l'inscription, il rattache le
+ * compte à CETTE fiche plutôt que d'en créer une nouvelle — et la personne
+ * retrouve les cérémonies où elle est déjà nommée.
+ *
+ * Avec un compte, il EST son identifiant de connexion : on modifie donc aussi
+ * l'adresse du compte. Deux cas courants l'exigent — les comptes techniques
+ * créés par l'import de l'historique (`@brunos.invalid`, qui ne reçoivent rien)
+ * et une adresse saisie de travers. Sans ça, la fiche resterait à jamais
+ * accrochée à la mauvaise adresse.
  */
-export async function setPersonEmail(formData: FormData): Promise<void> {
+export async function setPersonEmail(formData: FormData): Promise<PeopleState> {
   await requireAdmin();
   const personId = String(formData.get("person_id") ?? "");
-  if (!personId) return;
+  if (!personId) return { error: "Personne introuvable." };
   const email = normalizeEmail(formData.get("email"));
+  if (email && invalidEmail(email)) return { error: "Ce courriel n'est pas valide." };
 
   const supabase = await createClient();
+  const { data: person } = await supabase
+    .from("people")
+    .select("auth_user_id")
+    .eq("id", personId)
+    .maybeSingle();
+
+  if (person?.auth_user_id) {
+    if (!email) return { error: "Un compte existant ne peut pas rester sans adresse." };
+    if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      return { error: "SUPABASE_SERVICE_ROLE_KEY manquante côté serveur." };
+    }
+    // `email_confirm` évite le double courriel de confirmation d'Supabase, qui
+    // n'a pas de sens ici : c'est l'administration qui décide, et la personne
+    // reprend la main via le lien d'accès envoyé juste après.
+    const admin = createAdminClient();
+    const { error } = await admin.auth.admin.updateUserById(person.auth_user_id, {
+      email,
+      email_confirm: true,
+    });
+    if (error) return { error: error.message };
+  }
+
   if (!email) {
     await supabase.from("person_invites").delete().eq("person_id", personId);
-  } else if (!invalidEmail(email)) {
+  } else {
     await supabase.from("person_invites").upsert({ person_id: personId, email });
   }
   revalidatePath("/admin/people");
+  return { error: null, success: true };
 }
 
 export async function renamePerson(formData: FormData): Promise<void> {
@@ -111,7 +142,7 @@ export async function setPersonHeadshot(
   if (!personId) return { error: "Personne introuvable." };
 
   const file = formData.get("headshot");
-  if (!(file instanceof File) || file.size === 0) return { error: "Choisis une image." };
+  if (!(file instanceof File) || file.size === 0) return { error: "Choisissez une image." };
   const ext = IMAGE_EXT[file.type];
   if (!ext) return { error: "L'image doit être en PNG, JPEG ou WebP." };
 
@@ -174,7 +205,6 @@ export async function invitePerson(personId: string): Promise<PeopleState> {
     .select("email")
     .eq("person_id", personId)
     .maybeSingle();
-  if (!invite?.email) return { error: "Note d'abord un courriel d'invitation." };
 
   const origin =
     process.env.NEXT_PUBLIC_SITE_URL ??
@@ -186,24 +216,24 @@ export async function invitePerson(personId: string): Promise<PeopleState> {
 
   const admin = createAdminClient();
 
-  // Une PREMIÈRE invitation crée déjà le compte auth (et le trigger rattache la
-  // fiche). Réinviter au même endroit échouerait donc sur « already registered ».
-  // On distingue trois cas :
-  //   • aucun compte            → invitation
-  //   • compte jamais utilisé   → relance par courriel de récupération : la
-  //                               personne clique et pose enfin son mot de passe
-  //   • compte déjà utilisé     → rien à renvoyer
+  // Quand un compte existe, SON adresse fait foi : c'est là que le courriel
+  // partira, et `person_invites` peut avoir pris du retard.
   const { data: list } = await admin.auth.admin.listUsers();
-  const existing = (list?.users ?? []).find(
-    (u) => (u.email ?? "").toLowerCase() === invite.email.toLowerCase(),
-  );
+  const account = person.auth_user_id
+    ? (list?.users ?? []).find((u) => u.id === person.auth_user_id)
+    : (list?.users ?? []).find(
+        (u) => (u.email ?? "").toLowerCase() === (invite?.email ?? "").toLowerCase(),
+      );
 
-  if (existing?.last_sign_in_at) {
-    return { error: "Cette personne utilise déjà son compte." };
-  }
+  const email = account?.email ?? invite?.email;
+  if (!email) return { error: "Notez d'abord un courriel d'accès." };
 
-  if (existing) {
-    const { error } = await supabase.auth.resetPasswordForEmail(invite.email, {
+  // Une première invitation crée le compte auth (et le trigger rattache la
+  // fiche) ; réinviter à la même adresse échouerait sur « already registered ».
+  // Dès qu'un compte existe — utilisé ou non — on envoie donc un lien de
+  // récupération. C'est aussi la reprise en main après un changement d'adresse.
+  if (account) {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
       redirectTo: `${origin}/bienvenue`,
     });
     if (error) return { error: error.message };
@@ -211,7 +241,7 @@ export async function invitePerson(personId: string): Promise<PeopleState> {
     return { error: null, success: true };
   }
 
-  const { error } = await admin.auth.admin.inviteUserByEmail(invite.email, {
+  const { error } = await admin.auth.admin.inviteUserByEmail(email, {
     redirectTo: `${origin}/bienvenue`,
     data: { display_name: person.display_name },
   });
@@ -241,7 +271,7 @@ export async function setPersonKind(personId: string, kind: "player" | "jury"): 
       .eq("person_id", personId);
     if ((count ?? 0) > 0) {
       return {
-        error: `Impossible : cette personne est nommée dans ${count} édition${(count ?? 0) > 1 ? "s" : ""}. Retire-la d'abord.`,
+        error: `Impossible : cette personne est nommée dans ${count} édition${(count ?? 0) > 1 ? "s" : ""}. Retirez-la d'abord.`,
       };
     }
   }
@@ -265,7 +295,7 @@ export async function setPersonRole(personId: string, role: Role): Promise<Peopl
     .maybeSingle();
   if (!profile) return { error: "Cette personne n'a pas de compte." };
   if (profile.user_id === current?.user.id) {
-    return { error: "Tu ne peux pas changer ton propre rôle." };
+    return { error: "Vous ne pouvez pas changer votre propre rôle." };
   }
 
   // RLS (profiles_update_admin) gates this to admins.

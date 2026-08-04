@@ -225,7 +225,7 @@ export async function loadFunStats(supabase: Client): Promise<FunAward[]> {
       key: "narcisse",
       emoji: "🪞",
       title: "Connaissance proche",
-      blurb: "S'est mis·e en tête de son propre classement plus souvent que quiconque.",
+      blurb: "Se place en tête de son propre classement plus souvent que tout le monde.",
       subject: nameOf(narcissist.key),
       detail: `${narcissist.value} fois`,
       personIds: [narcissist.key],

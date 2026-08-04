@@ -83,10 +83,20 @@ export async function resetBallot(editionId: string, participantId: string) {
   return { error: null, success: true };
 }
 
-/** Set (or clear) a participant's personalized Apple Invitation URL. */
-export async function setAppleInvite(participantId: string, url: string): Promise<ActionState> {
+/**
+ * Renseigne (ou efface) le lien Apple Invitation d'une personne pour une
+ * cérémonie donnée.
+ *
+ * La clé est (cérémonie, personne) et non le compte : un nommé sans compte —
+ * le cas ordinaire avant sa première cérémonie — doit pouvoir en recevoir un.
+ */
+export async function setAppleInvite(
+  editionId: string,
+  personId: string,
+  url: string,
+): Promise<ActionState> {
   await requireAdmin();
-  if (!participantId) return { error: "Participant introuvable." };
+  if (!editionId || !personId) return { error: "Personne introuvable." };
 
   const trimmed = url.trim();
   if (trimmed && !/^https?:\/\//i.test(trimmed)) {
@@ -95,10 +105,14 @@ export async function setAppleInvite(participantId: string, url: string): Promis
 
   const supabase = await createClient();
   const { error } = await supabase
-    .from("participants")
-    .update({ apple_invite_url: trimmed || null })
-    .eq("id", participantId);
+    .from("edition_invites")
+    .upsert(
+      { edition_id: editionId, person_id: personId, apple_invite_url: trimmed || null },
+      { onConflict: "edition_id,person_id" },
+    );
   if (error) return { error: error.message };
+
+  revalidatePath(`/admin/editions/${editionId}`);
   return { error: null, success: true };
 }
 

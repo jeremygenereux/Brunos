@@ -4,27 +4,34 @@ import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { setAppleInvite } from "./actions";
 
-export type ManagedParticipant = {
-  id: string;
+/**
+ * Une personne conviée à une cérémonie. Elle vient de `players` (nommée) ou de
+ * `edition_entourage` (proche d'un joueur) — jamais de `participants`, qui
+ * n'existe qu'à partir du moment où un compte est créé et laisserait donc les
+ * nouveaux venus sans ligne où coller leur lien.
+ */
+export type ManagedGuest = {
+  personId: string;
   name: string;
   kind: "player" | "jury";
+  hasAccount: boolean;
   apple_invite_url: string | null;
 };
 
-function Row({ p }: { p: ManagedParticipant }) {
-  const [url, setUrl] = useState(p.apple_invite_url ?? "");
+function Row({ editionId, guest }: { editionId: string; guest: ManagedGuest }) {
+  const [url, setUrl] = useState(guest.apple_invite_url ?? "");
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
   const router = useRouter();
 
-  const dirty = url.trim() !== (p.apple_invite_url ?? "");
+  const dirty = url.trim() !== (guest.apple_invite_url ?? "");
 
   function save() {
     setError(null);
     setSaved(false);
     start(async () => {
-      const r = await setAppleInvite(p.id, url);
+      const r = await setAppleInvite(editionId, guest.personId, url);
       if (r.error) setError(r.error);
       else {
         setSaved(true);
@@ -35,11 +42,16 @@ function Row({ p }: { p: ManagedParticipant }) {
 
   return (
     <li className="border-or-400/12 bg-noir-700/40 flex flex-col gap-2 rounded-xl border px-4 py-3">
-      <div className="flex items-center gap-2">
-        <span className="text-ivoire font-sans text-sm font-medium">{p.name}</span>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-ivoire font-sans text-sm font-medium">{guest.name}</span>
         <span className="text-ivoire-faint font-sans text-xs">
-          {p.kind === "jury" ? "Entourage" : "Joueur"}
+          {guest.kind === "jury" ? "Entourage" : "Joueur"}
         </span>
+        {!guest.hasAccount && (
+          <span className="border-or-400/25 text-or-400/80 rounded-full border px-2 py-0.5 font-sans text-[10px] tracking-wide uppercase">
+            Sans compte
+          </span>
+        )}
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <input
@@ -66,18 +78,24 @@ function Row({ p }: { p: ManagedParticipant }) {
   );
 }
 
-export function ParticipantsManager({ participants }: { participants: ManagedParticipant[] }) {
-  if (participants.length === 0) {
+export function ParticipantsManager({
+  editionId,
+  guests,
+}: {
+  editionId: string;
+  guests: ManagedGuest[];
+}) {
+  if (guests.length === 0) {
     return (
       <p className="text-ivoire-muted font-sans text-sm">
-        Personne n&apos;a encore rejoint l&apos;édition (partage le lien d&apos;invitation).
+        Aucun joueur ni proche pour l&apos;instant. Ajoutez des joueurs pour les voir ici.
       </p>
     );
   }
   return (
     <ul className="flex flex-col gap-2">
-      {participants.map((p) => (
-        <Row key={p.id} p={p} />
+      {guests.map((g) => (
+        <Row key={g.personId} editionId={editionId} guest={g} />
       ))}
     </ul>
   );

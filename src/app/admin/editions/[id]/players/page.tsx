@@ -56,7 +56,7 @@ export default async function PlayersPage({ params }: { params: Promise<{ id: st
 
       <h1 className="text-ivoire font-display mt-4 text-4xl font-semibold">Joueurs</h1>
       <p className="text-ivoire-muted mt-1 font-sans text-sm">
-        Les nommés de cette soirée, choisis dans le{" "}
+        Les joueurs de cette cérémonie, choisis dans le{" "}
         <Link href="/admin/people" className="text-or-300 hover:text-or-400 transition">
           répertoire
         </Link>

@@ -15,6 +15,6 @@ export const DRINK_RULE_LABEL: Record<DrinkRule, string> = {
 
 /** Version courte pour les listes déroulantes denses. */
 export const DRINK_RULE_HINT: Record<DrinkRule, string> = {
-  TOP_UNIQUE: "Gagnant boit — le 1er du classement cale",
-  ESCALATION: "Perdant boit — le dernier cale, les autres boivent selon leur rang",
+  TOP_UNIQUE: "Gagnant boit : le 1er du classement cale",
+  ESCALATION: "Perdant boit : le dernier cale, les autres boivent selon leur rang",
 };

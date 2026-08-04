@@ -11,6 +11,8 @@ import type {
 } from "@/lib/editions/presentation-types";
 import { ArchiveButton } from "./archive-button";
 import { cascadeOf } from "@/lib/editions/reveal-order";
+import { questionModesFor } from "@/lib/editions/question-modes";
+import { ChoiceGlyph, ModeCard, RankingGlyph } from "@/components/question-mode";
 import { ReactiveParticles, AwardCategoryReveal } from "@/components/award";
 
 export type { Category, RankRow, RecapRow };
@@ -66,12 +68,19 @@ export function PresentationDeck({
 }) {
   const quitHref = backHref ?? `/admin/editions/${edition.id}`;
 
-  // Typed slide deck: intro → rules → categories → recap.
+  // Enchaînement : ouverture → règlement → catégories → relevé.
   type Slide =
     | { type: "intro" }
     | { type: "rules" }
     | { type: "category"; cat: Category }
     | { type: "recap" };
+
+  // Les façons de voter présentes ce soir, annoncées au règlement.
+  const modes = useMemo(
+    () => questionModesFor(categories, edition.drinkRule),
+    [categories, edition.drinkRule],
+  );
+
   const slides = useMemo<Slide[]>(
     () => [
       { type: "intro" },
@@ -173,9 +182,9 @@ export function PresentationDeck({
         ? ` ${cat.drama.map((d) => `${d.title}. ${d.detail}`).join(" ")}`
         : "")
     : isRecap
-      ? "Relevéitulatif de la soirée."
+      ? "Total des gorgées de la soirée."
       : isRules
-        ? "Les règles de la soirée."
+        ? `Les règles de la soirée. ${modes.map((m) => `${m.title}. ${m.ballotNote} ${m.drinkNote}`).join(" ")}`
         : `${edition.name}.`;
 
   return (
@@ -206,7 +215,7 @@ export function PresentationDeck({
             {cat
               ? `${cat.index + 1} / ${categories.length}`
               : isRecap
-                ? "Relevé"
+                ? "Total"
                 : isRules
                   ? "Règlement"
                   : "Ouverture"}
@@ -238,31 +247,39 @@ export function PresentationDeck({
           </div>
         )}
 
+        {/* Le règlement porte les deux pictogrammes du bulletin : l'assemblée
+            reconnaît en séance ce qu'elle a vu en votant, et découvre où tombe
+            la charge AVANT le premier verdict plutôt que pendant. */}
         {isRules && (
-          <div key="rules" className="brunos-fade flex max-w-2xl flex-col items-center gap-6">
+          <div key="rules" className="brunos-fade flex w-full max-w-6xl flex-col items-center gap-10">
             <Kicker>Règlement</Kicker>
-            <h2 className="text-ivoire font-display text-4xl leading-tight font-semibold sm:text-5xl">
-              {edition.drinkRule === "TOP_UNIQUE"
-                ? "Le lauréat s'acquitte du shooter."
-                : "La charge revient au dernier rang."}
+            <h2 className="text-ivoire font-display text-5xl leading-tight font-semibold sm:text-6xl">
+              Un shooter vaut{" "}
+              <span className="text-or-300">{edition.shooterValue} gorgées</span>.
             </h2>
-            <p className="text-ivoire-muted font-sans text-lg leading-relaxed">
-              {edition.drinkRule === "TOP_UNIQUE" ? (
-                <>
-                  Dans chaque catégorie, seul·e le·la lauréat·e s&apos;acquitte d&apos;un shooter,
-                  soit <span className="text-or-300">{edition.shooterValue} gorgées</span>. En cas
-                  d&apos;ex æquo, la charge est partagée.
-                </>
-              ) : (
-                <>
-                  Dans chaque catégorie, la consommation suit le rang : une gorgée pour la première
-                  place, deux pour la deuxième, et ainsi de suite. Le dernier rang s&apos;acquitte
-                  d&apos;un shooter, soit{" "}
-                  <span className="text-or-300">{edition.shooterValue} gorgées</span>.
-                </>
-              )}
-            </p>
-            <p className="text-or-400/60 font-sans text-sm tracking-[0.2em] uppercase">
+
+            <div className="flex w-full flex-col gap-6 lg:flex-row">
+              {modes.map((m) => (
+                <ModeCard
+                  key={m.kind}
+                  scale="stage"
+                  glyph={
+                    m.kind === "ranking" ? (
+                      <RankingGlyph scale="stage" />
+                    ) : (
+                      <ChoiceGlyph scale="stage" />
+                    )
+                  }
+                  title={m.title}
+                  subtitle={`${m.count} catégorie${m.count > 1 ? "s" : ""}`}
+                >
+                  <p>{m.ballotNote}</p>
+                  <p className="text-ivoire">{m.drinkNote}</p>
+                </ModeCard>
+              ))}
+            </div>
+
+            <p className="text-or-400/60 font-sans text-base tracking-[0.3em] uppercase">
               Que le meilleur perde.
             </p>
           </div>
@@ -313,7 +330,7 @@ export function PresentationDeck({
             key="recap"
             className="brunos-fade flex w-full max-w-2xl flex-col items-center gap-6"
           >
-            <Kicker>Relevé de la soirée</Kicker>
+            <Kicker>Total de la soirée</Kicker>
             <h2 className="text-ivoire font-display text-5xl font-semibold">Consommation totale</h2>
             <ol className="mt-2 flex w-full flex-col gap-2">
               {recap.map((r, i) => {

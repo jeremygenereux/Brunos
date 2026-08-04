@@ -130,6 +130,45 @@ export type Database = {
           },
         ]
       }
+      edition_invites: {
+        Row: {
+          apple_invite_url: string | null
+          created_at: string
+          edition_id: string
+          person_id: string
+          updated_at: string
+        }
+        Insert: {
+          apple_invite_url?: string | null
+          created_at?: string
+          edition_id: string
+          person_id: string
+          updated_at?: string
+        }
+        Update: {
+          apple_invite_url?: string | null
+          created_at?: string
+          edition_id?: string
+          person_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "edition_invites_edition_id_fkey"
+            columns: ["edition_id"]
+            isOneToOne: false
+            referencedRelation: "editions"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "edition_invites_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       editions: {
         Row: {
           circle_id: string
@@ -239,7 +278,6 @@ export type Database = {
       }
       participants: {
         Row: {
-          apple_invite_url: string | null
           created_at: string
           edition_id: string
           id: string
@@ -251,7 +289,6 @@ export type Database = {
           user_id: string
         }
         Insert: {
-          apple_invite_url?: string | null
           created_at?: string
           edition_id: string
           id?: string
@@ -263,7 +300,6 @@ export type Database = {
           user_id: string
         }
         Update: {
-          apple_invite_url?: string | null
           created_at?: string
           edition_id?: string
           id?: string

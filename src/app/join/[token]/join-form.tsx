@@ -32,7 +32,7 @@ export function JoinForm({ token, players }: { token: string; players: Player[] 
           <span className="font-sans text-sm">
             <span className="text-ivoire">Joueur</span>
             <span className="text-ivoire-muted block text-xs">
-              Vous êtes nommé·e : votre suffrage est officiel et vous êtes soumis·e aux charges.
+              Vous êtes nommé dans cette cérémonie : votre vote compte, et vous pouvez avoir à boire.
             </span>
           </span>
         </label>
@@ -48,7 +48,7 @@ export function JoinForm({ token, players }: { token: string; players: Player[] 
           <span className="font-sans text-sm">
             <span className="text-ivoire">Jury / entourage</span>
             <span className="text-ivoire-muted block text-xs">
-              Votre suffrage est consultatif : il ne fait boire personne.
+              Votre vote est consultatif : il ne fait boire personne.
             </span>
           </span>
         </label>

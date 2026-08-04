@@ -1,9 +1,9 @@
 import { Avatar } from "@/components/avatar";
 import { RoleSelect } from "./role-select";
 import { KindSelect } from "./kind-select";
-import { InviteButton } from "./invite-button";
+import { AccessManager } from "./access-manager";
 import { HeadshotForm } from "./headshot-form";
-import { renamePerson, deletePerson, setPersonEmail } from "./actions";
+import { renamePerson, deletePerson } from "./actions";
 import { AdminToggle } from "../cercles/admin-toggle";
 import { AffiliateButton } from "./affiliate-button";
 import type { Role } from "@/lib/auth/user";
@@ -96,36 +96,16 @@ export function PersonCard({
             <KindSelect personId={person.id} initial={person.kind} />
           </Field>
 
-          <Field
-            label="Accès"
-            hint="Ce courriel rattache le futur compte à cette fiche. Les cérémonies apparaîtront dès l'inscription, sans lien à suivre."
-          >
-            {!person.accountUsed ? (
-              <>
-                <form action={setPersonEmail} className="flex items-center gap-2">
-                  <input type="hidden" name="person_id" value={person.id} />
-                  <input
-                    name="email"
-                    type="email"
-                    defaultValue={person.invitedEmail}
-                    placeholder="prenom@exemple.com"
-                    className={INPUT}
-                  />
-                  <button type="submit" className={BTN}>
-                    Enregistrer
-                  </button>
-                </form>
-                <InviteButton
-                  personId={person.id}
-                  disabled={!person.invitedEmail}
-                  label={person.account ? "Renvoyer l'invitation" : "Envoyer l'invitation"}
-                />
-              </>
-            ) : (
-              <span className="text-ivoire-faint font-sans text-xs">
-                Accès déjà utilisé. Aucun envoi requis.
-              </span>
-            )}
+          <Field label="Accès">
+            <AccessManager
+              access={{
+                personId: person.id,
+                invitedEmail: person.invitedEmail,
+                accountEmail: person.accountEmail,
+                hasAccount: Boolean(person.account),
+                accountUsed: person.accountUsed,
+              }}
+            />
           </Field>
 
           {/* L'administration d'un cercle se délègue à quelqu'un qui a déjà un

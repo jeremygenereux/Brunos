@@ -145,7 +145,7 @@ function LockedBallot({
   return (
     <div className="mt-6 flex flex-col gap-5">
       <p className="brunos-glass border-or-400/30 text-or-300 rounded-2xl border px-5 py-4 font-sans text-sm">
-        Bulletin déposé{when ? ` le ${when}` : ""}. Nous vous remercions.
+        Bulletin déposé{when ? ` le ${when}` : ""}. Merci.
       </p>
       {questions.map((q, i) => (
         <div key={q.id} className="border-or-400/12 bg-noir-700/40 rounded-2xl border p-5">

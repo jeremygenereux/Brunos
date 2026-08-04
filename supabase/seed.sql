@@ -26,7 +26,7 @@ set app.skip_autoenroll = 'on';
 --     • Family / entourage voters (kind='jury') with their own ballots.
 --     • shooter_value set per edition (the "égaliseur" constant).
 --     • notifications (vote_submitted, results_compiled, …) for the admin.
---     • invite_token on every edition + apple_invite_url on participants.
+--     • invite_token on every edition + edition_invites (liens Apple).
 --
 -- HOW WE HANDLE auth.users
 --   participants/votes/profiles all FK auth.users(id), so authenticated rows
@@ -367,9 +367,9 @@ on conflict (id) do nothing;
 --
 -- 3a) Core 6 as players in all four editions.
 -- =====================================================================
-insert into public.participants (id, edition_id, user_id, kind, linked_player_id, relation_label, apple_invite_url)
+insert into public.participants (id, edition_id, user_id, kind, linked_player_id, relation_label)
 select
-  pt.participant_id, pt.edition_id, u.id, 'player'::public.participant_kind, null, null, pt.apple_url
+  pt.participant_id, pt.edition_id, u.id, 'player'::public.participant_kind, null, null
 from (values
   -- 2028 (draft) — only the admin/owner is in so far; the rest get added when
   -- the edition opens. Keeps the CONSTRUCTION edition realistically empty.
@@ -398,6 +398,19 @@ from (values
 ) as pt(participant_id, edition_id, user_id, apple_url)
 join auth.users u on u.id = pt.user_id
 on conflict (id) do nothing;
+
+-- Les liens Apple sont désormais portés par (cérémonie, personne) et non par
+-- le compte : un nommé sans compte doit pouvoir en recevoir un.
+insert into public.edition_invites (edition_id, person_id, apple_invite_url)
+select v.edition_id, pe.id, v.url
+from (values
+  ('ed170000-0000-4000-8000-000000002027'::uuid, 'a17e0000-0000-4000-8000-000000000001'::uuid,
+   'https://invites.apple.com/brunos-2027/jeremy'),
+  ('ed170000-0000-4000-8000-000000002026'::uuid, 'a17e0000-0000-4000-8000-000000000001'::uuid,
+   'https://invites.apple.com/brunos-2026/jeremy')
+) as v(edition_id, auth_user_id, url)
+join public.people pe on pe.auth_user_id = v.auth_user_id
+on conflict (edition_id, person_id) do nothing;
 
 -- 3b) Family / entourage members as jury participants (linked to a player).
 --     2027: 1 family voter. 2026 + 2025: several. linked_player_id points at
@@ -511,7 +524,8 @@ select
   q.prompt,
   case when q.n in (3, 10) then 'single_choice'::public.question_format else 'ranking'::public.question_format end,
   (q.n - 1),
-  case when q.n = 3 then 'TOP_UNIQUE'::public.drink_rule else null end,
+  -- Une désignation fait toujours un seul buveur : la personne la plus votée.
+  case when q.n in (3, 10) then 'TOP_UNIQUE'::public.drink_rule else null end,
   false, null, true
 from (values
   (1,  'Qui est le plus susceptible de se marier en premier ?'),
@@ -569,10 +583,10 @@ select
   -- ~1/5 are single_choice; the rest ranking.
   case when q.n % 5 = 0 then 'single_choice'::public.question_format else 'ranking'::public.question_format end,
   (q.n - 1),
-  -- a few drink-rule overrides to exercise the equalizer.
-  case when q.n = 3 then 'TOP_UNIQUE'::public.drink_rule
-       when q.n = 20 then 'ESCALATION'::public.drink_rule
-       else null end,
+  -- Toute désignation est en « gagnant boit » : c'est la seule règle qui ait
+  -- un sens quand on ne choisit qu'une personne. La question 3 est un
+  -- classement en « gagnant boit », pour exercer le cas mixte.
+  case when q.n % 5 = 0 or q.n = 3 then 'TOP_UNIQUE'::public.drink_rule else null end,
   false, null, true
 from (values
   (1,  'Qui est le plus susceptible de se marier en premier ?'),
@@ -629,9 +643,7 @@ select
   q.prompt,
   case when q.n % 5 = 0 then 'single_choice'::public.question_format else 'ranking'::public.question_format end,
   (q.n - 1),
-  case when q.n = 3 then 'TOP_UNIQUE'::public.drink_rule
-       when q.n = 20 then 'ESCALATION'::public.drink_rule
-       else null end,
+  case when q.n % 5 = 0 or q.n = 3 then 'TOP_UNIQUE'::public.drink_rule else null end,
   (q.n <= 20),                                   -- selected for the show?
   case when q.n <= 20 then (q.n - 1) else null end,  -- show_order 0..19
   -- one selected question has its reveal toggled OFF, to exercise that flag.

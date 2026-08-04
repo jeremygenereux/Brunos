@@ -85,7 +85,7 @@ export function FunAwards({ awards }: { awards: FunAward[] }) {
         Ce que révèlent les bulletins
       </h2>
       <p className="text-ivoire-muted mt-1 font-sans text-sm">
-        Établies d&apos;après l&apos;ensemble des scrutins archivés.
+        Calculées à partir de tous les votes archivés.
       </p>
 
       <ul className="mt-5 grid gap-3 sm:grid-cols-2">

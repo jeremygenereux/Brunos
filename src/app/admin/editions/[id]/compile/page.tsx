@@ -42,7 +42,7 @@ export default async function CompilePage({ params }: { params: Promise<{ id: st
         </Link>
         <p className="border-or-400/15 bg-noir-700/40 text-ivoire-muted mt-6 rounded-2xl border px-6 py-10 text-center font-sans text-sm">
           La compilation n&apos;est disponible que lorsque l&apos;édition est en état COMPILATION
-          (ferme le vote depuis le détail).
+          (fermez le vote depuis le détail).
         </p>
       </main>
     );

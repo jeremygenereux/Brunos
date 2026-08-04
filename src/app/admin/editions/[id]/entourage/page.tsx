@@ -72,8 +72,8 @@ export default async function EntouragePage({ params }: { params: Promise<{ id: 
 
       <h1 className="text-ivoire font-display mt-4 text-4xl font-semibold">Entourage</h1>
       <p className="text-ivoire-muted mt-1 max-w-2xl font-sans text-sm">
-        Les proches conviés à voter à cette cérémonie. Leur suffrage figure dans un classement
-        distinct et n&apos;entraîne aucune charge. Chacun se rattache à un joueur.
+        Les proches invités à voter à cette cérémonie. Leurs votes sont comptés à part et ne font
+        boire personne. Chacun est rattaché à un joueur.
       </p>
 
       {playerList.length === 0 ? (

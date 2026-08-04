@@ -23,9 +23,9 @@ export async function addEntourage(
   const linkedPlayerId = String(formData.get("linked_player_id") ?? "");
   const relation = String(formData.get("relation_label") ?? "").trim();
 
-  if (!editionId || !personId) return { error: "Choisis une personne." };
-  if (!linkedPlayerId) return { error: "Choisis le joueur auquel la rattacher." };
-  if (!relation) return { error: "Précise le lien (ex. « Mère de Raphaël »)." };
+  if (!editionId || !personId) return { error: "Choisissez une personne." };
+  if (!linkedPlayerId) return { error: "Choisissez le joueur auquel la rattacher." };
+  if (!relation) return { error: "Précisez le lien (ex. « Mère de Raphaël »)." };
 
   const supabase = await createClient();
   const { error } = await supabase.from("edition_entourage").upsert(
