@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth/guards";
 import { nextState, type EditionState } from "@/lib/editions/state-machine";
 import { snapshotEditionResults } from "@/lib/editions/snapshot";
+import { eventInputToIso } from "@/lib/dates/event-time";
 
 export type ActionState = { error: string | null; success?: boolean };
 
@@ -166,7 +167,7 @@ export async function transitionEdition(
     state: requested,
   };
   if (requested === "SENT_FOR_VOTE") {
-    payload.vote_deadline = voteDeadline ? new Date(voteDeadline).toISOString() : null;
+    payload.vote_deadline = voteDeadline ? eventInputToIso(voteDeadline) : null;
   }
 
   // RLS (editions_update_admin) is the real gate; this update is admin-only.
@@ -225,7 +226,7 @@ export async function updateEdition(_prev: ActionState, formData: FormData): Pro
   if (!Number.isInteger(year) || year < 2001) return { error: "Année invalide." };
   if (!(shooterValue > 0)) return { error: "La valeur du shooter doit être positive." };
   if (drinkRule !== "ESCALATION" && drinkRule !== "TOP_UNIQUE") {
-    return { error: "Règle de consommation invalide." };
+    return { error: "Règle par défaut invalide." };
   }
 
   const supabase = await createClient();
@@ -234,7 +235,7 @@ export async function updateEdition(_prev: ActionState, formData: FormData): Pro
     .update({
       name,
       year,
-      event_at: eventAt ? new Date(eventAt).toISOString() : null,
+      event_at: eventAt ? eventInputToIso(eventAt) : null,
       venue_name: venueName || null,
       venue_address: venueAddress || null,
       description: description || null,

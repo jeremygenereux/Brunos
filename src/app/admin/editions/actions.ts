@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { currentCircleId } from "@/lib/editions/circle";
 import { requireAdmin } from "@/lib/auth/guards";
+import { eventInputToIso } from "@/lib/dates/event-time";
 
 export type EditionFormState = { error: string | null; success?: boolean };
 
@@ -26,7 +27,7 @@ export async function createEdition(
   if (!Number.isInteger(year) || year < 2001) return { error: "Année invalide." };
   if (!(shooterValue > 0)) return { error: "La valeur du shooter doit être positive." };
   if (drinkRule !== "ESCALATION" && drinkRule !== "TOP_UNIQUE") {
-    return { error: "Règle de consommation invalide." };
+    return { error: "Règle par défaut invalide." };
   }
 
   const supabase = await createClient();
@@ -36,7 +37,7 @@ export async function createEdition(
   const { error } = await supabase.from("editions").insert({
     name,
     year,
-    event_at: eventAt ? new Date(eventAt).toISOString() : null,
+    event_at: eventAt ? eventInputToIso(eventAt) : null,
     venue_name: venueName || null,
     venue_address: venueAddress || null,
     description: description || null,

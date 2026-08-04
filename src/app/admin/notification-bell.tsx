@@ -4,6 +4,7 @@ import { useEffect, useRef, useState, useTransition } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { markAllNotificationsRead } from "@/app/admin/notifications/actions";
+import { formatEventDateTime } from "@/lib/dates/event-time";
 
 export type BellNotif = {
   id: string;
@@ -14,7 +15,7 @@ export type BellNotif = {
 };
 
 function fmt(value: string) {
-  return new Date(value).toLocaleString("fr-CA", { dateStyle: "short", timeStyle: "short" });
+  return formatEventDateTime(value, "short");
 }
 
 export function NotificationBell({

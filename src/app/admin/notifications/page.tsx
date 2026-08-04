@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { markAllNotificationsRead } from "./actions";
+import { formatEventDateTime } from "@/lib/dates/event-time";
 
 export const metadata: Metadata = { title: "Notifications" };
 
@@ -13,7 +14,7 @@ function editionName(editions: unknown): { name: string; id: string } | null {
 }
 
 function fmt(value: string) {
-  return new Date(value).toLocaleString("fr-CA", { dateStyle: "medium", timeStyle: "short" });
+  return formatEventDateTime(value, "medium");
 }
 
 export default async function NotificationsPage() {

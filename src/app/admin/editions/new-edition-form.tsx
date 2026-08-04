@@ -47,7 +47,11 @@ export function NewEditionForm({ defaultYear }: { defaultYear: number }) {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="drink_rule">Règle de consommation</Label>
+        <Label htmlFor="drink_rule">Règle par défaut des nouvelles catégories</Label>
+        <p className="text-ivoire-faint font-sans text-xs">
+          Chaque catégorie porte sa propre règle. Celle-ci ne fait que pré-remplir le
+          choix quand vous en ajoutez une.
+        </p>
         <Select id="drink_rule" name="drink_rule" defaultValue="ESCALATION">
           <option value="ESCALATION">{DRINK_RULE_HINT.ESCALATION}</option>
           <option value="TOP_UNIQUE">{DRINK_RULE_HINT.TOP_UNIQUE}</option>

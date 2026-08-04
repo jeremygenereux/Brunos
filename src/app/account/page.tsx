@@ -9,6 +9,7 @@ import { loadArchiveStats } from "@/lib/editions/stats";
 import { ArchiveRolodex } from "./archive-rolodex";
 import { Countdown } from "./countdown";
 import type { Database } from "@/lib/types/database.types";
+import { formatEventDate, formatEventDateTime } from "@/lib/dates/event-time";
 
 export const metadata: Metadata = { title: "Accueil" };
 
@@ -23,11 +24,11 @@ const ROLE_LABEL: Record<Role, string> = {
 
 function fmtDate(value: string | null) {
   if (!value) return null;
-  return new Date(value).toLocaleDateString("fr-CA", { dateStyle: "long" });
+  return formatEventDate(value);
 }
 function fmtDateTime(value: string | null) {
   if (!value) return null;
-  return new Date(value).toLocaleString("fr-CA", { dateStyle: "long", timeStyle: "short" });
+  return formatEventDateTime(value);
 }
 
 type Edition = {

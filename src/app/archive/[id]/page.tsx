@@ -7,12 +7,13 @@ import { loadEditionVoteReveal } from "@/lib/editions/drama";
 import { cascadeOf } from "@/lib/editions/reveal-order";
 import type { Category, RankRow } from "@/lib/editions/presentation-types";
 import { Avatar } from "@/components/avatar";
+import { formatEventDate } from "@/lib/dates/event-time";
 
 export const metadata: Metadata = { title: "Récap" };
 
 function fmtDate(value: string | null) {
   if (!value) return null;
-  return new Date(value).toLocaleDateString("fr-CA", { dateStyle: "long" });
+  return formatEventDate(value);
 }
 
 function StatTile({ value, label }: { value: string | number; label: string }) {
