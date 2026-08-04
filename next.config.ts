@@ -32,6 +32,18 @@ const nextConfig: NextConfig = {
       bodySizeLimit: "8mb",
     },
   },
+  // Application privée, sur invitation : aucune page ne doit se retrouver dans
+  // un moteur de recherche. `robots.txt` (voir src/app/robots.ts) écarte les
+  // robots qui le respectent ; cet en-tête neutralise ceux qui l'ignorent, et
+  // couvre le cas où une URL serait découverte par un lien externe.
+  async headers() {
+    return [
+      {
+        source: "/:path*",
+        headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow, noarchive" }],
+      },
+    ];
+  },
 };
 
 export default nextConfig;
