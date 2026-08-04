@@ -17,18 +17,10 @@ export default function Home() {
         </span>
       </h1>
 
-      <p
-        className="text-ivoire-muted brunos-enter mt-8 max-w-md font-sans text-base"
-        style={{ animationDelay: "240ms" }}
-      >
-        Cérémonie annuelle. Vote à bulletin secret, résultats dévoilés en grand écran, et
-        des shooters pour ceux que le classement désigne.
-      </p>
-
       {/* L'accès se fait sur invitation : pas de « créer un compte » en vitrine.
           La route /signup reste nécessaire au parcours entourage (/join/<token>),
           où le jury déclare lui-même son lien avec un joueur. */}
-      <div className="brunos-enter mt-12" style={{ animationDelay: "360ms" }}>
+      <div className="brunos-enter mt-12" style={{ animationDelay: "240ms" }}>
         <Link
           href="/login"
           className="from-or-300 to-or-600 text-noir-900 hover:from-or-400 hover:to-or-500 rounded-full bg-gradient-to-b px-8 py-3 font-sans text-sm font-semibold shadow-lg transition"
@@ -39,9 +31,9 @@ export default function Home() {
 
       <p
         className="text-ivoire-faint brunos-enter mt-8 max-w-sm font-sans text-xs"
-        style={{ animationDelay: "480ms" }}
+        style={{ animationDelay: "360ms" }}
       >
-        L&apos;accès se fait sur invitation. Le lien reçu par courriel ouvre votre espace.
+        L&apos;accès se fait sur invitation.
       </p>
     </main>
   );

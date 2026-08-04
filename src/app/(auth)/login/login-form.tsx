@@ -1,7 +1,6 @@
 "use client";
 
 import { useActionState } from "react";
-import Link from "next/link";
 import { signIn, type AuthState } from "@/app/(auth)/actions";
 import { Input, Label, SubmitButton } from "@/components/ui";
 
@@ -39,11 +38,11 @@ export function LoginForm({ next }: { next?: string }) {
 
       <SubmitButton>Se connecter</SubmitButton>
 
+      {/* Aucun lien vers /signup ici : les accès sont attribués par
+          l'organisateur. La route existe toujours, mais elle sert au parcours
+          entourage, qui n'y arrive que par un lien d'invitation. */}
       <p className="text-ivoire-muted text-center font-sans text-sm">
-        Vous n&apos;avez pas d&apos;accès ?{" "}
-        <Link href="/signup" className="text-or-400 hover:text-or-300">
-          En créer un
-        </Link>
+        Vos identifiants vous sont remis par l&apos;organisateur.
       </p>
     </form>
   );
