@@ -51,8 +51,8 @@ export function RevealCurator({ editionId, items }: { editionId: string; items: 
         Révélations & déboules
       </h2>
       <p className="text-ivoire-muted mt-1 mb-5 font-sans text-sm">
-        Aperçu de ce qui pourra être révélé en présentation et dans l&apos;archive. Active ou
-        désactive par question.
+        Aperçu de ce qui pourra être révélé en présentation et dans l&apos;archive. Activez ou
+        désactivez par question.
       </p>
       <ul className="flex flex-col gap-3">
         {items.map((item) => (

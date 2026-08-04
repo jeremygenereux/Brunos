@@ -26,7 +26,7 @@ export function AddEntourageForm({
     return (
       <p className="border-or-400/10 text-ivoire-muted rounded-2xl border border-dashed px-6 py-8 text-center font-sans text-sm">
         Tous les proches du répertoire sont déjà rattachés. Inscrivez une nouvelle personne de
-        type « Proche » au répertoire pour en convier d&apos;autres.
+        type « Proche » au répertoire pour en ajouter d&apos;autres.
       </p>
     );
   }

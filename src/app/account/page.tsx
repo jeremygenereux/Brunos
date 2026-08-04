@@ -15,7 +15,7 @@ export const metadata: Metadata = { title: "Accueil" };
 type EditionState = Database["public"]["Enums"]["edition_state"];
 
 const ROLE_LABEL: Record<Role, string> = {
-  super_admin: "Intendant général",
+  super_admin: "Administrateur général",
   admin: "Administrateur",
   player: "Joueur",
   jury: "Entourage",
@@ -87,10 +87,19 @@ export default async function AccountPage() {
 
   const { data: parts } = await supabase
     .from("participants")
-    .select("edition_id, kind, apple_invite_url")
+    .select("edition_id, kind")
     .eq("user_id", current.user.id);
   const partByEdition = new Map((parts ?? []).map((p) => [p.edition_id, p]));
   const editionIds = (parts ?? []).map((p) => p.edition_id);
+
+  // Le lien Apple est rattaché à la personne, pas au compte : c'est ce qui
+  // permet de le préparer avant même que l'invité·e se soit inscrit·e.
+  const { data: invites } = await supabase
+    .from("edition_invites")
+    .select("edition_id, apple_invite_url");
+  const inviteByEdition = new Map(
+    (invites ?? []).map((i) => [i.edition_id, i.apple_invite_url]),
+  );
 
   const { data: editionsData } = editionIds.length
     ? await supabase
@@ -161,7 +170,7 @@ export default async function AccountPage() {
           {upcoming ? (
             <UpcomingCard
               edition={upcoming}
-              appleInvite={partByEdition.get(upcoming.id)?.apple_invite_url ?? null}
+              appleInvite={inviteByEdition.get(upcoming.id) ?? null}
               kind={partByEdition.get(upcoming.id)?.kind ?? "player"}
             />
           ) : (
@@ -170,7 +179,7 @@ export default async function AccountPage() {
                 À l&apos;an prochain.
               </span>
               <p className="text-ivoire-muted max-w-sm font-sans text-sm">
-                Aucune cérémonie annoncée. La prochaine paraîtra ici dès votre inscription.
+                Aucune cérémonie annoncée. La prochaine apparaîtra ici dès que vous y serez inscrit.
               </p>
               {archived.length > 0 && (
                 <Link
@@ -311,7 +320,7 @@ function UpcomingCard({
         <Fact label="Date" value={fmtDate(edition.event_at) ?? "À confirmer"} />
         <Fact label="Lieu" value={edition.venue_name ?? "À confirmer"} />
         {edition.venue_address && <Fact label="Adresse" value={edition.venue_address} />}
-        <Fact label="Vous y siégez comme" value={kind === "jury" ? "Entourage" : "Joueur"} />
+        <Fact label="Vous y participez comme" value={kind === "jury" ? "Entourage" : "Joueur"} />
       </dl>
 
       {edition.description && (

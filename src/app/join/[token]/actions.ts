@@ -13,7 +13,7 @@ export async function joinEdition(_prev: JoinState, formData: FormData): Promise
   const relation = String(formData.get("relation") ?? "").trim();
 
   if (!token) return { error: "Invitation invalide." };
-  if (kind !== "player" && kind !== "jury") return { error: "Choisis joueur ou jury." };
+  if (kind !== "player" && kind !== "jury") return { error: "Choisissez joueur ou entourage." };
   if (kind === "jury" && (!linkedPlayer || !relation)) {
     return { error: "Le jury doit choisir un joueur et préciser son lien." };
   }

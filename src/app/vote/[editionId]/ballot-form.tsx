@@ -20,6 +20,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { saveDraft, submitBallot, type BallotResult } from "./actions";
+import { ChoiceGlyph, ModeCard, RankingGlyph } from "@/components/question-mode";
 import type { DrinkRule } from "@/lib/editions/drink-rule";
 
 type Player = { id: string; display_name: string; headshot_url: string | null };
@@ -64,72 +65,6 @@ function Avatar({
   );
 }
 
-
-/* ── Écran d'ouverture ────────────────────────────────────────────────
-   Deux pictogrammes valent mieux qu'un paragraphe : le votant doit saisir
-   d'un coup d'œil ce qu'on attend de lui, et où tombe la charge. Les glyphes
-   reprennent la géométrie réelle des deux écrans de vote (une pile ordonnée,
-   une désignation parmi un rang), pour que la promesse tienne. */
-
-/** Pile ordonnée, la barre la plus basse marquée d'un jeton. */
-function RankingGlyph() {
-  return (
-    <svg viewBox="0 0 64 48" className="h-12 w-16" fill="none" aria-hidden="true">
-      {[0, 1, 2].map((i) => (
-        <rect
-          key={i}
-          x="6"
-          y={6 + i * 14}
-          width={44 - i * 6}
-          height="8"
-          rx="4"
-          fill="currentColor"
-          opacity={0.9 - i * 0.25}
-        />
-      ))}
-      <circle cx="56" cy="40" r="5" fill="var(--or-300)" />
-    </svg>
-  );
-}
-
-/** Un rang de jetons, un seul cerclé d'or. */
-function ChoiceGlyph() {
-  return (
-    <svg viewBox="0 0 64 48" className="h-12 w-16" fill="none" aria-hidden="true">
-      {[0, 1, 2, 3].map((i) => (
-        <circle key={i} cx={10 + i * 15} cy="24" r="5" fill="currentColor" opacity={0.35} />
-      ))}
-      <circle cx="25" cy="24" r="5" fill="var(--or-300)" />
-      <circle cx="25" cy="24" r="10" stroke="var(--or-400)" strokeWidth="1.5" opacity="0.8" />
-    </svg>
-  );
-}
-
-function ModeCard({
-  glyph,
-  title,
-  count,
-  children,
-}: {
-  glyph: React.ReactNode;
-  title: string;
-  count: number;
-  children: React.ReactNode;
-}) {
-  if (count === 0) return null;
-  return (
-    <div className="border-or-400/15 bg-noir-900/40 flex flex-1 flex-col items-center gap-3 rounded-2xl border px-5 py-6 text-center">
-      <span className="text-or-400/70">{glyph}</span>
-      <div className="flex flex-col gap-0.5">
-        <span className="text-ivoire font-display text-lg font-semibold">{title}</span>
-        <span className="text-or-300 font-sans text-xs tabular-nums">
-          {count} catégorie{count > 1 ? "s" : ""}
-        </span>
-      </div>
-      <p className="text-ivoire-muted font-sans text-xs leading-relaxed">{children}</p>
-    </div>
-  );
-}
 
 /** Les nommés de la cérémonie, en suspension. */
 function PlayerGallery({ players }: { players: Player[] }) {
@@ -244,12 +179,12 @@ export function BallotForm({
   function submit() {
     const missing = questions.find((qq) => qq.format === "single_choice" && !choices[qq.id]);
     if (missing) {
-      setResult({ error: "Une catégorie à désignation unique demeure sans réponse." });
+      setResult({ error: "Une catégorie à choix unique est restée sans réponse." });
       return;
     }
     if (
       !window.confirm(
-        "Votre bulletin sera déposé de façon irrévocable. Confirmez-vous ?",
+        "Votre bulletin sera déposé définitivement. Confirmez-vous ?",
       )
     ) {
       return;
@@ -276,23 +211,39 @@ export function BallotForm({
                 Le scrutin est ouvert.
               </h2>
               <p className="text-ivoire-muted max-w-md font-sans text-sm leading-relaxed">
-                {total} catégorie{total > 1 ? "s" : ""} vous {total > 1 ? "sont" : "est"} soumise
-                {total > 1 ? "s" : ""}. Votre bulletin est conservé à mesure que vous progressez ; il
-                ne devient <span className="text-or-300">définitif </span> qu&apos;au dépôt.
+                {total} catégorie{total > 1 ? "s" : ""} à remplir. Votre bulletin est enregistré au
+                fur et à mesure ; il ne devient{" "}
+                <span className="text-or-300">définitif </span> qu&apos;au dépôt.
               </p>
             </div>
 
             <PlayerGallery players={players} />
 
             <div className="flex w-full flex-col gap-3 sm:flex-row">
-              <ModeCard glyph={<RankingGlyph />} title="Classement" count={rankingCount}>
-                Vous ordonnez l&apos;ensemble des nommés, du plus concerné au moins concerné. La
-                charge revient à une position précise du classement final, signalée par un shooter.
-              </ModeCard>
-              <ModeCard glyph={<ChoiceGlyph />} title="Désignation" count={choiceCount}>
-                Vous désignez une seule personne. La charge revient à celle que le suffrage place en
-                tête, ou en queue, selon le règlement de la catégorie.
-              </ModeCard>
+              {rankingCount > 0 && (
+                <ModeCard
+                  glyph={<RankingGlyph />}
+                  title="Classement"
+                  subtitle={`${rankingCount} catégorie${rankingCount > 1 ? "s" : ""}`}
+                >
+                  <p>
+                    Vous classez tous les joueurs, du premier au dernier. Le résultat détermine qui
+                    boit, et combien.
+                  </p>
+                </ModeCard>
+              )}
+              {choiceCount > 0 && (
+                <ModeCard
+                  glyph={<ChoiceGlyph />}
+                  title="Désignation"
+                  subtitle={`${choiceCount} catégorie${choiceCount > 1 ? "s" : ""}`}
+                >
+                  <p>
+                    Vous désignez une seule personne. Celle qui reçoit le plus de votes boit un
+                    shooter.
+                  </p>
+                </ModeCard>
+              )}
             </div>
 
             <button
@@ -341,8 +292,8 @@ export function BallotForm({
             <p className="text-ivoire-muted font-sans text-xs leading-relaxed">
               {q.format === "ranking" ? (
                 <>
-                  Du plus concerné en haut au moins concerné en bas. Le 🥃 signale la position
-                  qui devra s&apos;acquitter d&apos;un shooter au dépouillement.
+                  Du plus concerné en haut au moins concerné en bas. Le 🥃 marque la place qui
+                  boira un shooter.
                 </>
               ) : (
                 "Désignez la personne qui correspond le plus à l&apos;énoncé."
@@ -370,7 +321,7 @@ export function BallotForm({
           <div className="flex flex-col gap-4">
             <h2 className="text-ivoire font-display text-3xl font-semibold">Récapitulatif</h2>
             <p className="text-ivoire-muted font-sans text-sm">
-              Relisez votre bulletin. Le dépôt est irrévocable.
+              Relisez votre bulletin. Le dépôt est définitif.
             </p>
             <ul className="flex flex-col gap-2">
               {questions.map((question, i) => {
@@ -418,7 +369,7 @@ export function BallotForm({
               {pending ? "Envoi…" : "Envoyer mes réponses"}
             </button>
             <p className="text-ivoire-faint text-center font-sans text-xs">
-              Le dépôt est irrévocable. Aucune modification ne sera possible par la suite.
+              Le dépôt est définitif : aucune modification ne sera possible ensuite.
             </p>
           </div>
         )}

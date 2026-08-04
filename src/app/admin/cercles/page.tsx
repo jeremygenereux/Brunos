@@ -38,12 +38,12 @@ export default async function CirclesPage() {
   return (
     <main className="mx-auto w-full max-w-4xl px-6 py-10">
       <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">
-        Intendance générale
+        Administration générale
       </p>
       <h1 className="text-ivoire font-display mt-2 text-4xl font-semibold">Les cercles</h1>
       <p className="text-ivoire-muted mt-1 max-w-2xl font-sans text-sm">
-        Chaque cercle mène ses cérémonies, son répertoire et son palmarès en toute indépendance.
-        Rien ne circule de l&apos;un à l&apos;autre. Vous seul les traversez.
+        Chaque cercle a ses propres cérémonies, son répertoire et ses statistiques. Rien n&apos;est
+        partagé entre eux. Vous êtes le seul à pouvoir passer de l&apos;un à l&apos;autre.
       </p>
 
       <section className="mt-8">

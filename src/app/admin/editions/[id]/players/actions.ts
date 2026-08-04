@@ -22,7 +22,7 @@ export async function addPlayer(_prev: PlayerState, formData: FormData): Promise
   const file = formData.get("headshot");
   if (!editionId) return { error: "Édition introuvable." };
   if (!existingPersonId && !name) {
-    return { error: "Choisis une personne de la banque ou entre un nouveau nom." };
+    return { error: "Choisissez une personne du répertoire ou saisissez un nouveau nom." };
   }
 
   const supabase = await createClient();

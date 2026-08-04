@@ -2,6 +2,7 @@ import "server-only";
 import type { createClient } from "@/lib/supabase/server";
 import { computeQuestionResult, resultRowsFor, type ResultRow } from "@/lib/scoring/edition";
 import type { DrinkRule, QuestionBallot, QuestionFormat } from "@/lib/scoring/types";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
 
@@ -34,7 +35,7 @@ export async function computeEditionResultRows(
 
   // Fail closed: a transient read error must not silently produce a ranking
   // computed from partial ballots. Surface it so the caller shows an error.
-  const failed = "Lecture des votes impossible. Réessaie.";
+  const failed = "Lecture des votes impossible. Réessayez.";
 
   const { data: rawPlayers, error: pErr } = await supabase
     .from("players")
@@ -82,10 +83,21 @@ export async function computeEditionResultRows(
   );
   const hasJury = (votes ?? []).some((v) => kindByVote.get(v.id) === "jury");
 
-  const { data: answers, error: aErr } = await supabase
-    .from("vote_answers")
-    .select("vote_id, question_id, player_id, rank")
-    .eq("edition_id", editionId);
+  // Paginé : au-delà de 1000 réponses, une lecture simple serait tronquée en
+  // silence et le classement figé serait faux sans que rien ne l'indique.
+  const { data: answers, error: aErr } = await fetchAllRows<{
+    vote_id: string;
+    question_id: string;
+    player_id: string;
+    rank: number;
+  }>((from, to) =>
+    supabase
+      .from("vote_answers")
+      .select("vote_id, question_id, player_id, rank")
+      .eq("edition_id", editionId)
+      .order("id")
+      .range(from, to),
+  );
   if (aErr) return { ...empty, error: failed };
 
   const byQuestionVote = new Map<string, Map<string, QuestionBallot>>();

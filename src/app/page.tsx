@@ -21,8 +21,8 @@ export default function Home() {
         className="text-ivoire-muted brunos-enter mt-8 max-w-md font-sans text-base"
         style={{ animationDelay: "240ms" }}
       >
-        Cérémonie annuelle. Scrutin à bulletin secret, palmarès proclamé en grand écran, et
-        l&apos;obligation, pour les lauréats, de s&apos;acquitter de leur verre.
+        Cérémonie annuelle. Vote à bulletin secret, résultats dévoilés en grand écran, et
+        des shooters pour ceux que le classement désigne.
       </p>
 
       {/* L'accès se fait sur invitation : pas de « créer un compte » en vitrine.
@@ -41,7 +41,7 @@ export default function Home() {
         className="text-ivoire-faint brunos-enter mt-8 max-w-sm font-sans text-xs"
         style={{ animationDelay: "480ms" }}
       >
-        L&apos;accès se fait sur invitation. Le lien transmis par courriel ouvre votre espace.
+        L&apos;accès se fait sur invitation. Le lien reçu par courriel ouvre votre espace.
       </p>
     </main>
   );

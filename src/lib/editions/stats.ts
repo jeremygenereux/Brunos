@@ -1,5 +1,6 @@
 import "server-only";
 import type { createClient } from "@/lib/supabase/server";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
 
@@ -72,10 +73,14 @@ export async function loadArchiveStats(supabase: Client): Promise<ArchiveStats> 
     .eq("state", "ARCHIVED");
   const yearByEdition = new Map((editions ?? []).map((e) => [e.id, e.year]));
 
-  const { data: results } = await supabase
-    .from("results")
-    .select("question_id, player_id, borda_score, vote_count, final_rank, drinks")
-    .eq("audience", "players");
+  const { data: results } = await fetchAllRows<ResultRow>((from, to) =>
+    supabase
+      .from("results")
+      .select("question_id, player_id, borda_score, vote_count, final_rank, drinks")
+      .eq("audience", "players")
+      .order("id")
+      .range(from, to),
+  );
 
   const { data: questions } = await supabase.from("questions").select("id, edition_id");
   const editionByQuestion = new Map((questions ?? []).map((q) => [q.id, q.edition_id]));
@@ -198,10 +203,20 @@ export async function loadFunStats(supabase: Client): Promise<FunAward[]> {
       .map((v) => [v.id, { participantId: v.participant_id, editionId: v.edition_id }]),
   );
 
-  const { data: answers } = await supabase
-    .from("vote_answers")
-    .select("vote_id, player_id, rank")
-    .eq("rank", 1);
+  // Cette lecture couvre TOUTES les éditions : elle franchit le plafond bien
+  // avant les autres.
+  const { data: answers } = await fetchAllRows<{
+    vote_id: string;
+    player_id: string;
+    rank: number;
+  }>((from, to) =>
+    supabase
+      .from("vote_answers")
+      .select("vote_id, player_id, rank")
+      .eq("rank", 1)
+      .order("id")
+      .range(from, to),
+  );
 
   const firsts: FirstPlaceVote[] = [];
   for (const a of answers ?? []) {
@@ -225,7 +240,7 @@ export async function loadFunStats(supabase: Client): Promise<FunAward[]> {
       key: "narcisse",
       emoji: "🪞",
       title: "Connaissance proche",
-      blurb: "S'est mis·e en tête de son propre classement plus souvent que quiconque.",
+      blurb: "Se place en tête de son propre classement plus souvent que tout le monde.",
       subject: nameOf(narcissist.key),
       detail: `${narcissist.value} fois`,
       personIds: [narcissist.key],
@@ -285,10 +300,18 @@ export async function loadFunStats(supabase: Client): Promise<FunAward[]> {
   const editionByQuestion = new Map((questions ?? []).map((q) => [q.id, q.edition_id]));
   const shooterValueByEdition = new Map(eds.map((e) => [e.id, Number(e.shooter_value)]));
 
-  const { data: results } = await supabase
-    .from("results")
-    .select("question_id, player_id, drinks")
-    .eq("audience", "players");
+  const { data: results } = await fetchAllRows<{
+    question_id: string;
+    player_id: string;
+    drinks: number | string;
+  }>((from, to) =>
+    supabase
+      .from("results")
+      .select("question_id, player_id, drinks")
+      .eq("audience", "players")
+      .order("id")
+      .range(from, to),
+  );
 
   const shooters = new Map<string, number>();
   for (const r of results ?? []) {
@@ -382,10 +405,14 @@ export async function loadPlayerProfile(
 
   // Load ALL readable player-audience results so winners can be computed per
   // question (a tie needs the whole field), then attribute to this person.
-  const { data: results } = await supabase
-    .from("results")
-    .select("question_id, player_id, borda_score, vote_count, final_rank, drinks")
-    .eq("audience", "players");
+  const { data: results } = await fetchAllRows<ResultRow>((from, to) =>
+    supabase
+      .from("results")
+      .select("question_id, player_id, borda_score, vote_count, final_rank, drinks")
+      .eq("audience", "players")
+      .order("id")
+      .range(from, to),
+  );
 
   const { data: questions } = await supabase.from("questions").select("id, edition_id, prompt");
   const qInfo = new Map(

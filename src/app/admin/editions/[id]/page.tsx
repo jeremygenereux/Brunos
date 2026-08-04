@@ -17,7 +17,6 @@ import { ReopenVoting } from "./reopen-voting";
 import { VoteTracker } from "./vote-tracker";
 import { ParticipantsManager } from "./participants-manager";
 import { InviteLink } from "@/components/invite-link";
-import { DRINK_RULE_LABEL } from "@/lib/editions/drink-rule";
 
 export const metadata: Metadata = { title: "Édition" };
 
@@ -28,22 +27,6 @@ const SECONDARY =
 
 
 
-function fmt(value: string | null) {
-  if (!value) return "—";
-  return new Date(value).toLocaleString("fr-CA", {
-    dateStyle: "long",
-    timeStyle: "short",
-  });
-}
-
-function Fact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex flex-col gap-0.5">
-      <dt className="text-ivoire-faint text-xs tracking-wide uppercase">{label}</dt>
-      <dd className="text-ivoire">{value}</dd>
-    </div>
-  );
-}
 
 export default async function EditionDetailPage({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
@@ -53,24 +36,48 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
 
   const next = nextState(edition.state);
 
-  const { data: rawParts } = await supabase
-    .from("participants")
-    .select("id, kind, user_id, relation_label, apple_invite_url")
-    .eq("edition_id", id);
-  const userIds = [...new Set((rawParts ?? []).map((p) => p.user_id))];
-  const { data: people } = userIds.length
-    ? await supabase.from("people").select("display_name, auth_user_id").in("auth_user_id", userIds)
-    : { data: [] as { display_name: string | null; auth_user_id: string | null }[] };
-  const nameByUser = new Map((people ?? []).map((p) => [p.auth_user_id, p.display_name]));
-  const participants = (rawParts ?? []).map((p) => ({
-    id: p.id,
-    kind: (p.kind === "jury" ? "jury" : "player") as "player" | "jury",
-    name:
-      nameByUser.get(p.user_id) ??
-      p.relation_label ??
-      (p.kind === "jury" ? "Entourage" : "Joueur"),
-    apple_invite_url: p.apple_invite_url,
-  }));
+  // Les conviés se lisent dans `players` et `edition_entourage` — les tables
+  // d'intention — et non dans `participants`, qui n'existe qu'à partir de la
+  // création d'un compte. Un nommé fraîchement ajouté n'a pas encore de compte :
+  // c'est justement lui qu'il faut pouvoir inviter.
+  const [{ data: playerRows }, { data: entourageRows }, { data: inviteRows }] = await Promise.all([
+    supabase.from("players").select("person_id, display_order").eq("edition_id", id),
+    supabase.from("edition_entourage").select("person_id, relation_label").eq("edition_id", id),
+    supabase.from("edition_invites").select("person_id, apple_invite_url").eq("edition_id", id),
+  ]);
+
+  const personIds = [
+    ...new Set([
+      ...(playerRows ?? []).map((r) => r.person_id),
+      ...(entourageRows ?? []).map((r) => r.person_id),
+    ]),
+  ];
+  const { data: people } = personIds.length
+    ? await supabase.from("people").select("id, display_name, auth_user_id").in("id", personIds)
+    : { data: [] as { id: string; display_name: string | null; auth_user_id: string | null }[] };
+
+  const personById = new Map((people ?? []).map((p) => [p.id, p]));
+  const inviteByPerson = new Map(
+    (inviteRows ?? []).map((r) => [r.person_id, r.apple_invite_url]),
+  );
+  const guest = (personId: string, kind: "player" | "jury", fallback: string) => {
+    const person = personById.get(personId);
+    return {
+      personId,
+      kind,
+      name: person?.display_name ?? fallback,
+      hasAccount: Boolean(person?.auth_user_id),
+      apple_invite_url: inviteByPerson.get(personId) ?? null,
+    };
+  };
+
+  const guests = [
+    ...(playerRows ?? [])
+      .slice()
+      .sort((a, b) => (a.display_order ?? 0) - (b.display_order ?? 0))
+      .map((r) => guest(r.person_id, "player", "Joueur")),
+    ...(entourageRows ?? []).map((r) => guest(r.person_id, "jury", r.relation_label ?? "Entourage")),
+  ];
 
   return (
     <div className="mx-auto w-full max-w-4xl px-6 py-10">
@@ -87,87 +94,64 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
         <span className="text-ivoire-faint font-sans text-sm">{edition.year}</span>
       </header>
 
-      <dl className="border-or-400/15 bg-noir-700/40 mt-6 grid grid-cols-1 gap-x-8 gap-y-3 rounded-2xl border p-6 sm:grid-cols-2">
-        <Fact label="Date de l'événement" value={fmt(edition.event_at)} />
-        <Fact label="Lieu" value={edition.venue_name ?? "—"} />
-        <Fact label="Adresse" value={edition.venue_address ?? "—"} />
-        <Fact
-          label="Règle de consommation"
-          value={DRINK_RULE_LABEL[edition.drink_rule] ?? edition.drink_rule}
+      {/* Ordre de lecture : où l'on va travailler, ce qu'on corrige, où en
+          est la cérémonie, puis qui l'on convie. Le récapitulatif figé qui
+          ouvrait la page doublait le formulaire — il a disparu. */}
+      <section className="mt-8">
+        <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
+          Gestion
+        </h2>
+        <nav className="flex flex-wrap gap-3">
+          <Link href={`/admin/editions/${edition.id}/players`} className={SECONDARY}>
+            Joueurs
+          </Link>
+          <Link href={`/admin/editions/${edition.id}/questions`} className={SECONDARY}>
+            Questions
+          </Link>
+          <Link href={`/admin/editions/${edition.id}/entourage`} className={SECONDARY}>
+            Entourage
+          </Link>
+          {edition.state === "COMPILATION" && (
+            <Link href={`/admin/editions/${edition.id}/compile`} className={PRIMARY}>
+              Compiler →
+            </Link>
+          )}
+          {edition.state === "LOCKED" && (
+            <Link href={`/admin/editions/${edition.id}/present`} className={PRIMARY}>
+              Aperçu de la présentation →
+            </Link>
+          )}
+          {edition.state === "LIVE" && (
+            <Link href={`/admin/editions/${edition.id}/present`} className={PRIMARY}>
+              Lancer la présentation →
+            </Link>
+          )}
+          {edition.state === "ARCHIVED" && (
+            <Link href={`/archive/${edition.id}`} className={PRIMARY}>
+              Voir le récap →
+            </Link>
+          )}
+        </nav>
+      </section>
+
+      <section className="mt-8">
+        <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
+          Informations
+        </h2>
+        <EditEditionForm
+          edition={{
+            id: edition.id,
+            name: edition.name,
+            year: edition.year,
+            event_at: edition.event_at,
+            venue_name: edition.venue_name,
+            venue_address: edition.venue_address,
+            description: edition.description,
+            drink_rule: edition.drink_rule,
+            shooter_value: edition.shooter_value,
+          }}
         />
-        <Fact label="Valeur d'un shooter" value={`${edition.shooter_value} gorgées`} />
-        <Fact label="Date limite de vote" value={fmt(edition.vote_deadline)} />
-      </dl>
-
-      {edition.description && (
-        <p className="text-ivoire-muted mt-4 font-sans text-sm">{edition.description}</p>
-      )}
-
-      <nav className="mt-6 flex flex-wrap gap-3">
-        <Link href={`/admin/editions/${edition.id}/players`} className={SECONDARY}>
-          Joueurs
-        </Link>
-        <Link href={`/admin/editions/${edition.id}/questions`} className={SECONDARY}>
-          Questions
-        </Link>
-        <Link href={`/admin/editions/${edition.id}/entourage`} className={SECONDARY}>
-          Entourage
-        </Link>
-        {edition.state === "COMPILATION" && (
-          <Link href={`/admin/editions/${edition.id}/compile`} className={PRIMARY}>
-            Compiler →
-          </Link>
-        )}
-        {edition.state === "LOCKED" && (
-          <Link href={`/admin/editions/${edition.id}/present`} className={PRIMARY}>
-            Aperçu de la présentation →
-          </Link>
-        )}
-        {edition.state === "LIVE" && (
-          <Link href={`/admin/editions/${edition.id}/present`} className={PRIMARY}>
-            Lancer la présentation →
-          </Link>
-        )}
-        {edition.state === "ARCHIVED" && (
-          <Link href={`/archive/${edition.id}`} className={PRIMARY}>
-            Voir le récap →
-          </Link>
-        )}
-      </nav>
-
-      <section className="mt-10">
-        <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
-          Lien d&apos;invitation
-        </h2>
-        <p className="text-ivoire-muted mb-3 font-sans text-sm">
-          Transmettez ce lien aux joueurs et aux proches pour qu&apos;ils rejoignent la cérémonie.
-        </p>
-        <InviteLink token={edition.invite_token} />
       </section>
-
-      <section className="mt-10">
-        <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
-          Participants et invitations Apple
-        </h2>
-        <p className="text-ivoire-muted mb-3 font-sans text-sm">
-          Renseignez le lien Apple Invitation de chaque invité·e. Un bouton « Consulter
-          l&apos;invitation » apparaîtra sur son espace.
-        </p>
-        <ParticipantsManager participants={participants} />
-      </section>
-
-      {STATE_ORDER.indexOf(edition.state) >= STATE_ORDER.indexOf("SENT_FOR_VOTE") && (
-        <section className="mt-10">
-          <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
-            Suivi du scrutin
-          </h2>
-          <p className="text-ivoire-muted mb-3 font-sans text-sm">
-            État des dépôts. Le détail des bulletins reste réservé à l&apos;administration : à
-            n&apos;ouvrir qu&apos;en cas d&apos;anomalie.
-          </p>
-          <VoteTracker editionId={edition.id} />
-        </section>
-      )}
 
       <section className="mt-10">
         <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
@@ -187,10 +171,6 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
           </p>
         )}
 
-        {/* Les classements sont figés au passage en « Verrouillée ». Tout ce qui
-            les nourrit peut bouger ensuite (valeur du shooter, règle, sélection
-            des questions, bulletin corrigé) — d'où ce recalcul à la demande,
-            qui évite de faire reculer puis réavancer l'édition. */}
         {/* Rouvrir reste possible tant que la cérémonie n'est pas archivée :
             c'est la soupape quand un bulletin doit être corrigé après coup. */}
         {STATE_ORDER.indexOf(edition.state) >= STATE_ORDER.indexOf("SENT_FOR_VOTE") &&
@@ -204,6 +184,10 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
             />
           )}
 
+        {/* Les classements sont figés au passage en « Verrouillée ». Tout ce qui
+            les nourrit peut bouger ensuite (valeur du shooter, règle, sélection
+            des questions, bulletin corrigé) — d'où ce recalcul à la demande,
+            qui évite de faire reculer puis réavancer l'édition. */}
         {STATE_ORDER.indexOf(edition.state) >= STATE_ORDER.indexOf("COMPILATION") && (
           <div className="border-or-400/12 mt-5 flex flex-col gap-2 rounded-xl border px-4 py-3">
             <p className="text-ivoire-muted font-sans text-xs">
@@ -216,23 +200,34 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
         )}
       </section>
 
+      {STATE_ORDER.indexOf(edition.state) >= STATE_ORDER.indexOf("SENT_FOR_VOTE") && (
+        <section className="mt-10">
+          <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
+            Suivi du scrutin
+          </h2>
+          <p className="text-ivoire-muted mb-3 font-sans text-sm">
+            Qui a déposé son bulletin. Le détail des réponses est réservé à l&apos;administration :
+            à n&apos;ouvrir qu&apos;en cas de problème.
+          </p>
+          <VoteTracker editionId={edition.id} />
+        </section>
+      )}
+
       <section className="mt-10">
         <h2 className="text-or-400/80 mb-3 font-sans text-xs tracking-[0.3em] uppercase">
-          Modifier les informations
+          Invitations
         </h2>
-        <EditEditionForm
-          edition={{
-            id: edition.id,
-            name: edition.name,
-            year: edition.year,
-            event_at: edition.event_at,
-            venue_name: edition.venue_name,
-            venue_address: edition.venue_address,
-            description: edition.description,
-            drink_rule: edition.drink_rule,
-            shooter_value: edition.shooter_value,
-          }}
-        />
+        <p className="text-ivoire-muted mb-3 font-sans text-sm">
+          Ce lien permet de rejoindre la cérémonie.
+        </p>
+        <InviteLink token={edition.invite_token} />
+
+        <p className="text-ivoire-muted mt-6 mb-3 font-sans text-sm">
+          Renseignez le lien Apple Invitation de chaque personne : un bouton « Consulter
+          l&apos;invitation » apparaîtra sur son espace. Les personnes sans compte figurent aussi
+          dans la liste, leur lien les attendra à l&apos;inscription.
+        </p>
+        <ParticipantsManager editionId={edition.id} guests={guests} />
       </section>
 
       <section className="mt-12 border-t border-red-400/15 pt-8">
@@ -249,6 +244,7 @@ export default async function EditionDetailPage({ params }: { params: Promise<{ 
           redirectTo="/admin/editions"
         />
       </section>
+
     </div>
   );
 }

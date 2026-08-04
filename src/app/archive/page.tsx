@@ -36,7 +36,7 @@ export default async function ArchivePage() {
         <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">Les Brunos</p>
         <h1 className="text-ivoire font-display text-5xl font-semibold">Archive</h1>
         <p className="text-ivoire-muted font-sans text-sm">
-          Les cérémonies passées, leurs palmarès et leurs présentations, consultables à volonté.
+          Les cérémonies passées, leurs résultats et leurs présentations.
         </p>
       </header>
 

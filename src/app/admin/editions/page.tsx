@@ -64,7 +64,7 @@ export default async function EditionsPage() {
         <div>
           <h1 className="text-ivoire font-display text-4xl font-semibold">Éditions</h1>
           <p className="text-ivoire-muted mt-1 font-sans text-sm">
-            Gère les galas et leur cycle de vie.
+            Gérez les cérémonies et leur cycle de vie.
           </p>
         </div>
       </div>
@@ -72,7 +72,7 @@ export default async function EditionsPage() {
       <section className="mt-8">
         {list.length === 0 ? (
           <p className="border-or-400/10 text-ivoire-muted rounded-2xl border border-dashed px-6 py-12 text-center font-sans text-sm">
-            Aucune édition. Crée la première ci-dessous.
+            Aucune édition. Créez la première ci-dessous.
           </p>
         ) : (
           <ul className="flex flex-col gap-4">

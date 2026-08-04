@@ -118,7 +118,7 @@ function CategoryCard({ c }: { c: Category }) {
 
       {c.players.length === 0 ? (
         <p className="text-ivoire-faint font-sans text-sm">
-          Aucun suffrage exprimé dans cette catégorie.
+          Aucun vote dans cette catégorie.
         </p>
       ) : rankingMatters ? (
         <div className={`grid gap-6 ${c.jury.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
@@ -127,8 +127,8 @@ function CategoryCard({ c }: { c: Category }) {
         </div>
       ) : (
         <p className="text-ivoire-faint font-sans text-sm">
-          Catégorie à désignation unique. Seul·e{winners.length > 1 ? "s" : ""} le·la lauréat·e
-          {winners.length > 1 ? "·s" : ""} s&apos;acquitte{winners.length > 1 ? "nt" : ""} d&apos;un shooter.
+          Catégorie à choix unique : {winners.length > 1 ? "les personnes" : "la personne"} en tête
+          {winners.length > 1 ? " boivent" : " boit"} un shooter. Les autres ne boivent pas.
         </p>
       )}
     </section>
@@ -254,7 +254,7 @@ export default async function ArchiveEditionPage({ params }: { params: Promise<{
             Révélations des votes
           </h2>
           <p className="text-ivoire-faint mt-1 font-sans text-sm">
-            Le détail des suffrages, la cérémonie étant close.
+            Le détail des votes, maintenant que la cérémonie est terminée.
           </p>
           <div className="mt-5 flex flex-col gap-6">
             {reveal.categories
