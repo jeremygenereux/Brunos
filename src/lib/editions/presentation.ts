@@ -2,6 +2,7 @@ import "server-only";
 import type { createClient } from "@/lib/supabase/server";
 import { computeEditionResultRows } from "./snapshot";
 import type { Category, PresentEdition, RankRow, RecapRow } from "./presentation-types";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
 
@@ -104,11 +105,16 @@ export async function loadPresentation(
   };
   let rows: Row[] = [];
   if (qids.length) {
-    const { data } = await supabase
-      .from("results")
-      .select("question_id, player_id, borda_score, vote_count, final_rank, drinks, audience")
-      .in("question_id", qids);
-    rows = (data ?? []).map((r) => ({ ...r, drinks: Number(r.drinks) }));
+    const { data } = await fetchAllRows<Omit<Row, "drinks"> & { drinks: number | string }>(
+      (from, to) =>
+        supabase
+          .from("results")
+          .select("question_id, player_id, borda_score, vote_count, final_rank, drinks, audience")
+          .in("question_id", qids)
+          .order("id")
+          .range(from, to),
+    );
+    rows = data.map((r) => ({ ...r, drinks: Number(r.drinks) }));
   }
   if (rows.length === 0 && qids.length && opts.allowLiveFallback) {
     const fb = await computeEditionResultRows(supabase, editionId);

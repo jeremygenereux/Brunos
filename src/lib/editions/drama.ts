@@ -1,6 +1,7 @@
 import "server-only";
 import type { createClient } from "@/lib/supabase/server";
 import type { DramaCard } from "./presentation-types";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
 
@@ -89,10 +90,19 @@ export async function loadEditionVoteReveal(
     .eq("edition_id", editionId);
   const participantByVote = new Map((votes ?? []).map((v) => [v.id, v.participant_id]));
 
-  const { data: answers } = await supabase
-    .from("vote_answers")
-    .select("vote_id, question_id, player_id, rank")
-    .eq("edition_id", editionId);
+  const { data: answers } = await fetchAllRows<{
+    vote_id: string;
+    question_id: string;
+    player_id: string;
+    rank: number;
+  }>((from, to) =>
+    supabase
+      .from("vote_answers")
+      .select("vote_id, question_id, player_id, rank")
+      .eq("edition_id", editionId)
+      .order("id")
+      .range(from, to),
+  );
 
   // question_id -> vote_id -> [{playerId, rank}]
   const byQuestionVote = new Map<string, Map<string, { playerId: string; rank: number }[]>>();

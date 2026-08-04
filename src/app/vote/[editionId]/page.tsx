@@ -5,6 +5,7 @@ import { requireUser } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { BallotForm } from "./ballot-form";
 import type { DrinkRule } from "@/lib/editions/drink-rule";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
 
 export const metadata: Metadata = { title: "Voter" };
 
@@ -70,12 +71,20 @@ export default async function VotePage({ params }: { params: Promise<{ editionId
     .eq("edition_id", editionId)
     .eq("participant_id", participant.id)
     .maybeSingle();
+  // Un seul bulletin tient largement sous le plafond aujourd'hui, mais un
+  // cercle de 25 nommés sur 40 catégories le franchirait — et on relirait un
+  // brouillon amputé sans s'en apercevoir.
+  type Answer = { question_id: string; player_id: string; rank: number };
   const { data: answers } = vote
-    ? await supabase
-        .from("vote_answers")
-        .select("question_id, player_id, rank")
-        .eq("vote_id", vote.id)
-    : { data: [] };
+    ? await fetchAllRows<Answer>((from, to) =>
+        supabase
+          .from("vote_answers")
+          .select("question_id, player_id, rank")
+          .eq("vote_id", vote.id)
+          .order("id")
+          .range(from, to),
+      )
+    : { data: [] as Answer[] };
 
   const allPlayerIds = playerList.map((p) => p.id);
   const editionRule = edition.drink_rule as DrinkRule;

@@ -44,12 +44,13 @@ function AccountStatus({ p }: { p: PersonView }) {
   if (p.account) {
     return (
       <>
-        <span className="text-or-400/80">Invitation en attente</span>
+        <span className="text-or-400/80">Compte créé</span>
         {p.accountEmail ? ` · ${p.accountEmail}` : ""}
       </>
     );
   }
-  if (p.invitedEmail) return <span className="text-or-400/80">À inviter · {p.invitedEmail}</span>;
+  if (p.invitedEmail)
+    return <span className="text-or-400/80">Accès à créer · {p.invitedEmail}</span>;
   return <span className="text-ivoire-faint">Aucun compte</span>;
 }
 

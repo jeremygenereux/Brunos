@@ -8,6 +8,7 @@ import type { QuestionBallot } from "@/lib/scoring/types";
 import { loadEditionVoteReveal } from "@/lib/editions/drama";
 import { EqualizerPanel } from "./equalizer-panel";
 import { RevealCurator } from "./reveal-curator";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
 
 export const metadata: Metadata = { title: "Compilation" };
 
@@ -76,10 +77,19 @@ export default async function CompilePage({ params }: { params: Promise<{ id: st
     (votes ?? []).map((v) => [v.id, kindByParticipant.get(v.participant_id)]),
   );
 
-  const { data: answers } = await supabase
-    .from("vote_answers")
-    .select("vote_id, question_id, player_id, rank")
-    .eq("edition_id", id);
+  const { data: answers } = await fetchAllRows<{
+    vote_id: string;
+    question_id: string;
+    player_id: string;
+    rank: number;
+  }>((from, to) =>
+    supabase
+      .from("vote_answers")
+      .select("vote_id, question_id, player_id, rank")
+      .eq("edition_id", id)
+      .order("id")
+      .range(from, to),
+  );
 
   // question_id -> vote_id -> ballot
   const byQuestionVote = new Map<string, Map<string, QuestionBallot>>();

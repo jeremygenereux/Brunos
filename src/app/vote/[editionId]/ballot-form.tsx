@@ -213,7 +213,7 @@ export function BallotForm({
               <p className="text-ivoire-muted max-w-md font-sans text-sm leading-relaxed">
                 {total} catégorie{total > 1 ? "s" : ""} à remplir. Votre bulletin est enregistré au
                 fur et à mesure ; il ne devient{" "}
-                <span className="text-or-300">définitif</span> qu&apos;au dépôt.
+                <span className="text-or-300">définitif </span> qu&apos;au dépôt.
               </p>
             </div>
 

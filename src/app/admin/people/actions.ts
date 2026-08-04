@@ -1,7 +1,6 @@
 "use server";
 
-import { randomUUID } from "node:crypto";
-import { headers } from "next/headers";
+import { randomBytes, randomUUID } from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -175,17 +174,44 @@ export async function deletePerson(formData: FormData): Promise<void> {
 }
 
 /**
- * Envoie l'invitation par courriel à une personne sans compte.
+ * Mot de passe lisible à voix haute et solide malgré tout.
  *
- * `inviteUserByEmail` crée l'utilisateur auth et envoie le courriel ; le
- * trigger on_auth_user_created rattache alors la fiche `people` qui porte ce
- * courriel (person_invites) et enrôle la personne dans les éditions où elle est
- * déjà joueuse. Elle n'a plus qu'à choisir son mot de passe sur /bienvenue.
+ * Alphabet sans caractères ambigus (ni 0/O, ni 1/l/I) et groupes de quatre :
+ * ce mot de passe se dicte au téléphone ou se recopie d'un texto sans erreur.
+ * Douze caractères pris dans 31 symboles font environ 59 bits d'entropie, très
+ * au-delà de ce qu'exige une application ouverte deux fois par an.
+ */
+function generatePassword(): string {
+  const ALPHABET = "abcdefghjkmnpqrstuvwxyz23456789";
+  const bytes = randomBytes(12);
+  const chars = Array.from(bytes, (b) => ALPHABET[b % ALPHABET.length]);
+  return [chars.slice(0, 4), chars.slice(4, 8), chars.slice(8, 12)]
+    .map((g) => g.join(""))
+    .join("-");
+}
+
+export type AccessState = PeopleState & {
+  /** Montré UNE fois à l'administration, jamais conservé nulle part. */
+  password?: string;
+  identifier?: string;
+};
+
+/**
+ * Crée l'accès d'une personne, ou lui attribue un nouveau mot de passe.
+ *
+ * AUCUN COURRIEL N'EST ENVOYÉ. `email_confirm: true` marque l'identifiant comme
+ * vérifié, ce qui court-circuite le courriel de confirmation : l'adresse ne sert
+ * que d'identifiant unique, elle n'a pas besoin de recevoir quoi que ce soit.
+ * L'administration transmet le mot de passe de vive voix ou par message.
+ *
+ * Le rattachement reste automatique : à la création du compte,
+ * `handle_new_user()` réclame la fiche `people` qui porte cet identifiant dans
+ * `person_invites` et inscrit la personne aux cérémonies où elle est nommée.
  *
  * Un des rares cas légitimes pour le client service-role : l'API admin d'auth
  * n'est pas accessible depuis une session utilisateur.
  */
-export async function invitePerson(personId: string): Promise<PeopleState> {
+export async function createAccess(personId: string): Promise<AccessState> {
   await requireAdmin();
   if (!personId) return { error: "Personne introuvable." };
   if (!process.env.SUPABASE_SERVICE_ROLE_KEY) {
@@ -206,18 +232,10 @@ export async function invitePerson(personId: string): Promise<PeopleState> {
     .eq("person_id", personId)
     .maybeSingle();
 
-  const origin =
-    process.env.NEXT_PUBLIC_SITE_URL ??
-    (await headers().then((h) => {
-      const host = h.get("host");
-      return host ? `${h.get("x-forwarded-proto") ?? "http"}://${host}` : null;
-    })) ??
-    "http://localhost:3001";
-
   const admin = createAdminClient();
 
-  // Quand un compte existe, SON adresse fait foi : c'est là que le courriel
-  // partira, et `person_invites` peut avoir pris du retard.
+  // Quand un compte existe, SON identifiant fait foi : `person_invites` peut
+  // avoir pris du retard sur un changement d'adresse.
   const { data: list } = await admin.auth.admin.listUsers();
   const account = person.auth_user_id
     ? (list?.users ?? []).find((u) => u.id === person.auth_user_id)
@@ -226,29 +244,25 @@ export async function invitePerson(personId: string): Promise<PeopleState> {
       );
 
   const email = account?.email ?? invite?.email;
-  if (!email) return { error: "Notez d'abord un courriel d'accès." };
+  if (!email) return { error: "Notez d'abord un identifiant." };
 
-  // Une première invitation crée le compte auth (et le trigger rattache la
-  // fiche) ; réinviter à la même adresse échouerait sur « already registered ».
-  // Dès qu'un compte existe — utilisé ou non — on envoie donc un lien de
-  // récupération. C'est aussi la reprise en main après un changement d'adresse.
+  const password = generatePassword();
+
   if (account) {
-    const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${origin}/bienvenue`,
+    const { error } = await admin.auth.admin.updateUserById(account.id, { password });
+    if (error) return { error: error.message };
+  } else {
+    const { error } = await admin.auth.admin.createUser({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: { display_name: person.display_name },
     });
     if (error) return { error: error.message };
-    revalidatePath("/admin/people");
-    return { error: null, success: true };
   }
 
-  const { error } = await admin.auth.admin.inviteUserByEmail(email, {
-    redirectTo: `${origin}/bienvenue`,
-    data: { display_name: person.display_name },
-  });
-  if (error) return { error: error.message };
-
   revalidatePath("/admin/people");
-  return { error: null, success: true };
+  return { error: null, success: true, password, identifier: email };
 }
 
 

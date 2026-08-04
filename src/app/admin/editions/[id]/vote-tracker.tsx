@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { ResetBallotButton } from "./reset-ballot-button";
+import { fetchAllRows } from "@/lib/supabase/fetch-all";
 
 /**
  * Suivi du scrutin pendant que le vote est ouvert : qui a déposé son bulletin,
@@ -37,13 +38,21 @@ export async function VoteTracker({ editionId }: { editionId: string }) {
     .order("position");
   const qById = new Map((questions ?? []).map((q) => [q.id, q]));
 
+  // Paginé : une cérémonie de 40 catégories à 7 nommés dépasse les 1800
+  // réponses, très au-delà du plafond de 1000 lignes par requête. Sans ça, les
+  // bulletins des derniers votants disparaissaient purement et simplement.
+  type Answer = { vote_id: string; question_id: string; player_id: string; rank: number };
   const voteIds = (votes ?? []).map((v) => v.id);
   const { data: answers } = voteIds.length
-    ? await supabase
-        .from("vote_answers")
-        .select("vote_id, question_id, player_id, rank")
-        .in("vote_id", voteIds)
-    : { data: [] as { vote_id: string; question_id: string; player_id: string; rank: number }[] };
+    ? await fetchAllRows<Answer>((from, to) =>
+        supabase
+          .from("vote_answers")
+          .select("vote_id, question_id, player_id, rank")
+          .in("vote_id", voteIds)
+          .order("id")
+          .range(from, to),
+      )
+    : { data: [] as Answer[] };
 
   const { data: players } = await supabase
     .from("players")
