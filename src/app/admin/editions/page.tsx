@@ -6,6 +6,7 @@ import { NewEditionForm } from "./new-edition-form";
 import { DeleteEditionButton } from "./[id]/delete-edition-button";
 import type { Database } from "@/lib/types/database.types";
 import { currentCircleId } from "@/lib/editions/circle";
+import { formatEventDate } from "@/lib/dates/event-time";
 
 export const metadata: Metadata = { title: "Éditions" };
 
@@ -13,7 +14,7 @@ type EditionState = Database["public"]["Enums"]["edition_state"];
 
 function formatDate(value: string | null) {
   if (!value) return "Date à venir";
-  return new Date(value).toLocaleDateString("fr-CA", { dateStyle: "long" });
+  return formatEventDate(value);
 }
 
 const PRIMARY =

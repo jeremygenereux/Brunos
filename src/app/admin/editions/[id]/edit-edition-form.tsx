@@ -4,6 +4,7 @@ import { useActionState } from "react";
 import { updateEdition, type ActionState } from "./actions";
 import { Input, Label, Select, Textarea, SubmitButton } from "@/components/ui";
 import { DRINK_RULE_HINT } from "@/lib/editions/drink-rule";
+import { isoToEventInput } from "@/lib/dates/event-time";
 
 type EditionInput = {
   id: string;
@@ -16,16 +17,6 @@ type EditionInput = {
   drink_rule: string;
   shooter_value: number;
 };
-
-/** ISO timestamp -> value for <input type="datetime-local"> in local time. */
-function toLocalInput(iso: string | null) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours(),
-  )}:${pad(d.getMinutes())}`;
-}
 
 const initialState: ActionState = { error: null };
 
@@ -62,7 +53,7 @@ export function EditEditionForm({ edition }: { edition: EditionInput }) {
           id="event_at"
           name="event_at"
           type="datetime-local"
-          defaultValue={toLocalInput(edition.event_at)}
+          defaultValue={isoToEventInput(edition.event_at)}
         />
       </div>
 
@@ -77,7 +68,11 @@ export function EditEditionForm({ edition }: { edition: EditionInput }) {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="drink_rule">Règle de consommation</Label>
+        <Label htmlFor="drink_rule">Règle par défaut des nouvelles catégories</Label>
+        <p className="text-ivoire-faint font-sans text-xs">
+          Chaque catégorie porte sa propre règle. Celle-ci ne fait que pré-remplir le
+          choix quand vous en ajoutez une.
+        </p>
         <Select id="drink_rule" name="drink_rule" defaultValue={edition.drink_rule}>
           <option value="ESCALATION">{DRINK_RULE_HINT.ESCALATION}</option>
           <option value="TOP_UNIQUE">{DRINK_RULE_HINT.TOP_UNIQUE}</option>

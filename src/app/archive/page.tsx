@@ -3,12 +3,13 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { loadArchiveStats, loadFunStats } from "@/lib/editions/stats";
 import { LifetimeBoard, FunAwards } from "./stats-panels";
+import { formatEventDate } from "@/lib/dates/event-time";
 
 export const metadata: Metadata = { title: "Archive" };
 
 function fmtDate(value: string | null) {
   if (!value) return null;
-  return new Date(value).toLocaleDateString("fr-CA", { dateStyle: "long" });
+  return formatEventDate(value);
 }
 
 export default async function ArchivePage() {

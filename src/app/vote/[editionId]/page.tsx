@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { BallotForm } from "./ballot-form";
 import type { DrinkRule } from "@/lib/editions/drink-rule";
 import { fetchAllRows } from "@/lib/supabase/fetch-all";
+import { formatEventDateTime } from "@/lib/dates/event-time";
 
 export const metadata: Metadata = { title: "Voter" };
 
@@ -149,7 +150,7 @@ function LockedBallot({
   submittedAt: string;
 }) {
   const when = submittedAt
-    ? new Date(submittedAt).toLocaleString("fr-CA", { dateStyle: "long", timeStyle: "short" })
+    ? formatEventDateTime(submittedAt)
     : null;
   return (
     <div className="mt-6 flex flex-col gap-5">

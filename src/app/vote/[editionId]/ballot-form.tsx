@@ -21,6 +21,7 @@ import {
 import { CSS } from "@dnd-kit/utilities";
 import { saveDraft, submitBallot, type BallotResult } from "./actions";
 import { ChoiceGlyph, ModeCard, RankingGlyph } from "@/components/question-mode";
+import { rangeesDe } from "@/lib/editions/player-rows";
 import type { DrinkRule } from "@/lib/editions/drink-rule";
 
 type Player = { id: string; display_name: string; headshot_url: string | null };
@@ -69,33 +70,53 @@ function Avatar({
 /** Les nommés de la cérémonie, en suspension. */
 function PlayerGallery({ players }: { players: Player[] }) {
   if (players.length === 0) return null;
+
+  const rangees: Player[][] = [];
+  let curseur = 0;
+  for (const taille of rangeesDe(players.length)) {
+    rangees.push(players.slice(curseur, curseur + taille));
+    curseur += taille;
+  }
+
+  // `flottant` reste continu d'une rangée à l'autre : sans ça, les décalages
+  // d'animation se répéteraient et les visages oscilleraient à l'unisson.
+  let flottant = 0;
+
   return (
     <div className="flex flex-col items-center gap-4">
       <span className="text-or-400/70 font-sans text-[11px] tracking-[0.35em] uppercase">
         Les nommés
       </span>
-      <ul className="flex flex-wrap items-start justify-center gap-x-6 gap-y-5">
-        {players.map((p, i) => (
-          <li key={p.id} className="flex w-20 flex-col items-center gap-2">
-            <span
-              className="brunos-float block"
-              style={{
-                animationDelay: `${(i % 6) * 0.7}s`,
-                animationDuration: `${6 + (i % 3)}s`,
-                // Halo porté par le portrait : `brunos-aura` s'appuie sur un
-                // ::before en z-index négatif, prévu pour un fond nu, qui
-                // passerait derrière la carte ici.
-                filter: "drop-shadow(0 0 14px color-mix(in oklab, var(--or-400) 30%, transparent))",
-              }}
-            >
-              <Avatar player={p} size={64} rounded />
-            </span>
-            <span className="text-ivoire-muted text-center font-sans text-[11px] leading-tight">
-              {p.display_name}
-            </span>
-          </li>
+      <div className="flex flex-col items-center gap-y-5">
+        {rangees.map((rangee, r) => (
+          <ul key={r} className="flex items-start justify-center gap-x-4 sm:gap-x-6">
+            {rangee.map((p) => {
+              const i = flottant++;
+              return (
+                <li key={p.id} className="flex w-16 flex-col items-center gap-2 sm:w-20">
+                  <span
+                    className="brunos-float block"
+                    style={{
+                      animationDelay: `${(i % 6) * 0.7}s`,
+                      animationDuration: `${6 + (i % 3)}s`,
+                      // Halo porté par le portrait : `brunos-aura` s'appuie sur
+                      // un ::before en z-index négatif, prévu pour un fond nu,
+                      // qui passerait derrière la carte ici.
+                      filter:
+                        "drop-shadow(0 0 14px color-mix(in oklab, var(--or-400) 30%, transparent))",
+                    }}
+                  >
+                    <Avatar player={p} size={64} rounded />
+                  </span>
+                  <span className="text-ivoire-muted text-center font-sans text-[11px] leading-tight">
+                    {p.display_name}
+                  </span>
+                </li>
+              );
+            })}
+          </ul>
         ))}
-      </ul>
+      </div>
     </div>
   );
 }

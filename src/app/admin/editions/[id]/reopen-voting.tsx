@@ -3,14 +3,7 @@
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { reopenVoting } from "./actions";
-
-/** Valeur pour <input type="datetime-local"> à partir d'un ISO, ou "". */
-function toLocalInput(iso: string | null) {
-  if (!iso) return "";
-  const d = new Date(iso);
-  const pad = (n: number) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
-}
+import { eventInputToIso, isoToEventInput } from "@/lib/dates/event-time";
 
 /**
  * Réouverture du scrutin, même après échéance ou verrouillage.
@@ -27,7 +20,7 @@ export function ReopenVoting({
   currentDeadline: string | null;
   resultsAreFrozen: boolean;
 }) {
-  const [deadline, setDeadline] = useState(toLocalInput(currentDeadline));
+  const [deadline, setDeadline] = useState(isoToEventInput(currentDeadline));
   const [pending, start] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [done, setDone] = useState(false);
@@ -61,7 +54,7 @@ export function ReopenVoting({
             start(async () => {
               const r = await reopenVoting(
                 editionId,
-                deadline ? new Date(deadline).toISOString() : null,
+                deadline ? eventInputToIso(deadline) : null,
               );
               if (r.error) setError(r.error);
               else {
