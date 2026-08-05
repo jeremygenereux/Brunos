@@ -1,4 +1,4 @@
-// Les deux façons de voter, dites en pictogrammes.
+// Les façons de voter, dites en pictogrammes.
 //
 // Partagé par l'intro du bulletin et le règlement de la présentation : c'est
 // le même langage visuel des deux côtés, pour que l'assemblée reconnaisse en
@@ -66,6 +66,95 @@ export function ChoiceGlyph({ scale = "ballot" }: { scale?: Scale }) {
       <circle cx="25" cy="24" r="5" fill="var(--or-300)" />
       <circle cx="25" cy="24" r="10" stroke="var(--or-400)" strokeWidth="1.5" opacity="0.8" />
     </svg>
+  );
+}
+
+/** Une jauge remplie aux deux tiers : une note, pas un rang. */
+export function RatingGlyph({ scale = "ballot" }: { scale?: Scale }) {
+  return (
+    <svg viewBox="0 0 64 48" className={GLYPH[scale]} fill="none" aria-hidden="true">
+      <rect x="6" y="20" width="52" height="9" rx="4.5" fill="currentColor" opacity={0.25} />
+      <rect x="6" y="20" width="36" height="9" rx="4.5" fill="var(--or-400)" opacity={0.85} />
+      <circle cx="42" cy="24.5" r="7" fill="var(--or-300)" />
+      {[0, 1, 2, 3, 4].map((i) => (
+        <rect key={i} x={9 + i * 12} y="35" width="2" height="5" rx="1" fill="currentColor" opacity={0.4} />
+      ))}
+    </svg>
+  );
+}
+
+/* ── Pastille de format ────────────────────────────────────────────────────
+   Dit d'un coup d'œil de quel type est la catégorie qu'on s'apprête à
+   dévoiler. En salle, ça évite d'avoir à redemander « attends, celle-là
+   c'est nous ou c'est les blondes ? » au moment du verdict.               */
+
+export type QuestionFormatValue = "ranking" | "single_choice" | "entourage";
+
+const FORMAT_LABEL: Record<QuestionFormatValue, string> = {
+  ranking: "Classement",
+  single_choice: "Choix unique",
+  entourage: "Entourage",
+};
+
+/** Version minuscule des pictogrammes, pour tenir dans une pastille. */
+function MiniGlyph({ format }: { format: QuestionFormatValue }) {
+  if (format === "ranking") {
+    return (
+      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+        {[0, 1, 2].map((i) => (
+          <rect
+            key={i}
+            x="1"
+            y={2 + i * 5}
+            width={12 - i * 3}
+            height="3"
+            rx="1.5"
+            fill="currentColor"
+            opacity={1 - i * 0.25}
+          />
+        ))}
+      </svg>
+    );
+  }
+  if (format === "entourage") {
+    return (
+      <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+        <rect x="1" y="6" width="14" height="4" rx="2" fill="currentColor" opacity={0.35} />
+        <rect x="1" y="6" width="9" height="4" rx="2" fill="currentColor" />
+        <circle cx="10" cy="8" r="3" fill="currentColor" />
+      </svg>
+    );
+  }
+  return (
+    <svg viewBox="0 0 16 16" className="h-3.5 w-3.5" fill="none" aria-hidden="true">
+      {[0, 1, 2].map((i) => (
+        <circle key={i} cx={3 + i * 5} cy="8" r="2" fill="currentColor" opacity={0.35} />
+      ))}
+      <circle cx="8" cy="8" r="2.4" fill="currentColor" />
+      <circle cx="8" cy="8" r="4.6" stroke="currentColor" strokeWidth="1" opacity={0.7} />
+    </svg>
+  );
+}
+
+export function FormatBadge({
+  format,
+  size = "sm",
+}: {
+  format: string;
+  size?: "sm" | "lg";
+}) {
+  const kind: QuestionFormatValue =
+    format === "ranking" ? "ranking" : format === "entourage" ? "entourage" : "single_choice";
+  const dense = size === "sm";
+  return (
+    <span
+      className={`border-or-400/30 bg-or-500/10 text-or-300 inline-flex shrink-0 items-center gap-1.5 rounded-full border font-sans tracking-[0.15em] uppercase ${
+        dense ? "px-2.5 py-1 text-[0.65rem]" : "px-4 py-1.5 text-sm tracking-[0.25em]"
+      }`}
+    >
+      <MiniGlyph format={kind} />
+      {FORMAT_LABEL[kind]}
+    </span>
   );
 }
 

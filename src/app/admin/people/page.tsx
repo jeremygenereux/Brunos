@@ -140,7 +140,7 @@ export default async function PeoplePage() {
       <Group
         title="Proches"
         count={proches.length}
-        hint="Famille et proches. Leurs votes ne font boire personne et ils ne sont jamais nommés. Rattachez-les depuis la fiche de la cérémonie."
+        hint="Famille et proches. Ils ne sont jamais nommés et n'ont pas de compte : ils notent leur joueur depuis un lien personnel, sur les catégories marquées entourage. Rattachez-les depuis la fiche de la cérémonie."
         people={proches}
         empty="Aucun proche pour l&apos;instant."
         circleId={circleId}

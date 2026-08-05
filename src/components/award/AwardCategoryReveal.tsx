@@ -34,6 +34,8 @@ export type RevealEntry = {
   headshot: string | null;
   rank: number;
   drinks: number;
+  /** Note moyenne des proches, déjà mise en forme (« 8,5/10 ») ; absente ailleurs. */
+  note?: string | null;
 };
 
 /* ── Rythme de la cascade (secondes) ─────────────────────────────────────
@@ -50,6 +52,8 @@ const NEAR_SIMULTANEOUS = 0.45;
 
 export type AwardCategoryRevealProps = {
   kicker: string;
+  /** Pastille de format, affichée à côté du kicker. */
+  badge?: React.ReactNode;
   prompt: string;
   /** 0 = catégorie seule ; ≥1 = cascade révélée. */
   step: number;
@@ -74,6 +78,7 @@ function gorgees(n: number) {
 
 export function AwardCategoryReveal({
   kicker,
+  badge,
   prompt,
   step,
   buildUp,
@@ -117,14 +122,18 @@ export function AwardCategoryReveal({
         transition={{ layout: { duration: DUR.glide, ease: EASE.inOut } }}
         className="flex flex-col items-center gap-4"
       >
-        <motion.p
-          className="text-or-400/80 font-sans text-sm tracking-[0.4em] uppercase"
+        {/* Le kicker dit OÙ on en est ; la pastille dit de QUEL type est la
+            catégorie, avant le verdict. En salle, ça évite de redemander si
+            celle-là vient des joueurs ou des proches. */}
+        <motion.div
+          className="flex flex-wrap items-center justify-center gap-3"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, ease: EASE.gentle }}
         >
-          {kicker}
-        </motion.p>
+          <p className="text-or-400/80 font-sans text-sm tracking-[0.4em] uppercase">{kicker}</p>
+          {badge}
+        </motion.div>
         {/* Le titre s'estompe une fois la cascade lancée : la hiérarchie
             bascule par l'opacité seule, sans toucher à la géométrie. */}
         <motion.div
@@ -186,6 +195,11 @@ export function AwardCategoryReveal({
                   <span className="text-ivoire flex-1 text-left font-sans text-sm">
                     {entry.name}
                   </span>
+                  {entry.note && (
+                    <span className="text-or-300/80 font-sans text-sm tabular-nums">
+                      {entry.note}
+                    </span>
+                  )}
                   {entry.drinks > 0 && (
                     <span className="text-ivoire-muted font-sans text-sm tabular-nums">
                       {gorgees(entry.drinks)}

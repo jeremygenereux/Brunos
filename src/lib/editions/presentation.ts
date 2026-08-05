@@ -2,6 +2,7 @@ import "server-only";
 import type { createClient } from "@/lib/supabase/server";
 import { computeEditionResultRows } from "./snapshot";
 import type { Category, PresentEdition, RankRow, RecapRow } from "./presentation-types";
+import type { DrinkRule } from "@/lib/scoring/types";
 import { fetchAllRows } from "@/lib/supabase/fetch-all";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
@@ -99,6 +100,7 @@ export async function loadPresentation(
     player_id: string;
     borda_score: number | null;
     vote_count: number | null;
+    avg_rating: number | string | null;
     final_rank: number;
     drinks: number;
     audience: string;
@@ -109,7 +111,9 @@ export async function loadPresentation(
       (from, to) =>
         supabase
           .from("results")
-          .select("question_id, player_id, borda_score, vote_count, final_rank, drinks, audience")
+          .select(
+            "question_id, player_id, borda_score, vote_count, avg_rating, final_rank, drinks, audience",
+          )
           .in("question_id", qids)
           .order("id")
           .range(from, to),
@@ -124,20 +128,16 @@ export async function loadPresentation(
       player_id: r.player_id,
       borda_score: r.borda_score,
       vote_count: r.vote_count,
+      avg_rating: r.avg_rating,
       final_rank: r.final_rank,
       drinks: r.drinks,
       audience: r.audience,
     }));
   }
 
-  const shapeRanking = (
-    questionId: string,
-    audience: "players" | "jury",
-    format: string,
-    rule: "ESCALATION" | "TOP_UNIQUE",
-  ): RankRow[] => {
+  const shapeRanking = (questionId: string, format: string, rule: DrinkRule): RankRow[] => {
     const sorted = rows
-      .filter((r) => r.question_id === questionId && r.audience === audience)
+      .filter((r) => r.question_id === questionId && r.audience === "players")
       .sort((a, b) => a.final_rank - b.final_rank);
     const n = sorted.length;
     const top = sorted[0];
@@ -148,30 +148,38 @@ export async function loadPresentation(
       headshot: playersById.get(r.player_id)?.headshot ?? null,
       finalRank: r.final_rank,
       drinks: r.drinks,
+      avgRating: r.avg_rating === null ? null : Number(r.avg_rating),
+      // Le critère d'égalité en tête dépend du format. Sur une question
+      // entourage, `borda_score` et `vote_count` sont TOUS les deux nuls : les
+      // comparer sacrerait tout le monde gagnant, puisque null === null.
       isWinner:
-        audience === "players" && top
+        top
           ? format === "ranking"
             ? r.borda_score === top.borda_score
-            : r.vote_count === top.vote_count
+            : format === "entourage"
+              ? Number(r.avg_rating) === Number(top.avg_rating)
+              : r.vote_count === top.vote_count
           : false,
+      // Qui cale, selon la règle. En escalade inversée c'est le PREMIER ; se
+      // rabattre sur « drinks > 0 » y marquerait toute la table, puisque tout
+      // le monde boit quelque chose.
       isShooter:
-        audience === "players"
-          ? rule === "ESCALATION"
-            ? r.final_rank === n
-            : r.drinks > 0
-          : false,
+        rule === "ESCALATION"
+          ? r.final_rank === n
+          : rule === "ESCALATION_INVERSE"
+            ? r.final_rank === 1
+            : r.drinks > 0,
     }));
   };
 
   const categories: Category[] = questions.map((q, i) => {
-    const rule = (q.drink_rule_override ?? edition.drink_rule) as "ESCALATION" | "TOP_UNIQUE";
+    const rule = (q.drink_rule_override ?? edition.drink_rule) as DrinkRule;
     return {
       questionId: q.id,
       index: i,
       prompt: q.prompt,
       format: q.format,
-      players: shapeRanking(q.id, "players", q.format, rule),
-      jury: shapeRanking(q.id, "jury", q.format, rule),
+      players: shapeRanking(q.id, q.format, rule),
     };
   });
 

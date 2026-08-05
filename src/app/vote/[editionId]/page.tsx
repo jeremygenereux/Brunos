@@ -59,10 +59,14 @@ export default async function VotePage({ params }: { params: Promise<{ editionId
         : (p.people as { display_name?: string } | null)?.display_name) ?? "Sans nom",
   }));
 
+  // Les questions entourage sont exclues : elles ne se répondent que depuis le
+  // lien envoyé aux proches, sur une échelle de notes. `submit_ballot` refuse
+  // d'ailleurs de les enregistrer ici, le filtre n'est que la première barrière.
   const { data: rawQuestions } = await supabase
     .from("questions")
     .select("id, prompt, format, drink_rule_override")
     .eq("edition_id", editionId)
+    .neq("format", "entourage")
     .order("position");
 
   // Prefill from any existing ballot.

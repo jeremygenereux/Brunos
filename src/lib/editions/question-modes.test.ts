@@ -15,7 +15,7 @@ function row(rank: number, drinks: number, extra: Partial<RankRow> = {}): RankRo
 }
 
 function category(prompt: string, format: string, players: RankRow[]): Category {
-  return { questionId: prompt, index: 0, prompt, format, players, jury: [] };
+  return { questionId: prompt, index: 0, prompt, format, players };
 }
 
 /** « Perdant boit » : les gorgées montent, le dernier rang cale. */
@@ -73,5 +73,41 @@ describe("questionModesFor", () => {
     expect(questionModesFor([sansVote], "TOP_UNIQUE")[0].drinkNote).toContain(
       "La première place boit un shooter",
     );
+  });
+});
+
+describe("mode entourage", () => {
+  /** Escalade inversée : la moyenne la plus haute cale, les gorgées décroissent. */
+  const entourage = () =>
+    category("Il ferme la place", "entourage", [
+      row(1, 8, { isWinner: true, isShooter: true }),
+      row(2, 2),
+      row(3, 1),
+    ]);
+
+  it("ne confond plus une question entourage avec une désignation", () => {
+    const modes = questionModesFor([entourage()], "TOP_UNIQUE");
+    expect(modes).toHaveLength(1);
+    expect(modes[0].kind).toBe("entourage");
+    expect(modes[0].title).toBe("Entourage");
+  });
+
+  it("annonce que ce sont les proches qui ont noté", () => {
+    const [m] = questionModesFor([entourage()], "TOP_UNIQUE");
+    expect(m.ballotNote).toContain("proches");
+    expect(m.ballotNote).toContain("1 à 10");
+  });
+
+  it("décrit la décroissance des gorgées et le cas du joueur sans proche", () => {
+    const [m] = questionModesFor([entourage()], "TOP_UNIQUE");
+    expect(m.drinkNote).toContain("shooter");
+    expect(m.drinkNote).toContain("moins");
+    expect(m.drinkNote).toContain("aucun proche");
+  });
+
+  it("cohabite avec les deux autres modes sans les écraser", () => {
+    const modes = questionModesFor([escalade("A"), topUnique("B"), entourage()], "ESCALATION");
+    expect(modes.map((m) => m.kind)).toEqual(["ranking", "single_choice", "entourage"]);
+    expect(modes.map((m) => m.count)).toEqual([1, 1, 1]);
   });
 });

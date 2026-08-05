@@ -1,8 +1,8 @@
 import "server-only";
 import type { createClient } from "@/lib/supabase/server";
 import { computeQuestionResult, resultRowsFor, type ResultRow } from "@/lib/scoring/edition";
-import type { DrinkRule, QuestionBallot, QuestionFormat } from "@/lib/scoring/types";
-import { fetchAllRows } from "@/lib/supabase/fetch-all";
+import type { DrinkRule, QuestionFormat } from "@/lib/scoring/types";
+import { loadEditionBallots } from "@/lib/editions/ballots";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
 
@@ -11,8 +11,6 @@ export type EditionResults = {
   rows: ResultRow[];
   /** Selected questions, in show order. */
   questions: { id: string; prompt: string; format: QuestionFormat; show_order: number }[];
-  /** True if at least one jury (entourage) ballot was cast for this edition. */
-  hasJury: boolean;
 };
 
 /**
@@ -24,7 +22,7 @@ export async function computeEditionResultRows(
   supabase: Client,
   editionId: string,
 ): Promise<EditionResults> {
-  const empty: EditionResults = { error: null, rows: [], questions: [], hasJury: false };
+  const empty: EditionResults = { error: null, rows: [], questions: [] };
 
   const { data: edition, error: eErr } = await supabase
     .from("editions")
@@ -66,70 +64,19 @@ export async function computeEditionResultRows(
   }));
   if (selected.length === 0) return empty;
 
-  const { data: participants, error: partErr } = await supabase
-    .from("participants")
-    .select("id, kind")
-    .eq("edition_id", editionId);
-  if (partErr) return { ...empty, error: failed };
-  const kindByParticipant = new Map((participants ?? []).map((p) => [p.id, p.kind]));
-
-  const { data: votes, error: vErr } = await supabase
-    .from("votes")
-    .select("id, participant_id")
-    .eq("edition_id", editionId);
-  if (vErr) return { ...empty, error: failed };
-  const kindByVote = new Map(
-    (votes ?? []).map((v) => [v.id, kindByParticipant.get(v.participant_id)]),
-  );
-  const hasJury = (votes ?? []).some((v) => kindByVote.get(v.id) === "jury");
-
-  // Paginé : au-delà de 1000 réponses, une lecture simple serait tronquée en
-  // silence et le classement figé serait faux sans que rien ne l'indique.
-  const { data: answers, error: aErr } = await fetchAllRows<{
-    vote_id: string;
-    question_id: string;
-    player_id: string;
-    rank: number;
-  }>((from, to) =>
-    supabase
-      .from("vote_answers")
-      .select("vote_id, question_id, player_id, rank")
-      .eq("edition_id", editionId)
-      .order("id")
-      .range(from, to),
-  );
-  if (aErr) return { ...empty, error: failed };
-
-  const byQuestionVote = new Map<string, Map<string, QuestionBallot>>();
-  for (const a of answers ?? []) {
-    let qv = byQuestionVote.get(a.question_id);
-    if (!qv) {
-      qv = new Map();
-      byQuestionVote.set(a.question_id, qv);
-    }
-    const ballot = qv.get(a.vote_id) ?? [];
-    ballot.push({ playerId: a.player_id, rank: a.rank });
-    qv.set(a.vote_id, ballot);
-  }
+  const ballots = await loadEditionBallots(supabase, editionId);
+  if (ballots.error) return { ...empty, error: failed };
 
   const shooterValue = Number(edition.shooter_value);
   const rows: ResultRow[] = [];
   for (const q of selected) {
-    const qv = byQuestionVote.get(q.id) ?? new Map<string, QuestionBallot>();
-    const playerBallots: QuestionBallot[] = [];
-    const juryBallots: QuestionBallot[] = [];
-    for (const [voteId, ballot] of qv) {
-      const kind = kindByVote.get(voteId);
-      if (kind === "player") playerBallots.push(ballot);
-      else if (kind === "jury") juryBallots.push(ballot);
-    }
     const computed = computeQuestionResult(
       {
         questionId: q.id,
         format: q.format,
         drinkRule: q.drinkRule,
-        playerBallots,
-        juryBallots,
+        playerBallots: ballots.playerBallots.get(q.id) ?? [],
+        entourageRatings: ballots.entourageRatings.get(q.id) ?? [],
       },
       playerIds,
       shooterValue,
@@ -137,7 +84,7 @@ export async function computeEditionResultRows(
     rows.push(...resultRowsFor(computed));
   }
 
-  return { error: null, rows, questions, hasJury };
+  return { error: null, rows, questions };
 }
 
 /**

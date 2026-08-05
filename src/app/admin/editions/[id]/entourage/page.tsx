@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { headers } from "next/headers";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { Avatar } from "@/components/avatar";
 import { AddEntourageForm } from "./add-form";
+import { BallotLink } from "./ballot-link";
 import { removeEntourage } from "./actions";
 
 export const metadata: Metadata = { title: "Entourage" };
@@ -12,6 +14,14 @@ export const metadata: Metadata = { title: "Entourage" };
 function nameOf(people: unknown): string {
   const p = Array.isArray(people) ? people[0] : people;
   return (p as { display_name?: string } | null)?.display_name ?? "Sans nom";
+}
+
+async function siteOrigin(): Promise<string> {
+  if (process.env.NEXT_PUBLIC_SITE_URL) return process.env.NEXT_PUBLIC_SITE_URL;
+  const h = await headers();
+  const host = h.get("host");
+  const proto = h.get("x-forwarded-proto") ?? "https";
+  return host ? `${proto}://${host}` : "http://localhost:3000";
 }
 
 export default async function EntouragePage({ params }: { params: Promise<{ id: string }> }) {
@@ -36,9 +46,21 @@ export default async function EntouragePage({ params }: { params: Promise<{ id: 
 
   const { data: rows } = await supabase
     .from("edition_entourage")
-    .select("person_id, linked_player_id, relation_label, people(display_name, headshot_url)")
+    .select(
+      "person_id, linked_player_id, relation_label, ballot_token, people(display_name, headshot_url)",
+    )
     .eq("edition_id", id);
 
+  // Qui a déjà rendu son bulletin. Un brouillon ne compte pas comme rendu.
+  const { data: ballots } = await supabase
+    .from("entourage_ballots")
+    .select("person_id, submitted_at")
+    .eq("edition_id", id);
+  const submittedBy = new Map(
+    (ballots ?? []).map((b) => [b.person_id, b.submitted_at as string | null]),
+  );
+
+  const origin = await siteOrigin();
   const attached = (rows ?? []).map((r) => {
     const person = Array.isArray(r.people) ? r.people[0] : r.people;
     return {
@@ -47,6 +69,8 @@ export default async function EntouragePage({ params }: { params: Promise<{ id: 
       headshot: (person as { headshot_url?: string | null } | null)?.headshot_url ?? null,
       linkedPlayer: playerNameById.get(r.linked_player_id) ?? "—",
       relation: r.relation_label,
+      url: `${origin}/bulletin/${r.ballot_token}`,
+      submitted: Boolean(submittedBy.get(r.person_id)),
     };
   });
   const attachedIds = new Set(attached.map((a) => a.personId));
@@ -72,8 +96,9 @@ export default async function EntouragePage({ params }: { params: Promise<{ id: 
 
       <h1 className="text-ivoire font-display mt-4 text-4xl font-semibold">Entourage</h1>
       <p className="text-ivoire-muted mt-1 max-w-2xl font-sans text-sm">
-        Les proches invités à voter à cette cérémonie. Leurs votes sont comptés à part et ne font
-        boire personne. Chacun est rattaché à un joueur.
+        Les proches invités à noter leur joueur. Chacun reçoit un lien personnel qui ouvre son
+        bulletin sans compte ni mot de passe : copiez-le et envoyez-le par message. Ils ne voient
+        que les questions marquées entourage, et uniquement leur joueur. Leurs notes font boire.
       </p>
 
       {playerList.length === 0 ? (
@@ -103,11 +128,15 @@ export default async function EntouragePage({ params }: { params: Promise<{ id: 
                   >
                     <Avatar name={a.name} headshot={a.headshot} size={36} />
                     <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                      <span className="text-ivoire font-sans text-sm">{a.name}</span>
+                      <span className="text-ivoire font-sans text-sm">
+                        {a.name}
+                        {a.submitted && <span className="text-or-300"> · a voté</span>}
+                      </span>
                       <span className="text-ivoire-faint font-sans text-xs">
                         {a.relation} · rattaché·e à {a.linkedPlayer}
                       </span>
                     </div>
+                    <BallotLink url={a.url} name={a.name} />
                     <form action={removeEntourage}>
                       <input type="hidden" name="edition_id" value={id} />
                       <input type="hidden" name="person_id" value={a.personId} />

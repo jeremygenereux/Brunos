@@ -26,7 +26,6 @@ describe("computeQuestionResult", () => {
         format: "ranking",
         drinkRule: "ESCALATION",
         playerBallots: unanimousRanking,
-        juryBallots: [],
       },
       PLAYERS,
       4,
@@ -42,7 +41,6 @@ describe("computeQuestionResult", () => {
         format: "ranking",
         drinkRule: "ESCALATION",
         playerBallots: unanimousRanking,
-        juryBallots: [],
       },
       PLAYERS,
       4,
@@ -59,7 +57,6 @@ describe("computeQuestionResult", () => {
         format: "ranking",
         drinkRule: "TOP_UNIQUE",
         playerBallots: unanimousRanking,
-        juryBallots: [],
       },
       PLAYERS,
       5,
@@ -69,49 +66,39 @@ describe("computeQuestionResult", () => {
     expect(r.drinks.get("c")).toBe(0);
   });
 
-  it("computes the jury audience independently from the player audience", () => {
-    // Jury ranks the exact opposite order.
-    const juryBallots: QuestionBallot[] = [
-      [
-        { playerId: "c", rank: 1 },
-        { playerId: "b", rank: 2 },
-        { playerId: "a", rank: 3 },
-      ],
-    ];
+  it("ignore les bulletins de l'entourage sur une catégorie normale", () => {
+    // L'entourage ne répond plus aux catégories des joueurs : `loadEditionBallots`
+    // ne lui transmet plus rien, et le calcul n'a plus qu'une audience.
     const r = computeQuestionResult(
       {
         questionId: "q1",
         format: "ranking",
         drinkRule: "ESCALATION",
         playerBallots: unanimousRanking,
-        juryBallots,
       },
       PLAYERS,
       4,
     );
     expect(r.players.map((p) => p.playerId)).toEqual(["a", "b", "c"]);
-    expect(r.jury.map((p) => p.playerId)).toEqual(["c", "b", "a"]);
   });
 });
 
 describe("resultRowsFor", () => {
-  it("emits both audiences; jury rows always have drinks = 0", () => {
+  it("n'émet plus que l'audience officielle", () => {
     const r = computeQuestionResult(
       {
         questionId: "q1",
         format: "ranking",
         drinkRule: "ESCALATION",
         playerBallots: unanimousRanking,
-        juryBallots: unanimousRanking,
       },
       PLAYERS,
       4,
     );
     const rows = resultRowsFor(r);
-    expect(rows.filter((x) => x.audience === "players")).toHaveLength(3);
-    expect(rows.filter((x) => x.audience === "jury")).toHaveLength(3);
-    expect(rows.filter((x) => x.audience === "jury").every((x) => x.drinks === 0)).toBe(true);
-    // players audience carries the real charges
+    expect(rows).toHaveLength(3);
+    expect(rows.every((x) => x.audience === "players")).toBe(true);
+    // l'audience officielle porte les vraies charges
     const loser = rows.find((x) => x.audience === "players" && x.player_id === "c");
     expect(loser?.drinks).toBe(4);
   });
@@ -123,7 +110,6 @@ describe("resultRowsFor", () => {
         format: "ranking",
         drinkRule: "ESCALATION",
         playerBallots: unanimousRanking,
-        juryBallots: [],
       },
       PLAYERS,
       4,
@@ -139,14 +125,12 @@ describe("resultRowsFor", () => {
         questionId: "q1",
         format: "ranking",
         drinkRule: "ESCALATION",
-        playerBallots: unanimousRanking,
-        juryBallots: [], // entourage never answered this one
+        playerBallots: unanimousRanking, // entourage never answered this one
       },
       PLAYERS,
       4,
     );
     const rows = resultRowsFor(r);
-    expect(rows.some((x) => x.audience === "jury")).toBe(false);
     expect(rows.filter((x) => x.audience === "players")).toHaveLength(3);
   });
 
@@ -157,7 +141,6 @@ describe("resultRowsFor", () => {
         format: "ranking",
         drinkRule: "TOP_UNIQUE", // would otherwise crown every hash-tied player
         playerBallots: [],
-        juryBallots: [],
       },
       PLAYERS,
       4,
@@ -179,7 +162,6 @@ describe("resultRowsFor", () => {
         format: "single_choice",
         drinkRule: "TOP_UNIQUE",
         playerBallots: sc,
-        juryBallots: [],
       },
       PLAYERS,
       4,

@@ -12,6 +12,8 @@ export type RankRow = {
   headshot: string | null;
   finalRank: number;
   drinks: number;
+  /** Moyenne des notes des proches (catégories entourage) ; null ailleurs. */
+  avgRating?: number | null;
   /** Genuinely tied for 1st (revealed together). */
   isWinner?: boolean;
   /** Actually took the shooter charge (not a coincidental value). */
@@ -30,7 +32,6 @@ export type Category = {
   prompt: string;
   format: string;
   players: RankRow[];
-  jury: RankRow[];
   drama?: DramaCard[];
 };
 

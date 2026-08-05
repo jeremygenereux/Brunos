@@ -12,7 +12,13 @@ import type {
 import { ArchiveButton } from "./archive-button";
 import { cascadeOf } from "@/lib/editions/reveal-order";
 import { questionModesFor } from "@/lib/editions/question-modes";
-import { ChoiceGlyph, ModeCard, RankingGlyph } from "@/components/question-mode";
+import {
+  ChoiceGlyph,
+  FormatBadge,
+  ModeCard,
+  RankingGlyph,
+  RatingGlyph,
+} from "@/components/question-mode";
 import { ReactiveParticles, AwardCategoryReveal } from "@/components/award";
 
 export type { Category, RankRow, RecapRow };
@@ -52,6 +58,9 @@ function toEntry(p: RankRow) {
     headshot: p.headshot,
     rank: p.finalRank,
     drinks: p.drinks,
+    // Sur une catégorie entourage, la moyenne est le verdict lui-même : sans
+    // elle, la salle voit un classement sans savoir d'où il sort.
+    note: typeof p.avgRating === "number" ? `${p.avgRating.toFixed(1).replace(".", ",")}/10` : null,
   };
 }
 
@@ -251,7 +260,7 @@ export function PresentationDeck({
             reconnaît en séance ce qu'elle a vu en votant, et découvre où tombe
             la charge AVANT le premier verdict plutôt que pendant. */}
         {isRules && (
-          <div key="rules" className="brunos-fade flex w-full max-w-6xl flex-col items-center gap-10">
+          <div key="rules" className="brunos-fade flex w-full max-w-7xl flex-col items-center gap-10">
             <Kicker>Règlement</Kicker>
             <h2 className="text-ivoire font-display text-5xl leading-tight font-semibold sm:text-6xl">
               Un shooter vaut{" "}
@@ -266,6 +275,8 @@ export function PresentationDeck({
                   glyph={
                     m.kind === "ranking" ? (
                       <RankingGlyph scale="stage" />
+                    ) : m.kind === "entourage" ? (
+                      <RatingGlyph scale="stage" />
                     ) : (
                       <ChoiceGlyph scale="stage" />
                     )
@@ -289,6 +300,7 @@ export function PresentationDeck({
           <AwardCategoryReveal
             key={`cat-${cat.questionId}`}
             kicker={`Catégorie ${cat.index + 1}`}
+            badge={<FormatBadge format={cat.format} size="lg" />}
             prompt={cat.prompt}
             step={step}
             buildUp={buildUp.map(toEntry)}

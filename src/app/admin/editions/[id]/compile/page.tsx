@@ -4,11 +4,10 @@ import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { computeQuestionResult } from "@/lib/scoring/edition";
-import type { QuestionBallot } from "@/lib/scoring/types";
+import { loadEditionBallots } from "@/lib/editions/ballots";
 import { loadEditionVoteReveal } from "@/lib/editions/drama";
 import { EqualizerPanel } from "./equalizer-panel";
 import { RevealCurator } from "./reveal-curator";
-import { fetchAllRows } from "@/lib/supabase/fetch-all";
 
 export const metadata: Metadata = { title: "Compilation" };
 
@@ -63,64 +62,20 @@ export default async function CompilePage({ params }: { params: Promise<{ id: st
     .eq("edition_id", id)
     .order("position");
 
-  const { data: participants } = await supabase
-    .from("participants")
-    .select("id, kind")
-    .eq("edition_id", id);
-  const kindByParticipant = new Map((participants ?? []).map((p) => [p.id, p.kind]));
-
-  const { data: votes } = await supabase
-    .from("votes")
-    .select("id, participant_id")
-    .eq("edition_id", id);
-  const kindByVote = new Map(
-    (votes ?? []).map((v) => [v.id, kindByParticipant.get(v.participant_id)]),
-  );
-
-  const { data: answers } = await fetchAllRows<{
-    vote_id: string;
-    question_id: string;
-    player_id: string;
-    rank: number;
-  }>((from, to) =>
-    supabase
-      .from("vote_answers")
-      .select("vote_id, question_id, player_id, rank")
-      .eq("edition_id", id)
-      .order("id")
-      .range(from, to),
-  );
-
-  // question_id -> vote_id -> ballot
-  const byQuestionVote = new Map<string, Map<string, QuestionBallot>>();
-  for (const a of answers ?? []) {
-    let qv = byQuestionVote.get(a.question_id);
-    if (!qv) {
-      qv = new Map();
-      byQuestionVote.set(a.question_id, qv);
-    }
-    const ballot = qv.get(a.vote_id) ?? [];
-    ballot.push({ playerId: a.player_id, rank: a.rank });
-    qv.set(a.vote_id, ballot);
-  }
+  // Même lecture que le gel des résultats : l'aperçu de l'égaliseur et les
+  // `results` figés doivent partir des mêmes bulletins, sans quoi la salle
+  // verrait un classement que l'administration n'a jamais vu.
+  const ballots = await loadEditionBallots(supabase, id);
 
   const shooterValue = Number(edition.shooter_value);
   const computed = (questions ?? []).map((q) => {
-    const qv = byQuestionVote.get(q.id) ?? new Map<string, QuestionBallot>();
-    const playerBallots: QuestionBallot[] = [];
-    const juryBallots: QuestionBallot[] = [];
-    for (const [voteId, ballot] of qv) {
-      const kind = kindByVote.get(voteId);
-      if (kind === "player") playerBallots.push(ballot);
-      else if (kind === "jury") juryBallots.push(ballot);
-    }
     const computed = computeQuestionResult(
       {
         questionId: q.id,
         format: q.format,
         drinkRule: q.drink_rule_override ?? edition.drink_rule,
-        playerBallots,
-        juryBallots,
+        playerBallots: ballots.playerBallots.get(q.id) ?? [],
+        entourageRatings: ballots.entourageRatings.get(q.id) ?? [],
       },
       playerIds,
       shooterValue,

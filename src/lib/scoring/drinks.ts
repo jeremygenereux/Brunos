@@ -4,13 +4,21 @@ import type { DrinkRule, PlayerScore } from "./types";
  * Drinks (in gorgées) each player takes for ONE question, from its OFFICIAL
  * ranking + the applicable rule. A shooter is worth `shooterValue` gorgées.
  *
- * ASSUMPTION — confirm with product (spec §5.4 / §7 are worth double-checking):
- *  - TOP_UNIQUE: the 1st-place player(s) drink one shooter; everyone else 0.
- *    Genuine ties for 1st all drink (ex æquo).
- *  - ESCALATION: everyone drinks — 1st place = 1 gorgée, 2nd = 2, …, and the
- *    LAST-ranked drinks a shooter (= shooterValue) instead of N gorgées.
+ *  - TOP_UNIQUE : le ou les premiers calent un shooter, personne d'autre ne
+ *    boit. Les vraies égalités en tête boivent toutes (ex æquo).
+ *  - ESCALATION : tout le monde boit. 1er = 1 gorgée, 2e = 2, … et le DERNIER
+ *    cale un shooter au lieu de ses N gorgées.
+ *  - ESCALATION_INVERSE : le miroir. Le PREMIER cale le shooter, puis les
+ *    gorgées décroissent vers le bas du classement (2e = N-1, …, dernier = 1).
+ *    C'est la règle des questions entourage, où la note la plus haute désigne
+ *    celui qui correspond le mieux à l'énoncé : il paie le plus, et les autres
+ *    trinquent quand même, à proportion inverse de leur rang.
  *
- * Both directions are a one-line change here if the intent is reversed.
+ * `ranking` ne contient QUE les joueurs réellement classés. Sur une question
+ * entourage, un joueur que personne n'a noté n'y figure pas : il n'apparaît
+ * donc pas non plus dans la carte rendue, et l'appelant lui laisse 0. C'est
+ * voulu — `n` vaut le nombre de joueurs notés, pas le nombre de nommés, sans
+ * quoi l'échelle des gorgées comporterait des trous.
  */
 export function questionDrinks(
   ranking: PlayerScore[],
@@ -22,6 +30,8 @@ export function questionDrinks(
   for (const r of ranking) {
     if (rule === "TOP_UNIQUE") {
       out.set(r.playerId, r.tiedForWin ? shooterValue : 0);
+    } else if (rule === "ESCALATION_INVERSE") {
+      out.set(r.playerId, r.finalRank === 1 ? shooterValue : n - r.finalRank + 1);
     } else {
       out.set(r.playerId, r.finalRank === n ? shooterValue : r.finalRank);
     }

@@ -83,6 +83,7 @@ export type Database = {
       }
       edition_entourage: {
         Row: {
+          ballot_token: string
           created_at: string
           edition_id: string
           linked_player_id: string
@@ -91,6 +92,7 @@ export type Database = {
           updated_at: string
         }
         Insert: {
+          ballot_token?: string
           created_at?: string
           edition_id: string
           linked_player_id: string
@@ -99,6 +101,7 @@ export type Database = {
           updated_at?: string
         }
         Update: {
+          ballot_token?: string
           created_at?: string
           edition_id?: string
           linked_player_id?: string
@@ -228,6 +231,96 @@ export type Database = {
             isOneToOne: false
             referencedRelation: "circles"
             referencedColumns: ["id"]
+          },
+        ]
+      }
+      entourage_ballots: {
+        Row: {
+          created_at: string
+          edition_id: string
+          id: string
+          person_id: string
+          submitted_at: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          edition_id: string
+          id?: string
+          person_id: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          edition_id?: string
+          id?: string
+          person_id?: string
+          submitted_at?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entourage_ballots_entourage_fk"
+            columns: ["edition_id", "person_id"]
+            isOneToOne: true
+            referencedRelation: "edition_entourage"
+            referencedColumns: ["edition_id", "person_id"]
+          },
+        ]
+      }
+      entourage_ratings: {
+        Row: {
+          ballot_id: string
+          created_at: string
+          edition_id: string
+          id: string
+          player_id: string
+          question_id: string
+          rating: number
+          updated_at: string
+        }
+        Insert: {
+          ballot_id: string
+          created_at?: string
+          edition_id: string
+          id?: string
+          player_id: string
+          question_id: string
+          rating: number
+          updated_at?: string
+        }
+        Update: {
+          ballot_id?: string
+          created_at?: string
+          edition_id?: string
+          id?: string
+          player_id?: string
+          question_id?: string
+          rating?: number
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "entourage_ratings_ballot_edition_fk"
+            columns: ["ballot_id", "edition_id"]
+            isOneToOne: false
+            referencedRelation: "entourage_ballots"
+            referencedColumns: ["id", "edition_id"]
+          },
+          {
+            foreignKeyName: "entourage_ratings_player_edition_fk"
+            columns: ["player_id", "edition_id"]
+            isOneToOne: false
+            referencedRelation: "players"
+            referencedColumns: ["id", "edition_id"]
+          },
+          {
+            foreignKeyName: "entourage_ratings_question_edition_fk"
+            columns: ["question_id", "edition_id"]
+            isOneToOne: false
+            referencedRelation: "questions"
+            referencedColumns: ["id", "edition_id"]
           },
         ]
       }
@@ -527,6 +620,7 @@ export type Database = {
       results: {
         Row: {
           audience: Database["public"]["Enums"]["result_audience"]
+          avg_rating: number | null
           borda_score: number | null
           created_at: string
           drinks: number
@@ -539,6 +633,7 @@ export type Database = {
         }
         Insert: {
           audience: Database["public"]["Enums"]["result_audience"]
+          avg_rating?: number | null
           borda_score?: number | null
           created_at?: string
           drinks?: number
@@ -551,6 +646,7 @@ export type Database = {
         }
         Update: {
           audience?: Database["public"]["Enums"]["result_audience"]
+          avg_rating?: number | null
           borda_score?: number | null
           created_at?: string
           drinks?: number
@@ -702,6 +798,7 @@ export type Database = {
       edition_is_archived: { Args: { p_edition: string }; Returns: boolean }
       edition_join_info: { Args: { p_token: string }; Returns: Json }
       edition_of_question: { Args: { p_question: string }; Returns: string }
+      entourage_ballot_info: { Args: { p_token: string }; Returns: Json }
       is_admin: { Args: never; Returns: boolean }
       is_admin_of_edition: { Args: { p_edition: string }; Returns: boolean }
       is_admin_of_person: { Args: { p_person: string }; Returns: boolean }
@@ -725,12 +822,20 @@ export type Database = {
         Args: { p_edition: string; p_ids: string[] }
         Returns: undefined
       }
+      save_entourage_ratings: {
+        Args: { p_ratings: Json; p_token: string }
+        Returns: undefined
+      }
       set_question_selection: {
         Args: { p_edition: string; p_ordered_ids: string[] }
         Returns: undefined
       }
       submit_ballot: {
         Args: { p_answers: Json; p_edition: string }
+        Returns: undefined
+      }
+      submit_entourage_ballot: {
+        Args: { p_ratings: Json; p_token: string }
         Returns: undefined
       }
       user_role: {
@@ -746,7 +851,7 @@ export type Database = {
       vote_is_in_open_window: { Args: { p_vote: string }; Returns: boolean }
     }
     Enums: {
-      drink_rule: "TOP_UNIQUE" | "ESCALATION"
+      drink_rule: "TOP_UNIQUE" | "ESCALATION" | "ESCALATION_INVERSE"
       edition_state:
         | "CONSTRUCTION"
         | "SENT_FOR_VOTE"
@@ -755,7 +860,7 @@ export type Database = {
         | "LIVE"
         | "ARCHIVED"
       participant_kind: "player" | "jury"
-      question_format: "ranking" | "single_choice"
+      question_format: "ranking" | "single_choice" | "entourage"
       result_audience: "players" | "jury"
       rsvp_status: "yes" | "no" | "maybe"
       user_role: "admin" | "player" | "jury" | "super_admin"
@@ -889,7 +994,7 @@ export const Constants = {
   },
   public: {
     Enums: {
-      drink_rule: ["TOP_UNIQUE", "ESCALATION"],
+      drink_rule: ["TOP_UNIQUE", "ESCALATION", "ESCALATION_INVERSE"],
       edition_state: [
         "CONSTRUCTION",
         "SENT_FOR_VOTE",
@@ -899,7 +1004,7 @@ export const Constants = {
         "ARCHIVED",
       ],
       participant_kind: ["player", "jury"],
-      question_format: ["ranking", "single_choice"],
+      question_format: ["ranking", "single_choice", "entourage"],
       result_audience: ["players", "jury"],
       rsvp_status: ["yes", "no", "maybe"],
       user_role: ["admin", "player", "jury", "super_admin"],

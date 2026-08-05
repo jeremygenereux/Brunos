@@ -7,6 +7,7 @@ function mkRanking(order: string[], tiedTop: string[] = [order[0]]): PlayerScore
     playerId: id,
     bordaScore: i + 1,
     voteCount: null,
+    avgRating: null,
     firstPlaceCount: 0,
     finalRank: i + 1,
     tiedForWin: tiedTop.includes(id),

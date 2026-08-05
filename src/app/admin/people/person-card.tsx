@@ -63,6 +63,11 @@ export function PersonCard({
   circleId: string | null;
   circleName: string;
 }) {
+  // Un proche vote par LIEN, pas par compte : ni identifiant, ni mot de passe,
+  // ni courriel. Lui proposer un accès n'ouvrirait que sur une impasse — et
+  // laisserait croire qu'il faut lui en créer un pour qu'il puisse répondre.
+  const parLien = person.kind === "jury";
+
   return (
     <li className="border-or-400/12 bg-noir-700/40 flex flex-col gap-3 rounded-2xl border px-5 py-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -70,12 +75,12 @@ export function PersonCard({
         <div className="flex min-w-0 flex-1 flex-col gap-0.5">
           <span className="text-ivoire font-sans font-medium">{person.name}</span>
           <span className="text-ivoire-faint font-sans text-xs">
-            <AccountStatus p={person} />
+            {parLien ? "Vote par lien" : <AccountStatus p={person} />}
             {" · "}
             {person.editions} cérémonie{person.editions > 1 ? "s" : ""}
           </span>
         </div>
-        {person.account && (
+        {person.account && !parLien && (
           <RoleSelect personId={person.id} initial={person.account.role} isSelf={person.isSelf} />
         )}
       </div>
@@ -97,21 +102,32 @@ export function PersonCard({
             <KindSelect personId={person.id} initial={person.kind} />
           </Field>
 
-          <Field label="Accès">
-            <AccessManager
-              access={{
-                personId: person.id,
-                invitedEmail: person.invitedEmail,
-                accountEmail: person.accountEmail,
-                hasAccount: Boolean(person.account),
-                accountUsed: person.accountUsed,
-              }}
-            />
-          </Field>
+          {parLien ? (
+            <Field
+              label="Accès"
+              hint="Les proches répondent par un lien personnel, sans compte ni mot de passe. Le lien se copie depuis l'entourage de la cérémonie."
+            >
+              <p className="text-ivoire-faint font-sans text-xs">
+                Rien à créer ici.
+              </p>
+            </Field>
+          ) : (
+            <Field label="Accès">
+              <AccessManager
+                access={{
+                  personId: person.id,
+                  invitedEmail: person.invitedEmail,
+                  accountEmail: person.accountEmail,
+                  hasAccount: Boolean(person.account),
+                  accountUsed: person.accountUsed,
+                }}
+              />
+            </Field>
+          )}
 
           {/* L'administration d'un cercle se délègue à quelqu'un qui a déjà un
               compte : circle_admins référence auth.users, pas la fiche. */}
-          {circleId && !person.unaffiliated && (
+          {circleId && !person.unaffiliated && !parLien && (
             <Field
               label="Administration"
               hint={

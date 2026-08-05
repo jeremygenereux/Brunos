@@ -168,6 +168,15 @@ voit pas le soir même : elle se voit deux ans plus tard dans le palmarès.
 - **🟡 Catégories à valeur double.** Certaines catégories comptent double au
   classement.
 
+  **Penser à l'égaliseur.** `equalize()` choisit k questions pour aplatir les
+  gorgées à partir d'un vecteur `{questionId, drinks}` par question. Il est
+  volontairement agnostique du format : le vote des proches n'a rien exigé de
+  lui, il a suffi que les questions entourage sachent produire leur vecteur.
+  Une catégorie à valeur double devra faire pareil, c'est-à-dire livrer des
+  gorgées **déjà doublées**, et surtout ne pas doubler ailleurs dans la chaîne.
+  Même consigne pour tout format à venir : la règle est que l'optimiseur ne
+  connaît que des gorgées, jamais des formats.
+
 ---
 
 ## F. Administration et qualité de vie

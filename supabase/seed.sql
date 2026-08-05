@@ -856,9 +856,14 @@ on conflict (vote_id, question_id, player_id) do nothing;
 --    Computed DIRECTLY from the seeded vote_answers so the cache is exactly
 --    consistent with the ballots (mirrors src/lib/scoring: Borda = sum of
 --    ranks, lower wins; single_choice = vote count; ESCALATION/TOP_UNIQUE
---    drinks on the players audience only). Only the 20 SELECTED questions are
---    snapshotted (matches snapshotEditionResults, which reads selected ones).
---    An audience with zero ballots is omitted (resultRowsFor behavior).
+--    drinks). Only the 20 SELECTED questions are snapshotted (matches
+--    snapshotEditionResults, which reads selected ones). A question with zero
+--    ballot is omitted (resultRowsFor behavior).
+--
+--    L'ENTOURAGE N'EST PLUS UN PUBLIC ICI. Il ne répond plus aux catégories
+--    des joueurs : il a ses propres questions (section 8bis), où son verdict
+--    est officiel et fait boire. On ne gèle donc que l'audience 'players',
+--    comme `resultRowsFor`.
 --
 --    final_rank tie-break here: primary score, then #1st-place finishes, then
 --    player display_order (deterministic + distinct). The FNV hash tie-break
@@ -897,6 +902,7 @@ agg as (
     on vt.edition_id = ed.edition_id
   join public.participants pa
     on pa.id = vt.participant_id
+   and pa.kind = 'player'::public.participant_kind
   left join public.vote_answers va
     on va.vote_id = vt.id and va.question_id = qu.id and va.player_id = pl.id
   group by qu.id, qu.format, coalesce(qu.drink_rule_override, ed.drink_rule),
@@ -931,22 +937,19 @@ ranked as (
   where h.total_rows > 0
 )
 select
-  md5(r.question_id::text || r.player_id::text ||
-      (case when r.audience_kind = 'player' then 'players' else 'jury' end))::uuid as id,
+  md5(r.question_id::text || r.player_id::text || 'players')::uuid as id,
   r.question_id,
   r.player_id,
   case when r.format = 'ranking'::public.question_format then r.borda_sum::int else null end as borda_score,
   case when r.format = 'single_choice'::public.question_format then r.choice_count::int else null end as vote_count,
   r.final_rank::int,
-  -- drinks: ONLY the players audience drinks; jury audience always 0.
   case
-    when r.audience_kind = 'jury' then 0
     when r.drink_rule = 'TOP_UNIQUE'::public.drink_rule then
       case when r.tied_for_win then (select shooter_value from ed) else 0 end
     else  -- ESCALATION: rank r gorgées, last place drinks a shooter instead.
       case when r.final_rank = r.n_players then (select shooter_value from ed) else r.final_rank end
   end::numeric(6,2) as drinks,
-  (case when r.audience_kind = 'player' then 'players' else 'jury' end)::public.result_audience as audience
+  'players'::public.result_audience as audience
 from ranked r
 on conflict (question_id, player_id, audience) do nothing;
 
@@ -988,6 +991,209 @@ values
   ('00710000-0000-4000-8000-000000250003'::uuid, 'ed170000-0000-4000-8000-000000002025'::uuid, null,                                          'results_compiled', 'Les classements de l''édition 2025 ont été compilés.', timestamptz '2025-08-23 12:00:00-04', timestamptz '2025-08-23 12:30:00-04'),
   ('00710000-0000-4000-8000-000000250004'::uuid, 'ed170000-0000-4000-8000-000000002025'::uuid, null,                                          'edition_archived', 'L''édition 2025 a été archivée. Les résultats sont publics.',          timestamptz '2025-08-30 02:00:00-04', timestamptz '2025-08-30 10:00:00-04')
 on conflict (id) do nothing;
+
+
+-- =====================================================================
+-- 8bis) LE VOTE DES PROCHES — questions entourage, liens de bulletin, notes.
+--
+--   Les proches ne classent plus personne : ils notent LEUR joueur de 1 à 10,
+--   depuis un lien sans compte. On moyenne, on classe les moyennes, et la plus
+--   haute cale (règle ESCALATION_INVERSE, posée par le déclencheur).
+--
+--   Jetons déterministes en b0110000-… pour qu'un lien collé dans un signet
+--   survive à un `db:reset`.
+--
+--   2027 (SENT_FOR_VOTE) : questions posées, AUCUNE note. C'est là qu'on teste
+--     le parcours complet en ouvrant /bulletin/<jeton>.
+--   2026 (COMPILATION)   : notes déjà rendues, pour que l'égaliseur et l'écran
+--     de compilation aient de quoi calculer.
+-- =====================================================================
+
+-- 8bis-a) L'intention : qui est le proche de qui, avec son jeton de bulletin.
+insert into public.edition_entourage
+  (edition_id, person_id, linked_player_id, relation_label, ballot_token)
+select pa.edition_id, pe.id, pa.linked_player_id, pa.relation_label, t.token
+from public.participants pa
+join public.people pe on pe.auth_user_id = pa.user_id
+join (values
+  ('Danielle Tremblay',    2027, 'b0110000-0000-4000-8000-000000270001'::uuid),
+  ('Danielle Tremblay',    2026, 'b0110000-0000-4000-8000-000000260001'::uuid),
+  ('Camille Lachance', 2026, 'b0110000-0000-4000-8000-000000260002'::uuid),
+  ('Rosalie Painchaud',     2026, 'b0110000-0000-4000-8000-000000260003'::uuid)
+) as t(nom, an, token)
+  on t.nom = pe.display_name
+join public.editions e on e.id = pa.edition_id and e.year = t.an
+where pa.kind = 'jury'::public.participant_kind
+  and pa.linked_player_id is not null
+on conflict (edition_id, person_id) do nothing;
+
+-- 8bis-b) Les questions réservées aux proches. Insérées AVANT la bascule des
+--         états : le verrou d'édition n'autorise l'ajout qu'en CONSTRUCTION.
+insert into public.questions (id, edition_id, prompt, format, position)
+select q.qid, q.ed,
+       q.prompt, 'entourage'::public.question_format,
+       900 + q.n
+from (values
+  ('9e570000-0000-4000-8000-000000270001'::uuid, 'ed170000-0000-4000-8000-000000002027'::uuid,
+   'Il ramène tout le monde à la maison après la fermeture des bars', 1),
+  ('9e570000-0000-4000-8000-000000270002'::uuid, 'ed170000-0000-4000-8000-000000002027'::uuid,
+   'Il raconte la même histoire à chaque souper de famille', 2),
+  ('9e570000-0000-4000-8000-000000270003'::uuid, 'ed170000-0000-4000-8000-000000002027'::uuid,
+   'Il promet de partir tôt et ferme la place', 3),
+  ('9e570000-0000-4000-8000-000000260001'::uuid, 'ed170000-0000-4000-8000-000000002026'::uuid,
+   'Il ramène tout le monde à la maison après la fermeture des bars', 1),
+  ('9e570000-0000-4000-8000-000000260002'::uuid, 'ed170000-0000-4000-8000-000000002026'::uuid,
+   'Il promet de partir tôt et ferme la place', 2)
+) as q(qid, ed, prompt, n)
+on conflict (id) do nothing;
+
+-- 8bis-c) Les bulletins RENDUS de 2026. Un brouillon (submitted_at nul) ne
+--         compterait pas : le chargeur ne retient que l'envoyé.
+insert into public.entourage_ballots (id, edition_id, person_id, submitted_at)
+select b.bid, ee.edition_id, ee.person_id, timestamptz '2026-08-20 19:00:00-04'
+from (values
+  ('ba110000-0000-4000-8000-000000260001'::uuid, 'b0110000-0000-4000-8000-000000260001'::uuid),
+  ('ba110000-0000-4000-8000-000000260002'::uuid, 'b0110000-0000-4000-8000-000000260002'::uuid),
+  ('ba110000-0000-4000-8000-000000260003'::uuid, 'b0110000-0000-4000-8000-000000260003'::uuid)
+) as b(bid, token)
+join public.edition_entourage ee on ee.ballot_token = b.token
+on conflict (id) do nothing;
+
+-- 8bis-d) Les notes. Sylvie note Jérémy, Geneviève note Thomas, Lucie note
+--         Benjamin. Les trois autres nommés n'ont aucun proche : ils restent
+--         HORS classement sur ces questions, ils ne peuvent ni gagner ni boire.
+insert into public.entourage_ratings (ballot_id, edition_id, question_id, player_id, rating)
+select b.id, b.edition_id, r.qid, ee.linked_player_id, r.note
+from (values
+  ('ba110000-0000-4000-8000-000000260001'::uuid, '9e570000-0000-4000-8000-000000260001'::uuid, 9),
+  ('ba110000-0000-4000-8000-000000260001'::uuid, '9e570000-0000-4000-8000-000000260002'::uuid, 4),
+  ('ba110000-0000-4000-8000-000000260002'::uuid, '9e570000-0000-4000-8000-000000260001'::uuid, 6),
+  ('ba110000-0000-4000-8000-000000260002'::uuid, '9e570000-0000-4000-8000-000000260002'::uuid, 8),
+  ('ba110000-0000-4000-8000-000000260003'::uuid, '9e570000-0000-4000-8000-000000260001'::uuid, 3),
+  ('ba110000-0000-4000-8000-000000260003'::uuid, '9e570000-0000-4000-8000-000000260002'::uuid, 10)
+) as r(bid, qid, note)
+join public.entourage_ballots b on b.id = r.bid
+join public.edition_entourage ee
+  on ee.edition_id = b.edition_id and ee.person_id = b.person_id
+on conflict (ballot_id, question_id) do nothing;
+
+
+-- ---------------------------------------------------------------------
+-- 8bis-e) L'ÉDITION 2025 ARCHIVÉE — de quoi voir le rendu en présentation et
+--         en archive sans avoir à jouer une soirée.
+--
+--   Le calcul de la section 7 est déjà passé quand on arrive ici, et il ignore
+--   ces questions puisqu'elles n'ont aucun `vote_answers`. On gèle donc leurs
+--   `results` nous-mêmes, juste en dessous.
+--
+--   Le tableau est choisi pour montrer les trois cas d'un coup :
+--     • Jérémy a DEUX proches, donc une moyenne (8,5 sur la première) ;
+--     • Thomas, Benjamin et Mathieu en ont un seul ;
+--     • Antoine et Paul-Émile n'en ont AUCUN : ils restent hors classement,
+--       ne peuvent pas gagner et ne boivent pas.
+--   Le gagnant change à chaque question, pour que la scène ne soit pas répétitive.
+-- ---------------------------------------------------------------------
+insert into public.people (id, display_name, kind, circle_id)
+select 'bef50000-0000-4000-8000-0000000000f5'::uuid, 'Chantal Dupont',
+       'jury'::public.participant_kind, e.circle_id
+from public.editions e where e.id = 'ed170000-0000-4000-8000-000000002025'::uuid
+on conflict (id) do nothing;
+
+insert into public.edition_entourage
+  (edition_id, person_id, linked_player_id, relation_label, ballot_token)
+select 'ed170000-0000-4000-8000-000000002025'::uuid, pe.id, t.player, t.relation, t.token
+from (values
+  ('Danielle Tremblay',    'b1a52025-0000-4000-8000-000000000001'::uuid, 'Mère de Raphaël',
+   'b0110000-0000-4000-8000-000000250001'::uuid),
+  ('Chantal Dupont',     'b1a52025-0000-4000-8000-000000000001'::uuid, 'Marraine de Jérémy',
+   'b0110000-0000-4000-8000-000000250005'::uuid),
+  ('Camille Lachance', 'b1a52025-0000-4000-8000-000000000002'::uuid, 'Conjointe de Félix',
+   'b0110000-0000-4000-8000-000000250002'::uuid),
+  ('Rosalie Painchaud',     'b1a52025-0000-4000-8000-000000000003'::uuid, 'Sœur de Samuel',
+   'b0110000-0000-4000-8000-000000250003'::uuid),
+  ('Gilles Beaulieu',       'b1a52025-0000-4000-8000-000000000004'::uuid, 'Père de Vincent',
+   'b0110000-0000-4000-8000-000000250004'::uuid)
+) as t(nom, player, relation, token)
+join public.people pe on pe.display_name = t.nom
+on conflict (edition_id, person_id) do nothing;
+
+-- Trois catégories entourage, TOUTES retenues pour la soirée. Les show_order
+-- 0..19 sont pris par les vingt questions classiques ; on enchaîne à 20.
+insert into public.questions
+  (id, edition_id, prompt, format, position, is_selected_for_show, show_order, reveal_enabled)
+select q.qid, 'ed170000-0000-4000-8000-000000002025'::uuid, q.prompt,
+       'entourage'::public.question_format, 900 + q.n, true, 19 + q.n, true
+from (values
+  ('9e570000-0000-4000-8000-000000250001'::uuid,
+   'Il ramène tout le monde à la maison après la fermeture des bars', 1),
+  ('9e570000-0000-4000-8000-000000250002'::uuid,
+   'Il promet de partir tôt et ferme la place', 2),
+  ('9e570000-0000-4000-8000-000000250003'::uuid,
+   'Il raconte la même histoire à chaque souper de famille', 3)
+) as q(qid, prompt, n)
+on conflict (id) do nothing;
+
+insert into public.entourage_ballots (id, edition_id, person_id, submitted_at)
+select b.bid, ee.edition_id, ee.person_id, timestamptz '2025-08-20 19:00:00-04'
+from (values
+  ('ba110000-0000-4000-8000-000000250001'::uuid, 'b0110000-0000-4000-8000-000000250001'::uuid),
+  ('ba110000-0000-4000-8000-000000250002'::uuid, 'b0110000-0000-4000-8000-000000250002'::uuid),
+  ('ba110000-0000-4000-8000-000000250003'::uuid, 'b0110000-0000-4000-8000-000000250003'::uuid),
+  ('ba110000-0000-4000-8000-000000250004'::uuid, 'b0110000-0000-4000-8000-000000250004'::uuid),
+  ('ba110000-0000-4000-8000-000000250005'::uuid, 'b0110000-0000-4000-8000-000000250005'::uuid)
+) as b(bid, token)
+join public.edition_entourage ee on ee.ballot_token = b.token
+on conflict (id) do nothing;
+
+insert into public.entourage_ratings (ballot_id, edition_id, question_id, player_id, rating)
+select b.id, b.edition_id,
+       ('9e570000-0000-4000-8000-00000025000' || r.q)::uuid,
+       ee.linked_player_id, r.note
+from (values
+  -- Sylvie et Chantal notent Jérémy : moyennes 8,5 / 5,5 / 9,5.
+  ('ba110000-0000-4000-8000-000000250001'::uuid, 1,  9), ('ba110000-0000-4000-8000-000000250001'::uuid, 2, 5), ('ba110000-0000-4000-8000-000000250001'::uuid, 3, 10),
+  ('ba110000-0000-4000-8000-000000250005'::uuid, 1,  8), ('ba110000-0000-4000-8000-000000250005'::uuid, 2, 6), ('ba110000-0000-4000-8000-000000250005'::uuid, 3,  9),
+  -- Geneviève note Thomas : il remporte la deuxième catégorie.
+  ('ba110000-0000-4000-8000-000000250002'::uuid, 1,  6), ('ba110000-0000-4000-8000-000000250002'::uuid, 2, 9), ('ba110000-0000-4000-8000-000000250002'::uuid, 3,  3),
+  -- Lucie note Benjamin.
+  ('ba110000-0000-4000-8000-000000250003'::uuid, 1,  4), ('ba110000-0000-4000-8000-000000250003'::uuid, 2, 7), ('ba110000-0000-4000-8000-000000250003'::uuid, 3,  8),
+  -- Marc note Mathieu.
+  ('ba110000-0000-4000-8000-000000250004'::uuid, 1,  2), ('ba110000-0000-4000-8000-000000250004'::uuid, 2, 3), ('ba110000-0000-4000-8000-000000250004'::uuid, 3,  7)
+) as r(bid, q, note)
+join public.entourage_ballots b on b.id = r.bid
+join public.edition_entourage ee
+  on ee.edition_id = b.edition_id and ee.person_id = b.person_id
+on conflict (ballot_id, question_id) do nothing;
+
+-- Le gel. Reproduit `computeEntourageRanking` + `questionDrinks` en SQL :
+-- moyenne par joueur, classement décroissant, puis escalade INVERSE — le
+-- premier cale, et les gorgées décroissent jusqu'à une seule pour le dernier.
+-- `n` compte les joueurs NOTÉS, pas les six nommés : l'échelle n'a pas de trous.
+insert into public.results
+  (question_id, player_id, borda_score, vote_count, avg_rating, final_rank, drinks, audience)
+with moy as (
+  select r.question_id, r.player_id, pl.display_order,
+         round(avg(r.rating), 2) as moyenne
+  from public.entourage_ratings r
+  join public.entourage_ballots b on b.id = r.ballot_id and b.submitted_at is not null
+  join public.players pl on pl.id = r.player_id
+  where r.edition_id = 'ed170000-0000-4000-8000-000000002025'::uuid
+  group by r.question_id, r.player_id, pl.display_order
+),
+classe as (
+  select m.*,
+         row_number() over (partition by m.question_id
+                            order by m.moyenne desc, m.display_order) as rang,
+         count(*)     over (partition by m.question_id)               as n
+  from moy m
+)
+select c.question_id, c.player_id, null, null, c.moyenne, c.rang,
+       case when c.rang = 1 then e.shooter_value else (c.n - c.rang + 1) end,
+       'players'::public.result_audience
+from classe c
+cross join (select shooter_value from public.editions
+            where id = 'ed170000-0000-4000-8000-000000002025'::uuid) e
+on conflict (question_id, player_id, audience) do nothing;
 
 
 -- =====================================================================

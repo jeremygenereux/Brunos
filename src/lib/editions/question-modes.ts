@@ -18,7 +18,7 @@
 import type { Category } from "./presentation-types";
 import { cascadeOf } from "./reveal-order";
 
-export type ModeKind = "ranking" | "single_choice";
+export type ModeKind = "ranking" | "single_choice" | "entourage";
 
 export type QuestionMode = {
   kind: ModeKind;
@@ -33,17 +33,20 @@ export type QuestionMode = {
 const TITLE: Record<ModeKind, string> = {
   ranking: "Classement",
   single_choice: "Désignation",
+  entourage: "Entourage",
 };
 
 const BALLOT_NOTE: Record<ModeKind, string> = {
   ranking: "Vous avez classé tous les joueurs, du premier au dernier.",
   single_choice: "Vous avez désigné une seule personne.",
+  entourage: "Vos proches ont noté votre cas de 1 à 10. Vous n'avez pas voté sur ces catégories.",
 };
 
 const TOP_UNIQUE_NOTE: Record<ModeKind, string> = {
   ranking: "La première place boit un shooter. Les autres ne boivent pas.",
   single_choice:
     "La personne qui reçoit le plus de votes boit un shooter. Les autres ne boivent pas.",
+  entourage: "La moyenne la plus haute boit un shooter. Les autres ne boivent pas.",
 };
 
 const ESCALATION_NOTE: Record<ModeKind, string> = {
@@ -51,6 +54,8 @@ const ESCALATION_NOTE: Record<ModeKind, string> = {
     "Chaque place boit selon son rang : 1 gorgée pour la première, 2 pour la deuxième, et ainsi de suite. La dernière place boit un shooter.",
   single_choice:
     "Les votes classent les joueurs. Chaque place boit selon son rang : 1 gorgée pour la première, 2 pour la deuxième, et ainsi de suite. La dernière place boit un shooter.",
+  entourage:
+    "Les moyennes classent les joueurs. La plus haute boit un shooter, puis chaque place boit un peu moins que la précédente, jusqu'à une seule gorgée pour la plus basse. Un joueur dont aucun proche n'a voté ne boit pas.",
 };
 
 const MIXED_NOTE: Record<ModeKind, string> = {
@@ -58,6 +63,8 @@ const MIXED_NOTE: Record<ModeKind, string> = {
     "Selon la catégorie, le shooter va à la première ou à la dernière place. À la première, elle boit seule. À la dernière, chaque place boit selon son rang : 1 gorgée pour la première, 2 pour la deuxième, et ainsi de suite.",
   single_choice:
     "Selon la catégorie, le shooter va à la personne la plus votée, qui boit seule, ou à la moins votée, chaque place buvant alors selon son rang.",
+  entourage:
+    "Selon la catégorie, la moyenne la plus haute boit seule, ou elle boit un shooter et les autres suivent avec de moins en moins de gorgées.",
 };
 
 /**
@@ -78,7 +85,12 @@ export function questionModesFor(
   const stats = new Map<ModeKind, { count: number; escalation: boolean; topUnique: boolean }>();
 
   for (const cat of categories) {
-    const kind: ModeKind = cat.format === "ranking" ? "ranking" : "single_choice";
+    const kind: ModeKind =
+      cat.format === "ranking"
+        ? "ranking"
+        : cat.format === "entourage"
+          ? "entourage"
+          : "single_choice";
     if (!stats.has(kind)) {
       stats.set(kind, { count: 0, escalation: false, topUnique: false });
       order.push(kind);

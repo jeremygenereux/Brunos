@@ -6,6 +6,13 @@ import { requireAdmin } from "@/lib/auth/guards";
 
 export type QuestionState = { error: string | null; success?: boolean };
 
+const DRINK_RULES = ["ESCALATION", "TOP_UNIQUE", "ESCALATION_INVERSE"] as const;
+type DrinkRuleValue = (typeof DRINK_RULES)[number];
+
+function isDrinkRule(v: string): v is DrinkRuleValue {
+  return (DRINK_RULES as readonly string[]).includes(v);
+}
+
 export async function addQuestion(
   _prev: QuestionState,
   formData: FormData,
@@ -18,10 +25,17 @@ export async function addQuestion(
   const drinkRule = String(formData.get("drink_rule") ?? "");
   if (!editionId) return { error: "Édition introuvable." };
   if (!prompt) return { error: "L'énoncé est requis." };
-  if (format !== "ranking" && format !== "single_choice") {
+  if (format !== "ranking" && format !== "single_choice" && format !== "entourage") {
     return { error: "Format invalide." };
   }
-  const ruleOverride = drinkRule === "ESCALATION" || drinkRule === "TOP_UNIQUE" ? drinkRule : null;
+  // Une question entourage porte toujours sa propre règle : la laisser à null
+  // la ferait retomber sur celle de l'édition, qui ne veut rien dire ici. Le
+  // déclencheur `questions_default_entourage_rule` pose ESCALATION_INVERSE.
+  // Un choix unique ne se négocie pas : la personne désignée cale, seule. Le
+  // déclencheur `questions_force_rule` l'impose aussi en base, ceci n'est que
+  // la première barrière.
+  const ruleOverride =
+    format === "single_choice" ? "TOP_UNIQUE" : isDrinkRule(drinkRule) ? drinkRule : null;
 
   const supabase = await createClient();
   const { data: last } = await supabase
@@ -55,7 +69,7 @@ export async function setQuestionRule(
   rule: string,
 ): Promise<QuestionState> {
   await requireAdmin();
-  if (rule !== "ESCALATION" && rule !== "TOP_UNIQUE") return { error: "Règle invalide." };
+  if (!isDrinkRule(rule)) return { error: "Règle invalide." };
 
   const supabase = await createClient();
   const { error } = await supabase

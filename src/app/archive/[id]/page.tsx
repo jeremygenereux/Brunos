@@ -7,6 +7,7 @@ import { loadEditionVoteReveal } from "@/lib/editions/drama";
 import { cascadeOf } from "@/lib/editions/reveal-order";
 import type { Category, RankRow } from "@/lib/editions/presentation-types";
 import { Avatar } from "@/components/avatar";
+import { FormatBadge } from "@/components/question-mode";
 import { formatEventDate } from "@/lib/dates/event-time";
 
 export const metadata: Metadata = { title: "Récap" };
@@ -65,6 +66,13 @@ function RankList({
                 ) : (
                   <span className="text-ivoire font-sans text-sm">{r.name}</span>
                 )}
+                {/* Sur une catégorie entourage, la moyenne EST le résultat :
+                    sans elle, le classement tomberait du ciel. */}
+                {typeof r.avgRating === "number" && (
+                  <span className="text-or-300/80 font-sans text-xs tabular-nums">
+                    {r.avgRating.toFixed(1).replace(".", ",")}/10
+                  </span>
+                )}
               </span>
               {showDrinks && (
                 <span
@@ -102,9 +110,12 @@ function CategoryCard({ c }: { c: Category }) {
             ))}
           </div>
         )}
-        <div className="flex flex-col gap-0.5">
-          <span className="text-or-400/50 font-sans text-xs tracking-[0.25em] uppercase">
-            Catégorie {c.index + 1}
+        <div className="flex min-w-0 flex-col gap-1">
+          <span className="flex flex-wrap items-center gap-2">
+            <span className="text-or-400/50 font-sans text-xs tracking-[0.25em] uppercase">
+              Catégorie {c.index + 1}
+            </span>
+            <FormatBadge format={c.format} />
           </span>
           <h2 className="text-ivoire font-display text-2xl leading-tight font-semibold">
             {c.prompt}
@@ -122,10 +133,11 @@ function CategoryCard({ c }: { c: Category }) {
           Aucun vote dans cette catégorie.
         </p>
       ) : rankingMatters ? (
-        <div className={`grid gap-6 ${c.jury.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1"}`}>
-          <RankList title="Joueurs" rows={c.players} showDrinks />
-          {c.jury.length > 0 && <RankList title="Entourage" rows={c.jury} showDrinks={false} />}
-        </div>
+        <RankList
+          title={c.format === "entourage" ? "Moyennes des proches" : "Classement"}
+          rows={c.players}
+          showDrinks
+        />
       ) : (
         <p className="text-ivoire-faint font-sans text-sm">
           Catégorie à choix unique : {winners.length > 1 ? "les personnes" : "la personne"} en tête
