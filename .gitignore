@@ -49,3 +49,6 @@ supabase/.env
 # claude code (local, per-user)
 .claude/settings.local.json
 
+
+# Configs d'import réelles : chemins locaux et lieux privés, inutiles hors de ma machine.
+supabase/backfill/20*.json
