@@ -60,6 +60,39 @@ export type Database = {
           },
         ]
       }
+      circle_members: {
+        Row: {
+          circle_id: string
+          created_at: string
+          person_id: string
+        }
+        Insert: {
+          circle_id: string
+          created_at?: string
+          person_id: string
+        }
+        Update: {
+          circle_id?: string
+          created_at?: string
+          person_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "circle_members_circle_id_fkey"
+            columns: ["circle_id"]
+            isOneToOne: false
+            referencedRelation: "circles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "circle_members_person_id_fkey"
+            columns: ["person_id"]
+            isOneToOne: false
+            referencedRelation: "people"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       circles: {
         Row: {
           created_at: string
@@ -694,6 +727,7 @@ export type Database = {
         }[]
       }
       autoenroll_person: { Args: { p_person_id: string }; Returns: undefined }
+      circle_can_read_archive: { Args: { p_edition: string }; Returns: boolean }
       circle_of_edition: { Args: { p_edition: string }; Returns: string }
       circle_of_person: { Args: { p_person: string }; Returns: string }
       current_participant_id: { Args: { p_edition: string }; Returns: string }
@@ -707,6 +741,7 @@ export type Database = {
       is_admin_of_person: { Args: { p_person: string }; Returns: boolean }
       is_circle_admin: { Args: { p_circle: string }; Returns: boolean }
       is_edition_participant: { Args: { p_edition: string }; Returns: boolean }
+      is_member_of_circle: { Args: { p_circle: string }; Returns: boolean }
       is_super_admin: { Args: never; Returns: boolean }
       join_edition: {
         Args: {
@@ -728,6 +763,10 @@ export type Database = {
       set_question_selection: {
         Args: { p_edition: string; p_ordered_ids: string[] }
         Returns: undefined
+      }
+      shares_circle_with_caller: {
+        Args: { p_person: string }
+        Returns: boolean
       }
       submit_ballot: {
         Args: { p_answers: Json; p_edition: string }

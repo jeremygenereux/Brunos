@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { loadPlayerProfile } from "@/lib/editions/stats";
+import { listCircles } from "@/lib/editions/circle";
 import { Avatar } from "@/components/avatar";
 
 export const metadata: Metadata = { title: "Joueur" };
@@ -14,8 +15,25 @@ export default async function PlayerProfilePage({
 }) {
   const { personId } = await params;
   const supabase = await createClient();
-  const profile = await loadPlayerProfile(supabase, personId);
-  if (!profile.person) notFound();
+
+  // Une carrière PAR CERCLE : les gorgées d'un cercle ne s'additionnent
+  // jamais à celles d'un autre. Pour un lecteur d'un seul cercle — le cas
+  // normal — la page est identique à avant.
+  const circles = await listCircles(supabase);
+  const profiles = (
+    await Promise.all(
+      circles.map(async (circle) => ({
+        circle,
+        profile: await loadPlayerProfile(supabase, personId, circle.id),
+      })),
+    )
+  ).filter((p) => p.profile.person !== null);
+  if (profiles.length === 0) notFound();
+
+  const withHistory = profiles.filter((p) => p.profile.history.length > 0);
+  const sections = withHistory.length > 0 ? withHistory : profiles.slice(0, 1);
+  const single = sections.length <= 1;
+  const person = sections[0].profile.person!;
 
   return (
     <main className="mx-auto w-full max-w-2xl px-6 py-12">
@@ -27,13 +45,18 @@ export default async function PlayerProfilePage({
       </Link>
 
       <header className="mt-4 flex items-center gap-4">
-        <Avatar name={profile.person.name} headshot={profile.person.headshot} size={72} />
+        <Avatar name={person.name} headshot={person.headshot} size={72} />
         <div className="flex flex-col gap-1">
           <p className="text-or-400/80 font-sans text-xs tracking-[0.4em] uppercase">Joueur</p>
-          <h1 className="text-ivoire font-display text-5xl font-semibold">{profile.person.name}</h1>
+          <h1 className="text-ivoire font-display text-5xl font-semibold">{person.name}</h1>
         </div>
       </header>
 
+      {sections.map(({ circle, profile }) => (
+      <section key={circle.id} className={single ? "" : "border-or-400/15 mt-10 border-t pt-8"}>
+      {!single && (
+        <h2 className="text-or-300 font-sans text-sm tracking-[0.35em] uppercase">{circle.name}</h2>
+      )}
       <div className="mt-6 grid grid-cols-2 gap-4">
         <div className="brunos-glass border-or-400/12 flex flex-col items-center gap-1 rounded-2xl border px-4 py-6">
           <span className="text-or-300 font-display text-4xl tabular-nums">
@@ -121,6 +144,8 @@ export default async function PlayerProfilePage({
           </ul>
         </>
       )}
+      </section>
+      ))}
     </main>
   );
 }

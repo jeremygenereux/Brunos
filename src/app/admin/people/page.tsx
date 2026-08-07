@@ -14,17 +14,21 @@ export default async function PeoplePage() {
   const supabase = await createClient();
   const current = await getCurrentUser();
 
-  // Cadré sur le cercle courant. Les fiches SANS cercle (inscription hors
-  // invitation) sont récupérées à part : sans cela elles n'apparaîtraient nulle
-  // part et resteraient orphelines pour toujours.
+  // Cadré sur le cercle courant, via les ADHÉSIONS : une personne peut être
+  // membre de plusieurs cercles, et chaque répertoire montre les siens —
+  // l'administrateur d'un cercle y figure d'office. Les fiches SANS cercle
+  // (inscription hors invitation) sont récupérées à part : sans cela elles
+  // n'apparaîtraient nulle part et resteraient orphelines pour toujours.
   const circleId = await currentCircleId(supabase);
-  const { data: people } = circleId
+  const { data: memberRows } = circleId
     ? await supabase
-        .from("people")
-        .select("id, display_name, auth_user_id, headshot_url, kind")
+        .from("circle_members")
+        .select("people(id, display_name, auth_user_id, headshot_url, kind)")
         .eq("circle_id", circleId)
-        .order("display_name")
     : { data: [] };
+  const people = (memberRows ?? [])
+    .flatMap((r) => (Array.isArray(r.people) ? r.people : r.people ? [r.people] : []))
+    .sort((a, b) => (a.display_name ?? "").localeCompare(b.display_name ?? ""));
 
   const { data: unaffiliated } = await supabase
     .from("people")
@@ -76,7 +80,7 @@ export default async function PeoplePage() {
     }
   }
 
-  const views: PersonView[] = (people ?? []).map((p) => {
+  const views: PersonView[] = people.map((p) => {
     const account = accountByPerson.get(p.id) ?? null;
     return {
       id: p.id,
