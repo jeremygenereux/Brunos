@@ -60,17 +60,19 @@ function winnersByQuestion(rows: ResultRow[]): Map<string, Set<string>> {
 
 /**
  * Cross-edition leaderboard, aggregated in memory over the `results` the
- * viewer may read. RLS already restricts `results` to ARCHIVED editions the
- * viewer participated in, so the board is naturally scoped to "galas you were
- * part of" (admins see everything). Identity persists across editions via
- * players.person_id → people. editionCount counts editions the person has a
- * frozen result in.
+ * viewer may read. Identity persists across editions via players.person_id →
+ * people. editionCount counts editions the person has a frozen result in.
+ *
+ * CADRÉ SUR UN CERCLE. Chaque cercle a son propre palmarès : un lecteur
+ * membre de deux cercles ne doit jamais voir leurs gorgées additionnées.
+ * La RLS ouvre la lecture, ce filtre fait la segmentation.
  */
-export async function loadArchiveStats(supabase: Client): Promise<ArchiveStats> {
+export async function loadArchiveStats(supabase: Client, circleId: string): Promise<ArchiveStats> {
   const { data: editions } = await supabase
     .from("editions")
     .select("id, year")
-    .eq("state", "ARCHIVED");
+    .eq("state", "ARCHIVED")
+    .eq("circle_id", circleId);
   const yearByEdition = new Map((editions ?? []).map((e) => [e.id, e.year]));
 
   const { data: results } = await fetchAllRows<ResultRow>((from, to) =>
@@ -171,11 +173,12 @@ function topEntry<T>(m: Map<string, T>, score: (v: T) => number) {
   return best;
 }
 
-export async function loadFunStats(supabase: Client): Promise<FunAward[]> {
+export async function loadFunStats(supabase: Client, circleId: string): Promise<FunAward[]> {
   const { data: editions } = await supabase
     .from("editions")
     .select("id, year, shooter_value")
-    .eq("state", "ARCHIVED");
+    .eq("state", "ARCHIVED")
+    .eq("circle_id", circleId);
   const eds = editions ?? [];
   if (eds.length === 0) return [];
 
@@ -356,10 +359,14 @@ export type PlayerProfile = {
   signatureWins: SignatureWin[];
 };
 
-/** One person's lifetime record across the archived editions the viewer can read. */
+/**
+ * One person's lifetime record — WITHIN one circle. Une personne présente
+ * dans deux cercles a deux carrières distinctes ; l'appelant choisit laquelle.
+ */
 export async function loadPlayerProfile(
   supabase: Client,
   personId: string,
+  circleId: string,
 ): Promise<PlayerProfile> {
   const empty: PlayerProfile = {
     person: null,
@@ -380,7 +387,8 @@ export async function loadPlayerProfile(
   const { data: editions } = await supabase
     .from("editions")
     .select("id, name, year")
-    .eq("state", "ARCHIVED");
+    .eq("state", "ARCHIVED")
+    .eq("circle_id", circleId);
   const edInfo = new Map((editions ?? []).map((e) => [e.id, e]));
 
   const { data: ownPlayers } = await supabase

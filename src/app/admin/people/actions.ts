@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireAdmin } from "@/lib/auth/guards";
+import { currentCircleId } from "@/lib/editions/circle";
 import { getCurrentUser, type Role } from "@/lib/auth/user";
 
 export type PeopleState = { error: string | null; success?: boolean };
@@ -33,9 +34,13 @@ export async function createPerson(_prev: PeopleState, formData: FormData): Prom
   const kind = String(formData.get("kind") ?? "player") === "jury" ? "jury" : "player";
 
   const supabase = await createClient();
+  // La fiche naît dans le cercle depuis lequel on l'inscrit : elle apparaît
+  // dans SON répertoire, pas dans la section des sans-cercle. Le déclencheur
+  // people_sync_membership matérialise l'adhésion.
+  const circleId = await currentCircleId(supabase);
   const { data: person, error } = await supabase
     .from("people")
-    .insert({ display_name: name, kind })
+    .insert({ display_name: name, kind, circle_id: circleId })
     .select("id")
     .single();
   if (error) return { error: error.message };

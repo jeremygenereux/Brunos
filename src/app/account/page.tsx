@@ -6,6 +6,7 @@ import { signOut } from "@/app/(auth)/actions";
 import { StateBadge } from "@/components/state-badge";
 import { createClient } from "@/lib/supabase/server";
 import { loadArchiveStats } from "@/lib/editions/stats";
+import { currentCircleId } from "@/lib/editions/circle";
 import { ArchiveRolodex } from "./archive-rolodex";
 import { Countdown } from "./countdown";
 import type { Database } from "@/lib/types/database.types";
@@ -123,7 +124,12 @@ export default async function AccountPage() {
         return ta - tb || b.year - a.year;
       })[0] ?? null;
 
-  const { drinkers, editionsCount } = await loadArchiveStats(supabase);
+  // Cadré sur le cercle courant : le palmarès d'un cercle ne déborde jamais
+  // sur l'autre, même pour quelqu'un qui appartient aux deux.
+  const circleId = await currentCircleId(supabase);
+  const { drinkers, editionsCount } = circleId
+    ? await loadArchiveStats(supabase, circleId)
+    : { drinkers: [], editionsCount: 0 };
   const topDrinker = drinkers[0];
   // Le palmarès personnel se lit dans le même classement — aucune requête de
   // plus : `drinkers` est déjà trié par gorgées cumulées.
