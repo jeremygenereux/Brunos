@@ -1,6 +1,9 @@
 import "server-only";
 import type { createClient } from "@/lib/supabase/server";
 import type { DramaCard } from "./presentation-types";
+import { detectDelusions } from "./delusion";
+import { computeQuestionRanking } from "@/lib/scoring/rankings";
+import type { DrinkRule, QuestionBallot } from "@/lib/scoring/types";
 import { fetchAllRows } from "@/lib/supabase/fetch-all";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
@@ -55,12 +58,21 @@ export async function loadEditionVoteReveal(
 
   const { data: rawQuestions } = await supabase
     .from("questions")
-    .select("id, prompt, format, show_order, reveal_enabled")
+    .select("id, prompt, format, show_order, reveal_enabled, drink_rule_override")
     .eq("edition_id", editionId)
     .eq("is_selected_for_show", true)
     .order("show_order");
   const questions = rawQuestions ?? [];
   if (questions.length === 0) return { categories: [] };
+
+  // La règle EFFECTIVE de chaque question décide de qui cale — et donc de qui
+  // peut être « dans le déni ».
+  const { data: editionRow } = await supabase
+    .from("editions")
+    .select("drink_rule")
+    .eq("id", editionId)
+    .single();
+  const editionRule = (editionRow?.drink_rule ?? "ESCALATION") as DrinkRule;
 
   const { data: rawPlayers } = await supabase
     .from("players")
@@ -205,6 +217,29 @@ export async function loadEditionVoteReveal(
             detail: `${playerName.get(lastPid) ?? "?"} : dernier·ère pour tout le monde.`,
           });
         }
+      }
+
+      // Le déni : le caleur s'était placé à l'extrémité opposée. On rejoue le
+      // classement officiel avec le même calcul que la compilation, pour que
+      // la carte ne contredise jamais le verdict affiché.
+      if (playerBallots.length > 0) {
+        const rule = (q.drink_rule_override ?? editionRule) as DrinkRule;
+        const asBallots: QuestionBallot[] = playerBallots.map((b) =>
+          [...b.byPlayer.entries()].map(([playerId, rank]) => ({ playerId, rank })),
+        );
+        const official = computeQuestionRanking("ranking", asBallots, [...playerName.keys()]);
+        drama.push(
+          ...detectDelusions(
+            playerBallots.map((b) => ({
+              voterName: b.voterName,
+              selfPlayerId: b.selfPlayerId,
+              selfRank: b.selfPlayerId ? (b.byPlayer.get(b.selfPlayerId) ?? null) : null,
+              maxRank: b.maxRank,
+            })),
+            official,
+            rule,
+          ),
+        );
       }
     } else {
       for (const b of playerBallots) {

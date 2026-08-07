@@ -19,7 +19,7 @@ export type RankRow = {
 };
 
 export type DramaCard = {
-  kind: "mutual_last" | "unanimous_first" | "unanimous_last" | "self_top";
+  kind: "mutual_last" | "unanimous_first" | "unanimous_last" | "self_top" | "self_delusion";
   title: string;
   detail: string;
 };
