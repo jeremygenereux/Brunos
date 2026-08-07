@@ -1,0 +1,114 @@
+Copyright © 2026 Jérémy Généreux. Tous droits réservés — All rights reserved.
+
+================================================================================
+FRANÇAIS
+================================================================================
+
+Ce dépôt est PUBLIC mais il n'est PAS open source. Il est publié à titre de
+portfolio, pour que le code puisse être lu et évalué. Aucune licence
+d'utilisation n'est accordée.
+
+CE QUI EST PERMIS
+
+  1. Consulter et lire le code source, notamment pour évaluer le travail de
+     l'auteur dans un contexte d'embauche, de mandat ou de collaboration.
+  2. Le citer avec attribution, en en reproduisant de courts extraits, dans un
+     article, une revue de code ou un travail scolaire.
+
+CE QUI N'EST PAS PERMIS, sans autorisation écrite préalable de l'auteur
+
+  1. Utiliser ce logiciel, en tout ou en partie, à quelque fin que ce soit, y
+     compris personnelle, commerciale, interne ou académique.
+  2. Le copier, le reproduire, le modifier, l'adapter, le traduire ou en
+     produire une œuvre dérivée.
+  3. Le distribuer, le publier, le sous-licencier, le vendre, le louer ou le
+     rendre disponible d'une quelconque manière.
+  4. En héberger une instance, publique ou privée.
+  5. En retirer ou en altérer les mentions de droit d'auteur.
+
+FOURCHES SUR GITHUB
+
+Les conditions d'utilisation de GitHub permettent à tout titulaire d'un compte
+de créer une fourche d'un dépôt public à l'intérieur de la plateforme. Cette
+permission découle de la publication sur GitHub et n'est pas accordée par la
+présente licence. Elle ne confère AUCUN des droits refusés ci-dessus : une
+fourche ne peut être ni utilisée, ni déployée, ni modifiée à d'autres fins que
+la consultation.
+
+DÉPENDANCES
+
+Les bibliothèques tierces installées par le gestionnaire de paquets restent
+régies par leurs propres licences. La présente licence ne s'applique qu'au code
+écrit par l'auteur et versionné dans ce dépôt.
+
+MARQUES ET CONTENU
+
+« Les Brunos », le nom du gala, son identité visuelle et ses textes ne sont
+couverts par aucune licence et demeurent la propriété exclusive de l'auteur.
+Les personnes, les lieux et les votes du jeu de démonstration sont fictifs.
+
+ABSENCE DE GARANTIE
+
+CE LOGICIEL EST FOURNI « TEL QUEL », SANS GARANTIE D'AUCUNE SORTE, EXPRESSE OU
+IMPLICITE, Y COMPRIS MAIS SANS S'Y LIMITER LES GARANTIES DE QUALITÉ MARCHANDE,
+D'ADÉQUATION À UN USAGE PARTICULIER ET D'ABSENCE DE CONTREFAÇON. L'AUTEUR NE
+POURRA ÊTRE TENU RESPONSABLE D'AUCUNE RÉCLAMATION, DOMMAGE OU AUTRE
+RESPONSABILITÉ, CONTRACTUELLE, DÉLICTUELLE OU AUTRE, DÉCOULANT DU LOGICIEL OU
+DE SON UTILISATION.
+
+Pour toute demande d'autorisation : ouvrir une « issue » sur ce dépôt.
+
+
+================================================================================
+ENGLISH
+================================================================================
+
+This repository is PUBLIC but it is NOT open source. It is published as a
+portfolio so the code can be read and evaluated. No license to use the software
+is granted.
+
+YOU MAY
+
+  1. View and read the source code, in particular to evaluate the author's work
+     in a hiring, contracting or collaboration context.
+  2. Quote it with attribution, reproducing short excerpts, in an article, a
+     code review or academic work.
+
+YOU MAY NOT, without the author's prior written permission
+
+  1. Use this software, in whole or in part, for any purpose whatsoever,
+     including personal, commercial, internal or academic use.
+  2. Copy, reproduce, modify, adapt, translate it, or create derivative works.
+  3. Distribute, publish, sublicense, sell, rent or otherwise make it available.
+  4. Host an instance of it, public or private.
+  5. Remove or alter its copyright notices.
+
+FORKS ON GITHUB
+
+GitHub's Terms of Service allow any account holder to fork a public repository
+within the platform. That permission stems from publishing on GitHub and is not
+granted by this license. It conveys NONE of the rights withheld above: a fork
+may not be used, deployed or modified for any purpose beyond viewing.
+
+DEPENDENCIES
+
+Third-party libraries installed by the package manager remain governed by their
+own licenses. This license covers only the code written by the author and
+committed to this repository.
+
+MARKS AND CONTENT
+
+"Les Brunos", the name of the event, its visual identity and its copy are
+covered by no license and remain the exclusive property of the author. The
+people, venues and votes in the demo dataset are fictional.
+
+NO WARRANTY
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS
+FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHOR BE
+LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF
+CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+Permission requests: open an issue on this repository.
