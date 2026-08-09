@@ -27,13 +27,20 @@ import { DUR, EASE } from "./cinematic-motion";
 import { CinematicRevealText } from "./CinematicRevealText";
 import { AnimatedOrnamentLine } from "./AnimatedOrnamentLine";
 
-/** Une personne dans la cascade de révélation. */
+/** Une personne à dévoiler. */
+export type RevealPerson = { id: string; name: string; headshot: string | null };
+
+/**
+ * Une POSITION dans la cascade — pas une personne. Deux ex æquo occupent la
+ * même position : un seul numéro, une seule ardoise, plusieurs visages, et ils
+ * se dévoilent d'un même geste. Les séparer trahirait l'égalité et laisserait
+ * croire à deux verdicts.
+ */
 export type RevealEntry = {
   id: string;
-  name: string;
-  headshot: string | null;
   rank: number;
   drinks: number;
+  people: RevealPerson[];
 };
 
 /* ── Rythme de la cascade (secondes) ─────────────────────────────────────
@@ -64,7 +71,7 @@ export type AwardCategoryRevealProps = {
   teaser: string;
   noVotes?: boolean;
   noVotesLabel?: string;
-  renderAvatar: (entry: RevealEntry, size: number) => React.ReactNode;
+  renderAvatar: (person: RevealPerson, size: number) => React.ReactNode;
   children?: React.ReactNode;
 };
 
@@ -174,21 +181,37 @@ export function AwardCategoryReveal({
               {rows.map(({ entry, delay }) => (
                 <motion.li
                   key={entry.id}
-                  className="brunos-glass border-or-400/12 flex items-center gap-3 rounded-xl border px-4 py-2"
+                  className="brunos-glass border-or-400/12 flex items-stretch gap-3 rounded-xl border px-4 py-2"
                   initial={reduce ? { opacity: 0 } : { opacity: 0, y: 18 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: DUR.block, ease: EASE.expoOut, delay: d(delay) }}
                 >
-                  <span className="text-ivoire-faint w-5 text-right font-sans text-sm tabular-nums">
-                    {entry.rank}
+                  <span className="flex w-5 shrink-0 items-center justify-end">
+                    <span className="text-ivoire-faint font-sans text-sm tabular-nums">
+                      {entry.rank}
+                    </span>
                   </span>
-                  {renderAvatar(entry, 34)}
-                  <span className="text-ivoire flex-1 text-left font-sans text-sm">
-                    {entry.name}
+                  <span className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
+                    {entry.people.map((p) => (
+                      <span key={p.id} className="flex items-center gap-3">
+                        {renderAvatar(p, 34)}
+                        <span className="text-ivoire flex-1 truncate text-left font-sans text-sm">
+                          {p.name}
+                        </span>
+                      </span>
+                    ))}
+                    {entry.people.length > 1 && (
+                      <span className="text-or-400/70 font-sans text-[11px] tracking-wide uppercase">
+                        Ex æquo
+                      </span>
+                    )}
                   </span>
                   {entry.drinks > 0 && (
-                    <span className="text-ivoire-muted font-sans text-sm tabular-nums">
-                      {gorgees(entry.drinks)}
+                    <span className="flex shrink-0 items-center">
+                      <span className="text-ivoire-muted font-sans text-sm tabular-nums">
+                        {gorgees(entry.drinks)}
+                        {entry.people.length > 1 && " chacun"}
+                      </span>
                     </span>
                   )}
                 </motion.li>
@@ -200,7 +223,7 @@ export function AwardCategoryReveal({
               matérialise (flou qui se dissipe + montée d'échelle) — le geste
               le plus lent et le plus appuyé de toute la présentation. */}
           <div className="flex flex-wrap items-end justify-center gap-12">
-            {shooters.map((p, i) => (
+            {shooters.flatMap((g) => g.people.map((p) => ({ ...p, group: g }))).map((p, i) => (
               <motion.div
                 key={p.id}
                 className="flex flex-col items-center gap-4"

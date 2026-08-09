@@ -3,14 +3,15 @@
 // pour que les deux vues racontent EXACTEMENT la même histoire.
 
 import type { RankRow } from "./presentation-types";
+import { groupByRank, type RankGroup } from "./rank-groups";
 
 export type Cascade = {
-  /** La ou les personnes qui calent (ex æquo possible). */
-  shooters: RankRow[];
-  /** Les positions dévoilées en liste, hors les deux dernières. */
-  buildUp: RankRow[];
+  /** La ou les POSITIONS qui calent (une position, plusieurs visages). */
+  shooters: RankGroup[];
+  /** Les positions dévoilées en liste, hors la dernière avant le climax. */
+  buildUp: RankGroup[];
   /** L'avant-dernière position, gardée pour le duo final. */
-  penultimate: RankRow | null;
+  penultimate: RankGroup | null;
   /**
    * Le classement porte-t-il un enjeu ?
    *
@@ -26,34 +27,33 @@ export type Cascade = {
 /**
  * `players` doit arriver trié par `finalRank` croissant.
  *
- * ON NE DÉDUIT RIEN DE LA POSITION DU CALEUR. C'était le cas avant : « le
- * shooter est au dernier rang, donc c'est une escalade ». L'inférence tenait
- * tant qu'il n'existait que deux règles. « Gagnant boit » la casse, puisque le
- * caleur y est PREMIER : la scène concluait à un choix unique, n'affichait
- * qu'un visage, et taisait les gorgées que les autres devaient pourtant
- * prendre. C'est ce qui a vidé la soirée du Gala Firme-École.
+ * ON RAISONNE EN POSITIONS, PAS EN PERSONNES. Deux ex æquo occupent UNE
+ * position : ils se dévoilent ensemble, sous un seul numéro et une seule
+ * ardoise. Découper la cascade par personne laissait la moitié d'une égalité
+ * dans le déroulé et l'autre au climax, ce qui vendait la mèche.
  *
- * On lit donc les gorgées elles-mêmes, ce qui vaut pour les trois règles et
- * vaudra pour celles d'après.
+ * ON NE DÉDUIT RIEN DE LA POSITION DU CALEUR. « Le shooter est au dernier
+ * rang, donc c'est une escalade » tenait tant qu'il n'existait que deux
+ * règles. « Gagnant boit » la casse, puisque le caleur y est PREMIER. On lit
+ * donc les gorgées elles-mêmes.
  *
- * L'ordre de révélation va du moins au plus chargé et RÉSERVE l'avant-dernier
- * dévoilement pour le climax, sinon le caleur serait devinable par élimination.
- * En « perdant boit » cela redonne exactement l'ordre des rangs ; en « gagnant
- * boit » cela remonte du bas vers le haut, pour finir juste sous le caleur.
+ * L'ordre va du moins au plus chargé et RÉSERVE l'avant-dernier dévoilement
+ * pour le climax, sinon le caleur serait devinable par élimination.
  */
 export function cascadeOf(players: RankRow[]): Cascade {
-  const shooters = players.filter((p) => p.isShooter);
+  const groups = groupByRank(players);
+  const shooters = groups.filter((g) => g.isShooter);
   if (shooters.length === 0) {
     return { shooters: [], buildUp: [], penultimate: null, rankingMatters: false };
   }
 
-  const rest = players.filter((p) => !p.isShooter);
-  if (!rest.some((p) => p.drinks > 0)) {
+  const rest = groups.filter((g) => !g.isShooter);
+  if (!rest.some((g) => g.drinks > 0)) {
     // Choix unique : on ne montre QUE le ou les visages qui remportent.
     return { shooters, buildUp: [], penultimate: null, rankingMatters: false };
   }
 
-  const montant = [...rest].sort((a, b) => a.drinks - b.drinks || a.finalRank - b.finalRank);
+  const montant = [...rest].sort((a, b) => a.drinks - b.drinks || a.rank - b.rank);
   return {
     shooters,
     buildUp: montant.slice(0, -1),

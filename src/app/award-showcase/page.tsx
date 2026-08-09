@@ -26,27 +26,27 @@ const CATS: Demo[] = [
     rule: "ESCALATION",
     // 1re → dernière position ; les DEUX dernières sont gardées pour le climax.
     buildUp: [
-      { id: "alex", name: "Alex", headshot: null, rank: 1, drinks: 1 },
-      { id: "jordan", name: "Jordan", headshot: null, rank: 2, drinks: 2 },
-      { id: "noa", name: "Noa", headshot: null, rank: 3, drinks: 3 },
-      { id: "sam", name: "Sam", headshot: null, rank: 4, drinks: 4 },
+      { id: "alex", rank: 1, drinks: 1, people: [{ id: "alex", name: "Alex", headshot: null }] },
+      { id: "jordan", rank: 2, drinks: 2, people: [{ id: "jordan", name: "Jordan", headshot: null }] },
+      { id: "noa", rank: 3, drinks: 3, people: [{ id: "noa", name: "Noa", headshot: null }] },
+      { id: "sam", rank: 4, drinks: 4, people: [{ id: "sam", name: "Sam", headshot: null }] },
     ],
-    penultimate: { id: "robin", name: "Robin", headshot: null, rank: 5, drinks: 5 },
-    shooters: [{ id: "camille", name: "Camille", headshot: null, rank: 6, drinks: 8 }],
+    penultimate: { id: "robin", rank: 5, drinks: 5, people: [{ id: "robin", name: "Robin", headshot: null }] },
+    shooters: [{ id: "camille", rank: 6, drinks: 8, people: [{ id: "camille", name: "Camille", headshot: null }] }],
   },
   {
     prompt: "La meilleure mauvaise idée de l'année",
     rule: "TOP_UNIQUE",
     // Ici le·la gagnant·e cale : on descend de la dernière position vers la 1re.
     buildUp: [
-      { id: "noa2", name: "Noa", headshot: null, rank: 5, drinks: 0 },
-      { id: "camille2", name: "Camille", headshot: null, rank: 4, drinks: 0 },
-      { id: "sam2", name: "Sam", headshot: null, rank: 3, drinks: 0 },
+      { id: "noa2", rank: 5, drinks: 0, people: [{ id: "noa2", name: "Noa", headshot: null }] },
+      { id: "camille2", rank: 4, drinks: 0, people: [{ id: "camille2", name: "Camille", headshot: null }] },
+      { id: "sam2", rank: 3, drinks: 0, people: [{ id: "sam2", name: "Sam", headshot: null }] },
     ],
-    penultimate: { id: "robin2", name: "Robin", headshot: null, rank: 2, drinks: 0 },
+    penultimate: { id: "robin2", rank: 2, drinks: 0, people: [{ id: "robin2", name: "Robin", headshot: null }] },
     shooters: [
-      { id: "alex2", name: "Alex", headshot: null, rank: 1, drinks: 8 },
-      { id: "jordan2", name: "Jordan", headshot: null, rank: 1, drinks: 8 },
+      { id: "alex2", rank: 1, drinks: 8, people: [{ id: "alex2", name: "Alex", headshot: null }] },
+      { id: "jordan2", rank: 1, drinks: 8, people: [{ id: "jordan2", name: "Jordan", headshot: null }] },
     ],
   },
 ];

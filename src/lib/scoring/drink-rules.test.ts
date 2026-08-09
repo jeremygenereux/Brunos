@@ -83,8 +83,8 @@ describe("cascadeOf — ce que la salle voit", () => {
   it("perdant boit : on déroule, l'avant-dernier garde le climax", () => {
     const c = cascadeOf(rows([1, 2, 3, SHOOTER], 4));
     expect(c.rankingMatters).toBe(true);
-    expect(c.buildUp.map((p) => p.finalRank)).toEqual([1, 2]);
-    expect(c.penultimate?.finalRank).toBe(3);
+    expect(c.buildUp.map((g) => g.rank)).toEqual([1, 2]);
+    expect(c.penultimate?.rank).toBe(3);
   });
 
   it("gagnant boit : le caleur est PREMIER et la cascade se déroule quand même", () => {
@@ -92,10 +92,10 @@ describe("cascadeOf — ce que la salle voit", () => {
     // concluait à un choix unique et n'affichait qu'un visage.
     const c = cascadeOf(rows([SHOOTER, 4, 3, 2, 1], 1));
     expect(c.rankingMatters).toBe(true);
-    expect(c.shooters.map((p) => p.finalRank)).toEqual([1]);
+    expect(c.shooters.map((g) => g.rank)).toEqual([1]);
     // On remonte du moins chargé au plus chargé, en s'arrêtant sous le caleur.
-    expect(c.buildUp.map((p) => p.finalRank)).toEqual([5, 4, 3]);
-    expect(c.penultimate?.finalRank).toBe(2);
+    expect(c.buildUp.map((g) => g.rank)).toEqual([5, 4, 3]);
+    expect(c.penultimate?.rank).toBe(2);
   });
 
   it("choix unique : un seul visage, le classement ne raconte rien", () => {

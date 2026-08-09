@@ -10,7 +10,13 @@ export type RankRow = {
   personId: string | null;
   name: string;
   headshot: string | null;
+  /** Position d'affichage, distincte : ordonne la liste sans doublon. */
   finalRank: number;
+  /**
+   * Rang de compétition, PARTAGÉ par les ex æquo (1, 2, 2, 4). C'est lui qu'on
+   * montre et qui décide des gorgées ; `finalRank` ne fait qu'ordonner.
+   */
+  tiedRank?: number;
   drinks: number;
   /** Genuinely tied for 1st (revealed together). */
   isWinner?: boolean;

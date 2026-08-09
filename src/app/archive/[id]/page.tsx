@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { loadPresentation } from "@/lib/editions/presentation";
 import { loadEditionVoteReveal } from "@/lib/editions/drama";
 import { cascadeOf } from "@/lib/editions/reveal-order";
+import { groupByRank } from "@/lib/editions/rank-groups";
 import type { Category, RankRow } from "@/lib/editions/presentation-types";
 import { Avatar } from "@/components/avatar";
 import { formatEventDate } from "@/lib/dates/event-time";
@@ -36,44 +37,68 @@ function RankList({
   rows: RankRow[];
   showDrinks: boolean;
 }) {
+  // Une position partagée est UNE ligne : un seul numéro, une seule ardoise,
+  // et les visages empilés dedans. Répéter « 1 · 15 » deux fois de suite
+  // laissait croire à deux verdicts au lieu d'une égalité.
+  const groups = groupByRank(rows);
+
   return (
     <div className="flex flex-col gap-2">
       <p className="text-or-400/70 font-sans text-xs tracking-[0.25em] uppercase">{title}</p>
       <ol className="flex flex-col gap-1.5">
-        {rows.map((r) => {
-          const shooter = showDrinks && Boolean(r.isShooter);
+        {groups.map((g) => {
+          const shooter = showDrinks && g.isShooter;
+          const partage = g.players.length > 1;
           return (
             <li
-              key={r.playerId}
-              className={`flex items-center gap-3 rounded-xl border px-4 py-2.5 ${
+              key={g.players[0].playerId}
+              className={`flex items-stretch gap-3 rounded-xl border px-4 py-2.5 ${
                 shooter ? "border-or-400/45 bg-or-500/10" : "border-or-400/12 bg-noir-700/40"
               }`}
             >
-              <span className="text-ivoire-faint w-5 text-right font-sans text-sm tabular-nums">
-                {r.finalRank}
+              {/* Le rang et l'ardoise se lisent une fois, centrés sur toute la
+                  hauteur du groupe : c'est ce qui dit « une seule position ». */}
+              <span className="flex w-5 shrink-0 items-center justify-end">
+                <span className="text-ivoire-faint font-sans text-sm tabular-nums">{g.rank}</span>
               </span>
-              <Avatar name={r.name} headshot={r.headshot} size={32} />
-              <span className="flex flex-1 items-center gap-1.5">
-                {showDrinks && r.isWinner && <span title="Gagnant·e">🏆</span>}
-                {r.personId ? (
-                  <Link
-                    href={`/archive/players/${r.personId}`}
-                    className="text-ivoire hover:text-or-300 font-sans text-sm transition"
-                  >
-                    {r.name}
-                  </Link>
-                ) : (
-                  <span className="text-ivoire font-sans text-sm">{r.name}</span>
+
+              <div className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
+                {g.players.map((r) => (
+                  <span key={r.playerId} className="flex items-center gap-3">
+                    <Avatar name={r.name} headshot={r.headshot} size={32} />
+                    <span className="flex min-w-0 flex-1 items-center gap-1.5">
+                      {showDrinks && g.isWinner && <span title="Gagnant·e">🏆</span>}
+                      {r.personId ? (
+                        <Link
+                          href={`/archive/players/${r.personId}`}
+                          className="text-ivoire hover:text-or-300 truncate font-sans text-sm transition"
+                        >
+                          {r.name}
+                        </Link>
+                      ) : (
+                        <span className="text-ivoire truncate font-sans text-sm">{r.name}</span>
+                      )}
+                    </span>
+                  </span>
+                ))}
+                {partage && (
+                  <span className="text-ivoire-faint font-sans text-[11px]">
+                    Ex æquo{showDrinks ? " · même ardoise" : ""}
+                  </span>
                 )}
-              </span>
+              </div>
+
               {showDrinks && (
-                <span
-                  className={`font-sans text-sm tabular-nums ${
-                    shooter ? "text-or-300" : "text-ivoire-muted"
-                  }`}
-                >
-                  {shooter ? "🥃 " : ""}
-                  {r.drinks}
+                <span className="flex shrink-0 items-center">
+                  <span
+                    className={`font-sans text-sm tabular-nums ${
+                      shooter ? "text-or-300" : "text-ivoire-muted"
+                    }`}
+                  >
+                    {shooter ? "🥃 " : ""}
+                    {g.drinks}
+                    {partage && <span className="text-ivoire-faint"> chacun</span>}
+                  </span>
                 </span>
               )}
             </li>

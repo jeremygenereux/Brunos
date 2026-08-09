@@ -11,6 +11,7 @@ import type {
 } from "@/lib/editions/presentation-types";
 import { ArchiveButton } from "./archive-button";
 import { cascadeOf } from "@/lib/editions/reveal-order";
+import type { RankGroup } from "@/lib/editions/rank-groups";
 import { questionModesFor } from "@/lib/editions/question-modes";
 import { ChoiceGlyph, ModeCard, RankingGlyph } from "@/components/question-mode";
 import { ReactiveParticles, AwardCategoryReveal } from "@/components/award";
@@ -44,14 +45,14 @@ function Kicker({ children }: { children: React.ReactNode }) {
   return <p className="text-or-400/80 font-sans text-sm tracking-[0.4em] uppercase">{children}</p>;
 }
 
-/** RankRow → entrée de cascade pour le composant de révélation. */
-function toEntry(p: RankRow) {
+/** Une POSITION du classement → une entrée de cascade. Les ex æquo y arrivent
+ *  ensemble : un numéro, une ardoise, plusieurs visages. */
+function toEntry(g: RankGroup) {
   return {
-    id: p.playerId,
-    name: p.name,
-    headshot: p.headshot,
-    rank: p.finalRank,
-    drinks: p.drinks,
+    id: g.players[0].playerId,
+    rank: g.rank,
+    drinks: g.drinks,
+    people: g.players.map((p) => ({ id: p.playerId, name: p.name, headshot: p.headshot })),
   };
 }
 
@@ -177,7 +178,9 @@ export function PresentationDeck({
 
   const announce = cat
     ? `Catégorie ${cat.index + 1} sur ${categories.length}. ${cat.prompt}` +
-      (step >= 1 && shooters.length ? `. ${shooters.map((w) => w.name).join(", ")}.` : "") +
+      (step >= 1 && shooters.length
+        ? `. ${shooters.flatMap((g) => g.players.map((p) => p.name)).join(", ")}.`
+        : "") +
       (step >= dramaStep && cat.drama
         ? ` ${cat.drama.map((d) => `${d.title}. ${d.detail}`).join(" ")}`
         : "")

@@ -80,7 +80,7 @@ export function questionModesFor(
 
     // Le classement porte un enjeu : reste à savoir de quel côté tombe le
     // shooter. `players` arrive trié par rang croissant.
-    if (shooters.some((p) => p.finalRank === 1)) s.tete = true;
+    if (shooters.some((g) => g.rank === 1)) s.tete = true;
     else s.queue = true;
   }
 

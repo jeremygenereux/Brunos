@@ -166,6 +166,7 @@ export async function loadPresentation(
       name: playersById.get(r.player_id)?.name ?? "—",
       headshot: playersById.get(r.player_id)?.headshot ?? null,
       finalRank: r.final_rank,
+      tiedRank: tiedRank[i],
       drinks: r.drinks,
       // Gagnant = premier rang de compétition. Les ex æquo en tête le
       // partagent, donc ils gagnent tous — ce que l'archive montrait déjà et

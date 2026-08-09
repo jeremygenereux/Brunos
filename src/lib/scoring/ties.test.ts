@@ -163,12 +163,13 @@ describe("la scène montre tous les caleurs", () => {
       name: `J${s.rank}`,
       headshot: null,
       finalRank: s.rank,
+      tiedRank: s.tied,
       drinks: s.drinks,
       isShooter: s.tied === dernier,
     }));
   }
 
-  it("deux derniers ex æquo : deux verres, et la cascade se déroule quand même", () => {
+  it("deux derniers ex æquo forment UNE position, pas deux", () => {
     const c = cascadeOf(
       rows([
         { rank: 1, tied: 1, drinks: 1 },
@@ -177,9 +178,30 @@ describe("la scène montre tous les caleurs", () => {
         { rank: 4, tied: 3, drinks: SHOOTER },
       ]),
     );
-    expect(c.shooters).toHaveLength(2);
+    // Une seule position qui cale, mais deux visages dedans : c'est ce qui
+    // permet d'afficher un numéro et une ardoise plutôt que de les répéter.
+    expect(c.shooters).toHaveLength(1);
+    expect(c.shooters[0].players).toHaveLength(2);
+    expect(c.shooters[0].rank).toBe(3);
     expect(c.rankingMatters).toBe(true);
-    expect(c.penultimate?.finalRank).toBe(2);
+    expect(c.penultimate?.rank).toBe(2);
+  });
+
+  it("une égalité au milieu ne se coupe pas entre le déroulé et le climax", () => {
+    const c = cascadeOf(
+      rows([
+        { rank: 1, tied: 1, drinks: 1 },
+        { rank: 2, tied: 2, drinks: 3 },
+        { rank: 3, tied: 2, drinks: 3 },
+        { rank: 4, tied: 4, drinks: SHOOTER },
+      ]),
+    );
+    // Les deux ex æquo restent ensemble : soit dans le déroulé, soit au
+    // climax, jamais à cheval — sinon la moitié d'une position vendrait
+    // l'autre par élimination.
+    const positions = [...c.buildUp, ...(c.penultimate ? [c.penultimate] : [])];
+    const groupeExAequo = positions.find((g) => g.rank === 2);
+    expect(groupeExAequo?.players).toHaveLength(2);
   });
 });
 
