@@ -42,7 +42,11 @@ function Avatar({ name, headshot, size }: { name: string; headshot: string | nul
 }
 
 function Kicker({ children }: { children: React.ReactNode }) {
-  return <p className="text-or-400/80 font-sans text-sm tracking-[0.4em] uppercase">{children}</p>;
+  return (
+    <p className="text-or-400/80 font-sans text-base tracking-[0.4em] uppercase sm:text-lg">
+      {children}
+    </p>
+  );
 }
 
 /** Une POSITION du classement → une entrée de cascade. Les ex æquo y arrivent
@@ -309,8 +313,8 @@ export function PresentationDeck({
           >
 
             {step >= dramaStep && cat.drama && cat.drama.length > 0 && (
-              <div key="drama" className="flex w-full max-w-2xl flex-col items-center gap-4">
-                <p className="text-or-400/70 font-sans text-xs tracking-[0.4em] uppercase">
+              <div key="drama" className="flex w-full max-w-4xl flex-col items-center gap-5">
+                <p className="text-or-400/70 font-sans text-base tracking-[0.4em] uppercase">
                   {cat.drama.length > 1 ? "Déboules" : "Déboule"}
                 </p>
                 {cat.drama.map((d, i) => (
@@ -319,8 +323,10 @@ export function PresentationDeck({
                     className="brunos-glass brunos-rise border-or-400/30 w-full rounded-2xl border px-6 py-5 text-center"
                     style={{ animationDelay: `${i * 120}ms` }}
                   >
-                    <p className="text-or-300 font-display text-2xl font-semibold">{d.title}</p>
-                    <p className="text-ivoire mt-1 font-sans text-base">{d.detail}</p>
+                    <p className="text-or-300 font-display text-3xl font-semibold sm:text-4xl">
+                      {d.title}
+                    </p>
+                    <p className="text-ivoire mt-2 font-sans text-xl sm:text-2xl">{d.detail}</p>
                   </div>
                 ))}
               </div>
@@ -331,32 +337,36 @@ export function PresentationDeck({
         {isRecap && (
           <div
             key="recap"
-            className="brunos-fade flex w-full max-w-2xl flex-col items-center gap-6"
+            className="brunos-fade flex w-full max-w-4xl flex-col items-center gap-6"
           >
             <Kicker>Total de la soirée</Kicker>
-            <h2 className="text-ivoire font-display text-5xl font-semibold">Consommation totale</h2>
+            <h2 className="text-ivoire font-display text-5xl font-semibold sm:text-6xl">
+              Consommation totale
+            </h2>
             <ol className="mt-2 flex w-full flex-col gap-2">
               {recap.map((r, i) => {
                 const champ = r.total === maxTotal && maxTotal > 0;
                 return (
                   <li
                     key={r.playerId}
-                    className={`brunos-rise brunos-glass flex items-center gap-4 rounded-2xl border px-5 py-3 ${
+                    className={`brunos-rise brunos-glass flex items-center gap-5 rounded-2xl border px-6 py-4 ${
                       champ ? "border-or-400/45 bg-or-500/10" : "border-or-400/12"
                     }`}
                     style={{ animationDelay: `${i * 70}ms` }}
                   >
-                    <span className="text-ivoire-faint w-6 text-right font-sans tabular-nums">
+                    <span className="text-or-400/60 font-display w-8 text-right text-3xl tabular-nums">
                       {i + 1}
                     </span>
-                    <Avatar name={r.name} headshot={r.headshot} size={44} />
-                    <span className="text-ivoire flex-1 text-left font-sans">{r.name}</span>
+                    <Avatar name={r.name} headshot={r.headshot} size={60} />
+                    <span className="text-ivoire flex-1 truncate text-left font-sans text-xl sm:text-2xl">
+                      {r.name}
+                    </span>
                     {champ && (
-                      <span className="text-or-300 font-sans text-xs tracking-wide uppercase">
+                      <span className="text-or-300 hidden shrink-0 font-sans text-base tracking-wide uppercase sm:inline">
                         Plus forte consommation
                       </span>
                     )}
-                    <span className="text-or-300 font-display text-2xl tabular-nums">
+                    <span className="text-or-300 font-display shrink-0 text-4xl tabular-nums sm:text-5xl">
                       {r.total}
                     </span>
                   </li>

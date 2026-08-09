@@ -111,6 +111,11 @@ export function AwardCategoryReveal({
     ...(penultimate ? [{ entry: penultimate, delay: penultDelay }] : []),
   ];
 
+  // Un ex æquo occupe deux lignes de visages dans une seule position : c'est
+  // la hauteur réelle qu'il faut compter, pas le nombre de positions.
+  const hauteur = rows.reduce((n, r) => n + r.entry.people.length, 0);
+  const dense = hauteur > 4;
+
   return (
     <div className="flex w-full max-w-5xl flex-col items-center gap-8 text-center">
       {/* En-tête : glisse vers le haut quand la cascade arrive.
@@ -125,7 +130,7 @@ export function AwardCategoryReveal({
         className="flex flex-col items-center gap-4"
       >
         <motion.p
-          className="text-or-400/80 font-sans text-sm tracking-[0.4em] uppercase"
+          className="text-or-400/80 font-sans text-base tracking-[0.4em] uppercase sm:text-lg"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, ease: EASE.gentle }}
@@ -164,7 +169,7 @@ export function AwardCategoryReveal({
       )}
       {!revealed && noVotes && noVotesLabel && (
         <motion.p
-          className="text-ivoire-muted font-sans text-base"
+          className="text-ivoire-muted font-sans text-xl sm:text-2xl"
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           transition={{ duration: 1, delay: d(1) }}
@@ -173,29 +178,50 @@ export function AwardCategoryReveal({
         </motion.p>
       )}
 
-      {/* step ≥1 : le classement, puis le verdict. */}
+      {/* step ≥1 : le classement, puis le verdict.
+
+          DIMENSIONNÉ POUR LA SALLE. Ces lignes se lisent à cinq mètres, pas à
+          trente centimètres : la taille par défaut d'une liste web y était
+          illisible, et le nombre de gorgées — l'information qui décide qui
+          boit — était le plus petit texte de l'écran. Le rang et le décompte
+          sont désormais les deux ancres visuelles de la ligne. */}
       {showCascade && (
         <div className="flex w-full flex-col items-center gap-9">
           {rows.length > 0 && (
-            <ol className="flex w-full max-w-md flex-col gap-1.5">
+            // La diapositive est en `overflow-hidden` : ce qui dépasse est
+            // COUPÉ, pas défilable. Une table de six laisserait donc une
+            // position hors écran au pire moment. On resserre d'un cran au-delà
+            // de quatre positions — toujours largement plus lisible qu'avant,
+            // sans jamais amputer le classement.
+            <ol className={`flex w-full max-w-3xl flex-col ${dense ? "gap-1.5" : "gap-2"}`}>
               {rows.map(({ entry, delay }) => (
                 <motion.li
                   key={entry.id}
-                  className="brunos-glass border-or-400/12 flex items-stretch gap-3 rounded-xl border px-4 py-2"
+                  className={`brunos-glass border-or-400/12 flex items-stretch gap-5 rounded-2xl border px-6 ${
+                    dense ? "py-2" : "py-3"
+                  }`}
                   initial={reduce ? { opacity: 0 } : { opacity: 0, y: 18 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: DUR.block, ease: EASE.expoOut, delay: d(delay) }}
                 >
-                  <span className="flex w-5 shrink-0 items-center justify-end">
-                    <span className="text-ivoire-faint font-sans text-sm tabular-nums">
+                  <span className="flex w-8 shrink-0 items-center justify-end sm:w-10">
+                    <span
+                      className={`text-or-400/60 font-display tabular-nums ${
+                        dense ? "text-2xl sm:text-3xl" : "text-3xl sm:text-4xl"
+                      }`}
+                    >
                       {entry.rank}
                     </span>
                   </span>
-                  <span className="flex min-w-0 flex-1 flex-col justify-center gap-1.5">
+                  <span className="flex min-w-0 flex-1 flex-col justify-center gap-2">
                     {entry.people.map((p) => (
-                      <span key={p.id} className="flex items-center gap-3">
-                        {renderAvatar(p, 34)}
-                        <span className="text-ivoire flex-1 truncate text-left font-sans text-sm">
+                      <span key={p.id} className="flex items-center gap-4">
+                        {renderAvatar(p, dense ? 42 : 52)}
+                        <span
+                          className={`text-ivoire flex-1 truncate text-left font-sans ${
+                            dense ? "text-lg sm:text-xl" : "text-xl sm:text-2xl"
+                          }`}
+                        >
                           {p.name}
                         </span>
                       </span>
@@ -203,9 +229,15 @@ export function AwardCategoryReveal({
                   </span>
                   {entry.drinks > 0 && (
                     <span className="flex shrink-0 items-center">
-                      <span className="text-ivoire-muted font-sans text-sm tabular-nums">
+                      <span
+                        className={`text-ivoire font-sans tabular-nums ${
+                          dense ? "text-lg sm:text-xl" : "text-xl sm:text-2xl"
+                        }`}
+                      >
                         {gorgees(entry.drinks)}
-                        {entry.people.length > 1 && " chacun"}
+                        {entry.people.length > 1 && (
+                          <span className="text-ivoire-faint"> chacun</span>
+                        )}
                       </span>
                     </span>
                   )}
@@ -243,7 +275,7 @@ export function AwardCategoryReveal({
                   className="text-or-300 font-display text-5xl font-semibold sm:text-6xl"
                 />
                 <motion.span
-                  className="text-or-400/85 font-sans text-xs tracking-[0.45em] uppercase"
+                  className="text-or-400/85 font-sans text-base tracking-[0.45em] uppercase sm:text-xl"
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}
                   transition={{ duration: 1.1, delay: d(climaxDelay + 1.1 + i * 0.5) }}

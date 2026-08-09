@@ -27,12 +27,15 @@ const TITLE: Record<Scale, string> = {
 
 const SUBTITLE: Record<Scale, string> = {
   ballot: "text-xs",
-  stage: "text-sm tracking-[0.2em] uppercase",
+  stage: "text-base tracking-[0.2em] uppercase",
 };
 
 const BODY: Record<Scale, string> = {
   ballot: "gap-2 text-xs leading-relaxed",
-  stage: "gap-4 text-lg leading-relaxed sm:text-xl",
+  // Le règlement est dense et se lit d'un bout à l'autre de la pièce : c'est
+  // le texte le plus long de la soirée, donc celui qui pardonne le moins une
+  // taille trop juste.
+  stage: "gap-4 text-xl leading-relaxed sm:text-2xl",
 };
 
 /** Des barres décroissantes : un ordre, du premier au dernier. */
