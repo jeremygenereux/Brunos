@@ -564,6 +564,7 @@ export type Database = {
           created_at: string
           drinks: number
           final_rank: number
+          tied_rank: number | null
           id: string
           player_id: string
           question_id: string
@@ -576,6 +577,7 @@ export type Database = {
           created_at?: string
           drinks?: number
           final_rank: number
+          tied_rank?: number | null
           id?: string
           player_id: string
           question_id: string
@@ -588,6 +590,7 @@ export type Database = {
           created_at?: string
           drinks?: number
           final_rank?: number
+          tied_rank?: number | null
           id?: string
           player_id?: string
           question_id?: string

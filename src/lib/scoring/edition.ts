@@ -66,6 +66,8 @@ export type ResultRow = {
   borda_score: number | null;
   vote_count: number | null;
   final_rank: number;
+  /** Rang de compétition, partagé par les ex æquo. Décide des gorgées. */
+  tied_rank: number;
   drinks: number;
   audience: ResultAudience;
 };
@@ -85,6 +87,7 @@ export function resultRowsFor(q: QuestionComputed): ResultRow[] {
         borda_score: s.bordaScore,
         vote_count: s.voteCount,
         final_rank: s.finalRank,
+        tied_rank: s.tiedRank,
         drinks: q.drinks.get(s.playerId) ?? 0,
         audience: "players",
       });
@@ -98,6 +101,7 @@ export function resultRowsFor(q: QuestionComputed): ResultRow[] {
         borda_score: s.bordaScore,
         vote_count: s.voteCount,
         final_rank: s.finalRank,
+        tied_rank: s.tiedRank,
         drinks: 0, // entourage ranking never makes anyone drink
         audience: "jury",
       });

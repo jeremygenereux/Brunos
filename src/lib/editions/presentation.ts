@@ -101,6 +101,7 @@ export async function loadPresentation(
     borda_score: number | null;
     vote_count: number | null;
     final_rank: number;
+    tied_rank: number | null;
     drinks: number;
     audience: string;
   };
@@ -110,7 +111,9 @@ export async function loadPresentation(
       (from, to) =>
         supabase
           .from("results")
-          .select("question_id, player_id, borda_score, vote_count, final_rank, drinks, audience")
+          .select(
+            "question_id, player_id, borda_score, vote_count, final_rank, tied_rank, drinks, audience",
+          )
           .in("question_id", qids)
           .order("id")
           .range(from, to),
@@ -126,6 +129,7 @@ export async function loadPresentation(
       borda_score: r.borda_score,
       vote_count: r.vote_count,
       final_rank: r.final_rank,
+      tied_rank: r.tied_rank,
       drinks: r.drinks,
       audience: r.audience,
     }));
@@ -140,30 +144,41 @@ export async function loadPresentation(
     const sorted = rows
       .filter((r) => r.question_id === questionId && r.audience === audience)
       .sort((a, b) => a.final_rank - b.final_rank);
-    const n = sorted.length;
-    const top = sorted[0];
-    return sorted.map((r) => ({
+    // Le rang de COMPÉTITION vient de la base : c'est lui qui a décidé des
+    // gorgées au moment du gel, donc c'est lui qui doit décider des verres
+    // affichés. Le repli sur le score ne sert qu'aux lignes d'avant la
+    // migration, où la colonne est nulle.
+    const scoreOf = (r: (typeof sorted)[number]) =>
+      format === "ranking" ? `b${r.borda_score}` : `v${r.vote_count}`;
+    const tiedRank: number[] = [];
+    sorted.forEach((r, i) => {
+      if (r.tied_rank != null) {
+        tiedRank.push(r.tied_rank);
+        return;
+      }
+      tiedRank.push(i > 0 && scoreOf(r) === scoreOf(sorted[i - 1]) ? tiedRank[i - 1] : i + 1);
+    });
+    const dernierRang = tiedRank.reduce((max, v) => Math.max(max, v), 0);
+
+    return sorted.map((r, i) => ({
       playerId: r.player_id,
       personId: playersById.get(r.player_id)?.personId ?? null,
       name: playersById.get(r.player_id)?.name ?? "—",
       headshot: playersById.get(r.player_id)?.headshot ?? null,
       finalRank: r.final_rank,
       drinks: r.drinks,
-      isWinner:
-        audience === "players" && top
-          ? format === "ranking"
-            ? r.borda_score === top.borda_score
-            : r.vote_count === top.vote_count
-          : false,
-      // Qui cale, selon la règle effective. En « gagnant boit » c'est le
-      // PREMIER ; se rabattre sur « drinks > 0 » y marquerait toute la table,
-      // puisque tout le monde boit quelque chose.
+      // Gagnant = premier rang de compétition. Les ex æquo en tête le
+      // partagent, donc ils gagnent tous — ce que l'archive montrait déjà et
+      // que la scène ignorait.
+      isWinner: audience === "players" && tiedRank[i] === 1,
+      // Qui cale, selon la règle effective — toujours sur le rang PARTAGÉ,
+      // pour que deux ex æquo à l'extrémité qui trinque calent tous les deux.
       isShooter:
         audience === "players"
           ? rule === "ESCALATION"
-            ? r.final_rank === n
+            ? tiedRank[i] === dernierRang
             : rule === "ESCALATION_INVERSE"
-              ? r.final_rank === 1
+              ? tiedRank[i] === 1
               : r.drinks > 0
           : false,
     }));

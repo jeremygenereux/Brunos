@@ -17,6 +17,12 @@ export function hashId(id: string): number {
  * - ranking → Borda: sum of positions; smallest total = 1st. Ties broken by
  *   (a) #times ranked 1st, then (b) stable hash of the player id.
  * - single_choice → vote count; most votes = 1st. Ties broken by stable hash.
+ *
+ * DEUX RANGS, ET C'EST VOULU. `finalRank` est toujours distinct : il ordonne
+ * l'affichage sans jamais deux fois le même numéro. `tiedRank` est le rang de
+ * compétition (1, 2, 2, 4) : deux scores égaux le partagent. Les gorgées se
+ * calculent sur le second, sinon le départage par hachage — arbitraire par
+ * construction — déciderait qui cale entre deux ex æquo.
  */
 export function computeQuestionRanking(
   format: QuestionFormat,
@@ -64,14 +70,26 @@ export function computeQuestionRanking(
     return hashId(a.playerId) - hashId(b.playerId);
   });
 
+  // Deux joueurs sont ex æquo quand TOUT ce qui compte avant le hachage est
+  // égal. Le hachage, lui, n'est qu'un ordre d'affichage : il ne crée pas
+  // d'écart réel et ne doit donc pas créer d'écart de gorgées.
+  const sameScore = (a: (typeof scored)[number], b: (typeof scored)[number]) =>
+    format === "ranking"
+      ? a.bordaScore === b.bordaScore && a.firstPlaceCount === b.firstPlaceCount
+      : a.voteCount === b.voteCount;
+
+  const tiedRanks: number[] = [];
+  scored.forEach((s, i) => {
+    // Rang de compétition : on reprend celui du précédent s'il a le même
+    // score, sinon on saute à la position courante (1, 2, 2, 4).
+    tiedRanks.push(i > 0 && sameScore(s, scored[i - 1]) ? tiedRanks[i - 1] : i + 1);
+  });
+
   const top = scored[0];
   return scored.map((s, i) => ({
     ...s,
     finalRank: i + 1,
-    tiedForWin: top
-      ? format === "ranking"
-        ? s.bordaScore === top.bordaScore && s.firstPlaceCount === top.firstPlaceCount
-        : s.voteCount === top.voteCount
-      : false,
+    tiedRank: tiedRanks[i],
+    tiedForWin: top ? sameScore(s, top) : false,
   }));
 }

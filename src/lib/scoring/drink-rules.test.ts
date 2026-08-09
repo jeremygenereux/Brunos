@@ -13,6 +13,8 @@ function ranking(n: number, tiedTop: number[] = [1]): PlayerScore[] {
     voteCount: null,
     firstPlaceCount: 0,
     finalRank: i + 1,
+    // Un vrai ex æquo en tête PARTAGE le rang de compétition : 1, 1, 3, 4.
+    tiedRank: tiedTop.includes(i + 1) ? 1 : i + 1,
     tiedForWin: tiedTop.includes(i + 1),
   }));
 }

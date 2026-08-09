@@ -9,6 +9,8 @@ function mkRanking(order: string[], tiedTop: string[] = [order[0]]): PlayerScore
     voteCount: null,
     firstPlaceCount: 0,
     finalRank: i + 1,
+    // Un vrai ex æquo en tête PARTAGE le rang de compétition : 1, 1, 3, 4.
+    tiedRank: tiedTop.includes(id) ? 1 : i + 1,
     tiedForWin: tiedTop.includes(id),
   }));
 }

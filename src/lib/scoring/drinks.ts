@@ -19,6 +19,12 @@ import type { DrinkRule, PlayerScore } from "./types";
  * d'un classement punissent la même personne — celle qui correspond le plus à
  * un énoncé peu flatteur — et ne diffèrent que par la façon de poser la
  * question.
+ *
+ * LES EX ÆQUO BOIVENT PAREIL. Tout se calcule sur `tiedRank`, le rang de
+ * compétition partagé, jamais sur `finalRank` : deux scores identiques ne
+ * peuvent pas donner deux ardoises différentes. Si l'égalité tombe sur
+ * l'extrémité qui cale, TOUS les ex æquo calent — c'est la règle de la
+ * maison, et c'est ce que la salle attend en voyant deux visages s'afficher.
  */
 export function questionDrinks(
   ranking: PlayerScore[],
@@ -27,13 +33,19 @@ export function questionDrinks(
 ): Map<string, number> {
   const n = ranking.length;
   const out = new Map<string, number>();
+
+  // Le « dernier » n'est pas forcément le rang N : avec des ex æquo, le
+  // classement peut s'arrêter à 1, 2, 3, 3. Le dernier groupe est celui qui
+  // porte le rang de compétition le plus élevé.
+  const dernierRang = ranking.reduce((max, r) => Math.max(max, r.tiedRank), 0);
+
   for (const r of ranking) {
     if (rule === "TOP_UNIQUE") {
-      out.set(r.playerId, r.tiedForWin ? shooterValue : 0);
+      out.set(r.playerId, r.tiedRank === 1 ? shooterValue : 0);
     } else if (rule === "ESCALATION_INVERSE") {
-      out.set(r.playerId, r.finalRank === 1 ? shooterValue : n - r.finalRank + 1);
+      out.set(r.playerId, r.tiedRank === 1 ? shooterValue : n - r.tiedRank + 1);
     } else {
-      out.set(r.playerId, r.finalRank === n ? shooterValue : r.finalRank);
+      out.set(r.playerId, r.tiedRank === dernierRang ? shooterValue : r.tiedRank);
     }
   }
   return out;

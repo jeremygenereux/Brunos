@@ -16,8 +16,18 @@ export type PlayerScore = {
   voteCount: number | null;
   /** Times ranked 1st (ranking) or chosen (single_choice). */
   firstPlaceCount: number;
-  /** Final position in the category, 1..N (distinct; ties broken deterministically). */
+  /**
+   * Position d'affichage, 1..N, TOUJOURS distincte : elle sert à ordonner la
+   * liste de façon stable, y compris entre ex æquo (départagés par hachage).
+   */
   finalRank: number;
+  /**
+   * Rang de COMPÉTITION, partagé par les ex æquo : 1, 2, 2, 4. C'est LUI qui
+   * décide des gorgées — deux personnes à égalité boivent la même chose, où
+   * qu'elles se trouvent dans le classement. `finalRank` ne servirait pas :
+   * son départage par hachage ferait boire différemment deux scores égaux.
+   */
+  tiedRank: number;
   /** True when genuinely tied for 1st (same primary+secondary score as the top). */
   tiedForWin: boolean;
 };
