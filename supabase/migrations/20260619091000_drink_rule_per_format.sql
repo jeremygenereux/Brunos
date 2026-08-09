@@ -67,13 +67,24 @@ create trigger questions_force_rule
 -- ---------------------------------------------------------------------
 -- (2) Reprise de l'existant.
 --
---     `questions_edit_lock` interdit les modifications structurelles hors
---     CONSTRUCTION ; il ne surveille pas `drink_rule_override`, donc ces
---     UPDATE passent même sur une édition archivée. C'est voulu : on répare
---     l'intention, pas les résultats. Les `results` déjà gelés ne bougent
---     PAS — seule une recompilation les recalculerait, et c'est une décision
---     d'administration, pas un effet de bord de migration.
+--     `questions_edit_lock` SURVEILLE `drink_rule_override` : il compte cette
+--     colonne parmi celles qu'on ne touche pas hors CONSTRUCTION. Sans
+--     l'interrupteur ci-dessous, ces UPDATE lèvent une exception dès qu'une
+--     édition dépassée est concernée — et toute la migration est annulée.
+--     C'est exactement ce qui est arrivé au premier essai en production :
+--     l'édition fautive était ARCHIVÉE.
+--
+--     On utilise donc la dérogation prévue par le schéma, transaction-locale
+--     (`true`), qui ne fait qu'AUTORISER l'écriture : aucun déclencheur
+--     n'efface de réponses, seuls `questions_edit_lock` et `set_updated_at`
+--     existent sur cette table.
+--
+--     Les `results` déjà gelés ne bougent PAS. On répare l'intention, pas le
+--     verdict : recalculer une soirée passée est une décision
+--     d'administration, jamais un effet de bord de migration.
 -- ---------------------------------------------------------------------
+select set_config('app.allow_question_edit', 'on', true);
+
 update public.questions
 set drink_rule_override = 'ESCALATION_INVERSE'::public.drink_rule
 where format = 'ranking'::public.question_format
