@@ -200,11 +200,6 @@ export function AwardCategoryReveal({
                         </span>
                       </span>
                     ))}
-                    {entry.people.length > 1 && (
-                      <span className="text-or-400/70 font-sans text-[11px] tracking-wide uppercase">
-                        Ex æquo
-                      </span>
-                    )}
                   </span>
                   {entry.drinks > 0 && (
                     <span className="flex shrink-0 items-center">

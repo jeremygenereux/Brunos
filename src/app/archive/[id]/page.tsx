@@ -81,11 +81,6 @@ function RankList({
                     </span>
                   </span>
                 ))}
-                {partage && (
-                  <span className="text-ivoire-faint font-sans text-[11px]">
-                    Ex æquo{showDrinks ? " · même ardoise" : ""}
-                  </span>
-                )}
               </div>
 
               {showDrinks && (
