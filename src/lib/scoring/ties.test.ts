@@ -40,6 +40,47 @@ describe("le rang de compétition", () => {
     expect(parId.get("e")!.tiedRank).toBe(5);
   });
 
+  it("même Borda = ex æquo, même avec des premières places différentes", () => {
+    // Le cas réel du Gala Firme-École : 1,1,5,5,5 contre 2,3,3,4,5. Même
+    // total de 17. L'ancien critère « nombre de fois classé premier » les
+    // séparait ; il a été retiré le 9 août 2026 car il contredisait la
+    // méthode annoncée et n'était plus utile une fois les ex æquo gérés.
+    const r = computeQuestionRanking(
+      "ranking",
+      [
+        // d finit 1,1,5,5,5 ; e finit 2,3,3,4,5 — tous deux à 17.
+        [
+          { playerId: "d", rank: 1 }, { playerId: "e", rank: 2 },
+          { playerId: "a", rank: 3 }, { playerId: "b", rank: 4 }, { playerId: "c", rank: 5 },
+        ],
+        [
+          { playerId: "d", rank: 1 }, { playerId: "e", rank: 3 },
+          { playerId: "a", rank: 2 }, { playerId: "b", rank: 4 }, { playerId: "c", rank: 5 },
+        ],
+        [
+          { playerId: "d", rank: 5 }, { playerId: "e", rank: 3 },
+          { playerId: "a", rank: 1 }, { playerId: "b", rank: 2 }, { playerId: "c", rank: 4 },
+        ],
+        [
+          { playerId: "d", rank: 5 }, { playerId: "e", rank: 4 },
+          { playerId: "a", rank: 1 }, { playerId: "b", rank: 2 }, { playerId: "c", rank: 3 },
+        ],
+        [
+          { playerId: "d", rank: 5 }, { playerId: "e", rank: 5 },
+          { playerId: "a", rank: 1 }, { playerId: "b", rank: 2 }, { playerId: "c", rank: 3 },
+        ],
+      ],
+      P,
+    );
+    const parId = new Map(r.map((s) => [s.playerId, s]));
+    expect(parId.get("d")!.bordaScore).toBe(17);
+    expect(parId.get("e")!.bordaScore).toBe(17);
+    expect(parId.get("d")!.firstPlaceCount).toBe(2);
+    expect(parId.get("e")!.firstPlaceCount).toBe(0);
+    // Le nombre de premières places diffère, le rang de compétition NON.
+    expect(parId.get("d")!.tiedRank).toBe(parId.get("e")!.tiedRank);
+  });
+
   it("garde finalRank distinct pour un affichage stable", () => {
     const r = computeQuestionRanking(
       "ranking",

@@ -14,15 +14,28 @@ export function hashId(id: string): number {
  * Aggregate ONE question across the given ballots (each ballot = one voter's
  * answers for this question, from a single audience).
  *
- * - ranking → Borda: sum of positions; smallest total = 1st. Ties broken by
- *   (a) #times ranked 1st, then (b) stable hash of the player id.
- * - single_choice → vote count; most votes = 1st. Ties broken by stable hash.
+ * - ranking → Borda : somme des positions, plus petit total = 1re place.
+ * - single_choice → nombre de voix, le plus voté gagne.
+ *
+ * MÊME SCORE, MÊME PLACE. Il n'y a aucun départage : deux joueurs au même
+ * total sont ex æquo, point. Un critère secondaire existait — le nombre de
+ * fois classé premier — hérité de la spécification §6.1. Il a été retiré le
+ * 9 août 2026, pour trois raisons :
+ *
+ *   1. il contredisait la méthode annoncée à la salle (« on additionne les
+ *      classements »), en ajoutant un second critère que personne ne voyait ;
+ *   2. il était inexplicable en séance : rien ne laissait deviner pourquoi
+ *      1,1,5,5,5 passait devant 2,3,3,4,5 à total égal ;
+ *   3. il n'existait que pour ÉVITER les égalités, à l'époque où une égalité
+ *      obligeait le hachage à désigner un caleur au hasard. Depuis que les ex
+ *      æquo boivent la même chose et calent ensemble, il n'a plus rien à
+ *      protéger.
  *
  * DEUX RANGS, ET C'EST VOULU. `finalRank` est toujours distinct : il ordonne
- * l'affichage sans jamais deux fois le même numéro. `tiedRank` est le rang de
- * compétition (1, 2, 2, 4) : deux scores égaux le partagent. Les gorgées se
- * calculent sur le second, sinon le départage par hachage — arbitraire par
- * construction — déciderait qui cale entre deux ex æquo.
+ * l'affichage sans jamais deux fois le même numéro, et c'est là — et là
+ * seulement — que le hachage sert encore. `tiedRank` est le rang de
+ * compétition (1, 2, 2, 4) : les ex æquo le partagent, et c'est lui qui
+ * décide des gorgées.
  */
 export function computeQuestionRanking(
   format: QuestionFormat,
@@ -59,24 +72,19 @@ export function computeQuestionRanking(
   }));
 
   scored.sort((a, b) => {
-    if (format === "ranking") {
-      const d = (a.bordaScore ?? 0) - (b.bordaScore ?? 0);
-      if (d !== 0) return d;
-      if (a.firstPlaceCount !== b.firstPlaceCount) return b.firstPlaceCount - a.firstPlaceCount;
-    } else {
-      const d = (b.voteCount ?? 0) - (a.voteCount ?? 0);
-      if (d !== 0) return d;
-    }
+    const d =
+      format === "ranking"
+        ? (a.bordaScore ?? 0) - (b.bordaScore ?? 0)
+        : (b.voteCount ?? 0) - (a.voteCount ?? 0);
+    if (d !== 0) return d;
+    // Le hachage n'ordonne plus que l'AFFICHAGE de deux ex æquo. Il ne décide
+    // plus jamais d'une gorgée : celles-ci suivent `tiedRank`, qu'ils partagent.
     return hashId(a.playerId) - hashId(b.playerId);
   });
 
-  // Deux joueurs sont ex æquo quand TOUT ce qui compte avant le hachage est
-  // égal. Le hachage, lui, n'est qu'un ordre d'affichage : il ne crée pas
-  // d'écart réel et ne doit donc pas créer d'écart de gorgées.
+  // Ex æquo = même score, sans autre condition.
   const sameScore = (a: (typeof scored)[number], b: (typeof scored)[number]) =>
-    format === "ranking"
-      ? a.bordaScore === b.bordaScore && a.firstPlaceCount === b.firstPlaceCount
-      : a.voteCount === b.voteCount;
+    format === "ranking" ? a.bordaScore === b.bordaScore : a.voteCount === b.voteCount;
 
   const tiedRanks: number[] = [];
   scored.forEach((s, i) => {

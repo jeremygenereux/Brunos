@@ -99,7 +99,16 @@ Chaque votant classe les N joueurs de 1 (le plus) à N (le moins).
 
 - On **additionne les positions** reçues par chaque joueur sur tous les votes _joueurs_.
 - **Plus petit total = 1re place** de la catégorie (« unanimement #1 » = celui que tout le monde a mis 1er).
-- Égalités départagées par : (a) nombre de fois classé 1er, puis (b) au hasard stable (seed sur l'id).
+- **Aucun départage** : deux joueurs au même total sont **ex æquo**, et ils
+  boivent exactement la même chose — y compris le shooter, si l'égalité tombe
+  sur l'extrémité qui cale. Le hachage stable de l'identifiant ne sert plus
+  qu'à ordonner leur affichage dans la liste.
+- _Révisé le 9 août 2026._ Un critère secondaire existait — le nombre de fois
+  classé 1er — pour éviter les égalités à l'époque où elles obligeaient à
+  désigner un caleur au hasard. Il contredisait la méthode annoncée à la salle
+  et restait invisible : rien n'expliquait pourquoi 1,1,5,5,5 passait devant
+  2,3,3,4,5 à total égal. Les ex æquo étant désormais gérés partout, il n'avait
+  plus rien à protéger.
 
 ### 6.2 Questions `single_choice`
 
