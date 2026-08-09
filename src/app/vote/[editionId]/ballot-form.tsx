@@ -447,6 +447,15 @@ function RankingQuestion({
     useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
   );
 
+  // Déplacer d'un cran, au doigt. Le glisser-déposer reste, mais il demande
+  // une précision que personne n'a sur un téléphone à la troisième bière ;
+  // deux flèches font le même travail sans viser.
+  function move(index: number, dir: -1 | 1) {
+    const target = index + dir;
+    if (target < 0 || target >= order.length) return;
+    onReorder(arrayMove(order, index, target));
+  }
+
   function onDragEnd(event: DragEndEvent) {
     const { active, over } = event;
     if (!over || active.id === over.id) return;
@@ -463,11 +472,22 @@ function RankingQuestion({
           {order.map((id, i) => {
             const player = playerById.get(id);
             if (!player) return null;
-            // Le shooter va au 1er en « Gagnant boit », au dernier sinon.
+            // Le shooter va au 1er en « Gagnant boit », au dernier sinon. Un
+            // classement n'est jamais en TOP_UNIQUE : cette règle est réservée
+            // aux désignations.
             const drinks =
-              drinkRule === "TOP_UNIQUE" ? i === 0 : i === order.length - 1;
+              drinkRule === "ESCALATION_INVERSE" ? i === 0 : i === order.length - 1;
             return (
-              <SortableRow key={id} id={id} rank={i + 1} player={player} drinks={drinks} />
+              <SortableRow
+                key={id}
+                id={id}
+                rank={i + 1}
+                player={player}
+                drinks={drinks}
+                onMove={(dir) => move(i, dir)}
+                canUp={i > 0}
+                canDown={i < order.length - 1}
+              />
             );
           })}
         </ol>
@@ -481,11 +501,17 @@ function SortableRow({
   rank,
   player,
   drinks,
+  onMove,
+  canUp,
+  canDown,
 }: {
   id: string;
   rank: number;
   player: Player;
   drinks: boolean;
+  onMove: (dir: -1 | 1) => void;
+  canUp: boolean;
+  canDown: boolean;
 }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id,
@@ -503,23 +529,53 @@ function SortableRow({
         drinks ? "border-or-400/50 bg-or-500/10" : "border-or-400/15 bg-noir-900/40"
       }`}
     >
+      {/* Cible de 44 px : la poignée n'était qu'un glyphe de 15 px, impossible
+          à attraper au pouce. `touch-none` la réserve au glissement pour que
+          la page continue de défiler partout ailleurs. */}
       <button
         type="button"
-        className="text-ivoire-faint hover:text-or-300 cursor-grab touch-none active:cursor-grabbing"
-        aria-label="Déplacer"
+        className="text-ivoire-faint hover:text-or-300 -my-2 -ml-1 flex h-11 w-9 shrink-0 cursor-grab touch-none items-center justify-center active:cursor-grabbing"
+        aria-label={`Déplacer ${player.display_name}`}
         {...attributes}
         {...listeners}
       >
-        ⠿
+        <svg viewBox="0 0 16 16" className="h-5 w-5" fill="currentColor" aria-hidden="true">
+          {[4, 8, 12].map((y) =>
+            [5, 11].map((x) => <circle key={`${x}-${y}`} cx={x} cy={y} r="1.4" />),
+          )}
+        </svg>
       </button>
-      <span className="text-or-300 font-display w-5 text-center text-lg">{rank}</span>
+      <span className="text-or-300 font-display w-5 shrink-0 text-center text-lg">{rank}</span>
       <Avatar player={player} />
-      <span className="text-ivoire flex-1 font-sans text-sm">{player.display_name}</span>
+      <span className="text-ivoire min-w-0 flex-1 truncate font-sans text-sm">
+        {player.display_name}
+      </span>
       {drinks && (
-        <span className="text-base" title="Cette place cale le shooter">
+        <span className="shrink-0 text-base" title="Cette place cale le shooter">
           🥃
         </span>
       )}
+      {/* Le chemin sûr : un cran à la fois, sans viser ni maintenir. */}
+      <span className="-my-2 flex shrink-0 flex-col">
+        <button
+          type="button"
+          disabled={!canUp}
+          onClick={() => onMove(-1)}
+          aria-label={`Monter ${player.display_name}`}
+          className="text-ivoire-faint hover:text-or-300 flex h-6 w-8 items-center justify-center text-xs transition disabled:opacity-25"
+        >
+          ▲
+        </button>
+        <button
+          type="button"
+          disabled={!canDown}
+          onClick={() => onMove(1)}
+          aria-label={`Descendre ${player.display_name}`}
+          className="text-ivoire-faint hover:text-or-300 flex h-6 w-8 items-center justify-center text-xs transition disabled:opacity-25"
+        >
+          ▼
+        </button>
+      </span>
     </li>
   );
 }

@@ -42,10 +42,12 @@ function RuleControl({
   questionId,
   editionId,
   value,
+  format,
 }: {
   questionId: string;
   editionId: string;
   value: Rule;
+  format: string;
 }) {
   const [rule, setRule] = useState<Rule>(value);
   const [pending, start] = useTransition();
@@ -57,6 +59,16 @@ function RuleControl({
       if (r.error) setRule(prev);
     });
   }
+  // Un choix unique n'offre rien à régler : la personne désignée cale, et
+  // c'est tout. On l'affiche sans le rendre modifiable.
+  if (format === "single_choice") {
+    return (
+      <span className="text-ivoire-faint shrink-0 font-sans text-xs">
+        {DRINK_RULE_LABEL.TOP_UNIQUE}
+      </span>
+    );
+  }
+
   return (
     <select
       value={rule}
@@ -65,8 +77,8 @@ function RuleControl({
       onPointerDown={(e) => e.stopPropagation()}
       className="border-or-400/20 bg-noir-900/60 text-ivoire focus:border-or-400/60 shrink-0 rounded-lg border px-2 py-1 font-sans text-xs outline-none disabled:opacity-60"
     >
+      <option value="ESCALATION_INVERSE">{DRINK_RULE_LABEL.ESCALATION_INVERSE}</option>
       <option value="ESCALATION">{DRINK_RULE_LABEL.ESCALATION}</option>
-      <option value="TOP_UNIQUE">{DRINK_RULE_LABEL.TOP_UNIQUE}</option>
     </select>
   );
 }
@@ -189,6 +201,7 @@ function SortableRow({
       <RuleControl
         questionId={question.id}
         editionId={editionId}
+        format={question.format}
         value={(question.drink_rule_override ?? editionRule) as Rule}
       />
       <form

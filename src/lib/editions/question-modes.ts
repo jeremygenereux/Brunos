@@ -6,14 +6,16 @@
 // la charge. On reconnaît en séance ce qu'on a déjà vu en votant.
 //
 // Les formulations suivent `questionDrinks` à la lettre :
-//   • Gagnant boit (TOP_UNIQUE) : la première place boit un shooter, tous les
-//     autres rangs sont à zéro ;
-//   • Perdant boit (ESCALATION) : rang 1 = 1 gorgée, rang 2 = 2, et ainsi de
-//     suite, la dernière place buvant un shooter au lieu de N gorgées.
-// Le mode (classer ou désigner) ne change pas ce calcul : il ne change que la
-// façon dont le classement a été obtenu. En pratique une désignation est
-// toujours en « gagnant boit » : ne choisir qu'une personne puis faire boire
-// tout le monde selon un rang de dépouillement n'aurait pas de sens.
+//   • Désignation → la personne la plus votée cale, PERSONNE d'autre ne boit.
+//   • Classement  → tout le monde boit selon son rang, et le shooter tombe à
+//     l'une des deux extrémités : au premier (« gagnant boit ») ou au dernier
+//     (« perdant boit »). Une cérémonie mélange couramment les deux, alors on
+//     annonce ce qui est RÉELLEMENT présent, pas une règle d'édition.
+//
+// ON LIT LE VERDICT, PAS LA CONFIGURATION. `cascadeOf` dit qui cale et si le
+// classement porte un enjeu ; on en déduit la formulation. C'est ce qui garde
+// la carte d'accord avec la scène même quand la configuration a changé après
+// le gel des résultats.
 
 import type { Category } from "./presentation-types";
 import { cascadeOf } from "./reveal-order";
@@ -40,78 +42,72 @@ const BALLOT_NOTE: Record<ModeKind, string> = {
   single_choice: "Vous avez désigné une seule personne.",
 };
 
-const TOP_UNIQUE_NOTE: Record<ModeKind, string> = {
-  ranking: "La première place boit un shooter. Les autres ne boivent pas.",
-  single_choice:
-    "La personne qui reçoit le plus de votes boit un shooter. Les autres ne boivent pas.",
-};
+const DESIGNATION_NOTE =
+  "La personne qui reçoit le plus de votes boit un shooter. Les autres ne boivent pas.";
 
-const ESCALATION_NOTE: Record<ModeKind, string> = {
-  ranking:
-    "Chaque place boit selon son rang : 1 gorgée pour la première, 2 pour la deuxième, et ainsi de suite. La dernière place boit un shooter.",
-  single_choice:
-    "Les votes classent les joueurs. Chaque place boit selon son rang : 1 gorgée pour la première, 2 pour la deuxième, et ainsi de suite. La dernière place boit un shooter.",
-};
+/** « Gagnant boit » : le shooter en tête, les gorgées décroissent. */
+const TETE_NOTE =
+  "La première place boit un shooter. Les suivantes boivent de moins en moins, jusqu'à une seule gorgée pour la dernière.";
 
-const MIXED_NOTE: Record<ModeKind, string> = {
-  ranking:
-    "Selon la catégorie, le shooter va à la première ou à la dernière place. À la première, elle boit seule. À la dernière, chaque place boit selon son rang : 1 gorgée pour la première, 2 pour la deuxième, et ainsi de suite.",
-  single_choice:
-    "Selon la catégorie, le shooter va à la personne la plus votée, qui boit seule, ou à la moins votée, chaque place buvant alors selon son rang.",
-};
+/** « Perdant boit » : le shooter en queue, les gorgées montent. */
+const QUEUE_NOTE =
+  "Chaque place boit selon son rang : 1 gorgée pour la première, 2 pour la deuxième, et ainsi de suite. La dernière place boit un shooter.";
 
-/**
- * Les modes réellement présents, dans l'ordre de première apparition.
- *
- * La règle se lit dans la CHORÉGRAPHIE (`rankingMatters`) et non dans celle de
- * l'édition : une cérémonie peut mélanger les deux par `drink_rule_override`,
- * et c'est ce que l'assemblée verra qu'il faut lui annoncer.
- *
- * `defaultRule` ne sert que de repli, quand aucune catégorie du mode n'a encore
- * de verdict à observer (aperçu d'une cérémonie non dépouillée).
- */
+const MIXTE_NOTE =
+  "Tout le monde boit à chaque catégorie. Selon l'énoncé, le shooter va à la première place ou à la dernière, et les gorgées s'échelonnent depuis elle.";
+
 export function questionModesFor(
   categories: Category[],
   defaultRule: "ESCALATION" | "TOP_UNIQUE",
 ): QuestionMode[] {
   const order: ModeKind[] = [];
-  const stats = new Map<ModeKind, { count: number; escalation: boolean; topUnique: boolean }>();
+  const stats = new Map<ModeKind, { count: number; tete: boolean; queue: boolean }>();
 
   for (const cat of categories) {
     const kind: ModeKind = cat.format === "ranking" ? "ranking" : "single_choice";
     if (!stats.has(kind)) {
-      stats.set(kind, { count: 0, escalation: false, topUnique: false });
+      stats.set(kind, { count: 0, tete: false, queue: false });
       order.push(kind);
     }
     const s = stats.get(kind)!;
     s.count += 1;
 
-    // Une catégorie sans verdict n'enseigne rien sur la règle : on la compte
-    // sans lui laisser décider de ce qu'on annonce.
+    // Une catégorie sans verdict n'enseigne rien : on la compte sans lui
+    // laisser décider de ce qu'on annonce.
     if (cat.players.length === 0) continue;
     const { shooters, rankingMatters } = cascadeOf(cat.players);
-    if (shooters.length === 0) continue;
-    if (rankingMatters) s.escalation = true;
-    else s.topUnique = true;
+    if (shooters.length === 0 || !rankingMatters) continue;
+
+    // Le classement porte un enjeu : reste à savoir de quel côté tombe le
+    // shooter. `players` arrive trié par rang croissant.
+    if (shooters.some((p) => p.finalRank === 1)) s.tete = true;
+    else s.queue = true;
   }
 
   return order.map((kind) => {
     const s = stats.get(kind)!;
-    const observed = s.escalation || s.topUnique;
-    const escalation = observed ? s.escalation : defaultRule === "ESCALATION";
-    const topUnique = observed ? s.topUnique : defaultRule === "TOP_UNIQUE";
+    if (kind === "single_choice") {
+      return {
+        kind,
+        title: TITLE[kind],
+        count: s.count,
+        ballotNote: BALLOT_NOTE[kind],
+        drinkNote: DESIGNATION_NOTE,
+      };
+    }
+
+    // Repli quand rien n'est encore dépouillé : la valeur de pré-remplissage
+    // de l'édition donne le sens le plus probable.
+    const observed = s.tete || s.queue;
+    const tete = observed ? s.tete : defaultRule === "TOP_UNIQUE";
+    const queue = observed ? s.queue : defaultRule === "ESCALATION";
 
     return {
       kind,
       title: TITLE[kind],
       count: s.count,
       ballotNote: BALLOT_NOTE[kind],
-      drinkNote:
-        escalation && topUnique
-          ? MIXED_NOTE[kind]
-          : escalation
-            ? ESCALATION_NOTE[kind]
-            : TOP_UNIQUE_NOTE[kind],
+      drinkNote: tete && queue ? MIXTE_NOTE : tete ? TETE_NOTE : QUEUE_NOTE,
     };
   });
 }
