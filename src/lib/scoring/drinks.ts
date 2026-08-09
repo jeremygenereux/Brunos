@@ -4,13 +4,21 @@ import type { DrinkRule, PlayerScore } from "./types";
  * Drinks (in gorgées) each player takes for ONE question, from its OFFICIAL
  * ranking + the applicable rule. A shooter is worth `shooterValue` gorgées.
  *
- * ASSUMPTION — confirm with product (spec §5.4 / §7 are worth double-checking):
- *  - TOP_UNIQUE: the 1st-place player(s) drink one shooter; everyone else 0.
- *    Genuine ties for 1st all drink (ex æquo).
- *  - ESCALATION: everyone drinks — 1st place = 1 gorgée, 2nd = 2, …, and the
- *    LAST-ranked drinks a shooter (= shooterValue) instead of N gorgées.
+ *  - TOP_UNIQUE — le ou les premiers calent, PERSONNE d'autre ne boit. Réservé
+ *    au CHOIX UNIQUE : là, les places 2 à N ne sont qu'un décompte de voix, pas
+ *    un classement, et il n'y a rien à échelonner. Les vraies égalités en tête
+ *    calent toutes (ex æquo).
+ *  - ESCALATION — « Perdant boit ». Tout le monde boit : 1er = 1 gorgée,
+ *    2e = 2, … et le DERNIER cale un shooter au lieu de ses N gorgées.
+ *  - ESCALATION_INVERSE — « Gagnant boit ». Le miroir : le PREMIER cale, puis
+ *    les gorgées décroissent (2e = N-1, …, dernier = 1 gorgée).
  *
- * Both directions are a one-line change here if the intent is reversed.
+ * POURQUOI LE MIROIR ET NON « le premier cale, seul ». Appliquer TOP_UNIQUE à
+ * un classement jetait l'ordre que les votants avaient établi : une seule
+ * personne buvait et la cascade n'avait plus rien à dérouler. Les deux règles
+ * d'un classement punissent la même personne — celle qui correspond le plus à
+ * un énoncé peu flatteur — et ne diffèrent que par la façon de poser la
+ * question.
  */
 export function questionDrinks(
   ranking: PlayerScore[],
@@ -22,6 +30,8 @@ export function questionDrinks(
   for (const r of ranking) {
     if (rule === "TOP_UNIQUE") {
       out.set(r.playerId, r.tiedForWin ? shooterValue : 0);
+    } else if (rule === "ESCALATION_INVERSE") {
+      out.set(r.playerId, r.finalRank === 1 ? shooterValue : n - r.finalRank + 1);
     } else {
       out.set(r.playerId, r.finalRank === n ? shooterValue : r.finalRank);
     }

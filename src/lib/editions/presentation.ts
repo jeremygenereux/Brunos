@@ -2,6 +2,7 @@ import "server-only";
 import type { createClient } from "@/lib/supabase/server";
 import { computeEditionResultRows } from "./snapshot";
 import type { Category, PresentEdition, RankRow, RecapRow } from "./presentation-types";
+import type { DrinkRule } from "@/lib/scoring/types";
 import { fetchAllRows } from "@/lib/supabase/fetch-all";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
@@ -134,7 +135,7 @@ export async function loadPresentation(
     questionId: string,
     audience: "players" | "jury",
     format: string,
-    rule: "ESCALATION" | "TOP_UNIQUE",
+    rule: DrinkRule,
   ): RankRow[] => {
     const sorted = rows
       .filter((r) => r.question_id === questionId && r.audience === audience)
@@ -154,17 +155,22 @@ export async function loadPresentation(
             ? r.borda_score === top.borda_score
             : r.vote_count === top.vote_count
           : false,
+      // Qui cale, selon la règle effective. En « gagnant boit » c'est le
+      // PREMIER ; se rabattre sur « drinks > 0 » y marquerait toute la table,
+      // puisque tout le monde boit quelque chose.
       isShooter:
         audience === "players"
           ? rule === "ESCALATION"
             ? r.final_rank === n
-            : r.drinks > 0
+            : rule === "ESCALATION_INVERSE"
+              ? r.final_rank === 1
+              : r.drinks > 0
           : false,
     }));
   };
 
   const categories: Category[] = questions.map((q, i) => {
-    const rule = (q.drink_rule_override ?? edition.drink_rule) as "ESCALATION" | "TOP_UNIQUE";
+    const rule = (q.drink_rule_override ?? edition.drink_rule) as DrinkRule;
     return {
       questionId: q.id,
       index: i,

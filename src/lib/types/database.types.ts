@@ -785,7 +785,7 @@ export type Database = {
       vote_is_in_open_window: { Args: { p_vote: string }; Returns: boolean }
     }
     Enums: {
-      drink_rule: "TOP_UNIQUE" | "ESCALATION"
+      drink_rule: "TOP_UNIQUE" | "ESCALATION" | "ESCALATION_INVERSE"
       edition_state:
         | "CONSTRUCTION"
         | "SENT_FOR_VOTE"
@@ -928,7 +928,7 @@ export const Constants = {
   },
   public: {
     Enums: {
-      drink_rule: ["TOP_UNIQUE", "ESCALATION"],
+      drink_rule: ["TOP_UNIQUE", "ESCALATION", "ESCALATION_INVERSE"],
       edition_state: [
         "CONSTRUCTION",
         "SENT_FOR_VOTE",

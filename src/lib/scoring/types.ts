@@ -1,4 +1,4 @@
-export type DrinkRule = "TOP_UNIQUE" | "ESCALATION";
+export type DrinkRule = "TOP_UNIQUE" | "ESCALATION" | "ESCALATION_INVERSE";
 export type QuestionFormat = "ranking" | "single_choice";
 
 /**

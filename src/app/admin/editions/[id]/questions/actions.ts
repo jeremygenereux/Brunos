@@ -3,8 +3,26 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { requireAdmin } from "@/lib/auth/guards";
+import type { DrinkRule } from "@/lib/editions/drink-rule";
 
 export type QuestionState = { error: string | null; success?: boolean };
+
+const RANKING_RULES = ["ESCALATION", "ESCALATION_INVERSE"] as const;
+
+/**
+ * La règle découle du FORMAT et n'est pas négociable :
+ *  - un choix unique fait caler la personne désignée, un point ;
+ *  - un classement fait boire tout le monde, le shooter tombant en tête
+ *    (« gagnant boit ») ou en queue (« perdant boit »), jamais TOP_UNIQUE.
+ * Le déclencheur `questions_force_rule` l'impose aussi en base ; ceci n'est
+ * que la première barrière.
+ */
+function ruleForFormat(format: string, wanted: string): DrinkRule {
+  if (format === "single_choice") return "TOP_UNIQUE";
+  return (RANKING_RULES as readonly string[]).includes(wanted)
+    ? (wanted as DrinkRule)
+    : "ESCALATION_INVERSE";
+}
 
 export async function addQuestion(
   _prev: QuestionState,
@@ -21,7 +39,7 @@ export async function addQuestion(
   if (format !== "ranking" && format !== "single_choice") {
     return { error: "Format invalide." };
   }
-  const ruleOverride = drinkRule === "ESCALATION" || drinkRule === "TOP_UNIQUE" ? drinkRule : null;
+  const ruleOverride = ruleForFormat(format, drinkRule);
 
   const supabase = await createClient();
   const { data: last } = await supabase
@@ -55,12 +73,14 @@ export async function setQuestionRule(
   rule: string,
 ): Promise<QuestionState> {
   await requireAdmin();
-  if (rule !== "ESCALATION" && rule !== "TOP_UNIQUE") return { error: "Règle invalide." };
+  if (!(RANKING_RULES as readonly string[]).includes(rule)) return { error: "Règle invalide." };
 
   const supabase = await createClient();
+  // Le déclencheur en base ramènera un choix unique à TOP_UNIQUE quoi qu'il
+  // arrive ; on n'a donc pas à relire le format ici.
   const { error } = await supabase
     .from("questions")
-    .update({ drink_rule_override: rule })
+    .update({ drink_rule_override: rule as DrinkRule })
     .eq("id", questionId);
   if (error) return { error: error.message };
 
