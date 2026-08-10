@@ -73,19 +73,19 @@ export const DRAMA_CATALOGUE: {
   {
     kind: "protest_vote",
     title: "À contre-courant",
-    blurb: "Un bulletin exactement inverse du verdict final.",
+    blurb: "Un vote exactement à l'envers du résultat.",
     rules: ["ESCALATION", "ESCALATION_INVERSE"],
   },
   {
     kind: "unanimous_first",
     title: "Sans appel",
-    blurb: "Celui qui cale a été désigné à l'unanimité.",
+    blurb: "Tout le monde a voté pareil.",
     rules: ["ESCALATION", "ESCALATION_INVERSE", "TOP_UNIQUE"],
   },
   {
     kind: "self_delusion",
     title: "Dans le déni",
-    blurb: "Celui qui cale s'était placé à l'autre bout.",
+    blurb: "Celui qui boit s'était mis à l'autre bout.",
     rules: ["ESCALATION", "ESCALATION_INVERSE"],
   },
   {
@@ -95,25 +95,25 @@ export const DRAMA_CATALOGUE: {
     // boire l'un l'autre. Les cartes, elles, restent distinctes en scène.
     kind: "mutual_last",
     title: "Rancune · Admiration mutuelle",
-    blurb: "Deux joueurs se sont mutuellement envoyés boire.",
+    blurb: "Deux joueurs s'envoient boire l'un l'autre.",
     rules: ["ESCALATION", "ESCALATION_INVERSE"],
   },
   {
     kind: "sacrificed_friend",
     title: "Sacrifice humain",
-    blurb: "Envoyer au shooter quelqu'un qui vous avait complètement épargné.",
+    blurb: "Envoyer au shooter quelqu'un qui vous avait protégé.",
     rules: ["ESCALATION", "ESCALATION_INVERSE"],
   },
   {
     kind: "lone_defender",
     title: "Joueur défensif",
-    blurb: "Une seule personne a épargné le caleur.",
+    blurb: "Une seule personne a protégé celui qui boit.",
     rules: ["ESCALATION", "ESCALATION_INVERSE"],
   },
   {
     kind: "self_top",
     title: "Sans complexe · Aucune illusion",
-    blurb: "Se placer soi-même du côté qui cale, ou du côté épargné.",
+    blurb: "Mettre son propre nom tout en haut ou tout en bas.",
     rules: ["ESCALATION", "ESCALATION_INVERSE", "TOP_UNIQUE"],
   },
 ];
@@ -160,7 +160,7 @@ export function buildDramaCards(input: DramaInput): DramaCard[] {
         cards.push({
           kind: "protest_vote",
           title: "À contre-courant",
-          detail: `${b.voterName} a rendu un bulletin exactement inverse du classement final.`,
+          detail: `${b.voterName} a voté exactement à l'envers du résultat.`,
         });
       }
     }
@@ -186,7 +186,9 @@ export function buildDramaCards(input: DramaInput): DramaCard[] {
         cards.push({
           kind: "unanimous_first",
           title: "Sans appel",
-          detail: `${nom(pid)} : première place à l'unanimité. Personne n'a hésité.`,
+          detail: estClassement
+            ? `Tout le monde a mis ${nom(pid)} en premier.`
+            : `Tout le monde a voté pour ${nom(pid)}.`,
         });
       }
     } else if (estClassement) {
@@ -195,7 +197,7 @@ export function buildDramaCards(input: DramaInput): DramaCard[] {
         cards.push({
           kind: "unanimous_last",
           title: "Sans appel",
-          detail: `${nom(pid)} : dernière place à l'unanimité. Personne n'a hésité.`,
+          detail: `Tout le monde a mis ${nom(pid)} en dernier.`,
         });
       }
     }
@@ -252,12 +254,12 @@ export function buildDramaCards(input: DramaInput): DramaCard[] {
           ? {
               kind: "mutual_last",
               title: "Rancune mutuelle",
-              detail: `${nom(a)} et ${nom(b)} se sont mutuellement classé·e·s dernier·ère·s.`,
+              detail: `${nom(a)} et ${nom(b)} ont mis le nom de l'autre en dernier.`,
             }
           : {
               kind: "mutual_first",
               title: "Admiration mutuelle",
-              detail: `${nom(a)} et ${nom(b)} se sont mutuellement classé·e·s premier·ère·s.`,
+              detail: `${nom(a)} et ${nom(b)} ont mis le nom de l'autre en premier.`,
             },
       );
     }
@@ -280,7 +282,7 @@ export function buildDramaCards(input: DramaInput): DramaCard[] {
         cards.push({
           kind: "sacrificed_friend",
           title: "Sacrifice humain",
-          detail: `${bourreau.voterName} a envoyé ${nom(victime)} au shooter, qui l'avait pourtant épargné·e.`,
+          detail: `${bourreau.voterName} a envoyé ${nom(victime)} au shooter. ${nom(victime)} avait pourtant protégé ${bourreau.voterName}.`,
         });
       }
     }
@@ -298,7 +300,7 @@ export function buildDramaCards(input: DramaInput): DramaCard[] {
         cards.push({
           kind: "lone_defender",
           title: "Joueur défensif",
-          detail: `${defenseurs[0].voterName} est le seul à avoir épargné ${nom(victime)}.`,
+          detail: `Une seule personne a protégé ${nom(victime)} : ${defenseurs[0].voterName}.`,
         });
       }
     }
@@ -324,8 +326,8 @@ export function buildDramaCards(input: DramaInput): DramaCard[] {
         kind: "self_top",
         title: "Aucune illusion",
         detail: estClassement
-          ? `${b.voterName} a pris ${rule === "ESCALATION" ? "la dernière" : "la première"} place, celle qui cale.`
-          : `${b.voterName} a voté pour soi, en sachant ce que ça coûte.`,
+          ? `${b.voterName} a mis son propre nom ${rule === "ESCALATION" ? "en dernier" : "en premier"}, là où on boit.`
+          : `${b.voterName} a voté pour son propre nom.`,
       });
     } else if (estClassement && soi === rangClement(b)) {
       // Masquée quand « Dans le déni » vise déjà cette personne : lui
@@ -334,7 +336,7 @@ export function buildDramaCards(input: DramaInput): DramaCard[] {
       cards.push({
         kind: "self_top",
         title: "Sans complexe",
-        detail: `${b.voterName} a pris ${rule === "ESCALATION" ? "la première" : "la dernière"} place, celle qui ne coûte rien.`,
+        detail: `${b.voterName} a mis son propre nom ${rule === "ESCALATION" ? "en premier" : "en dernier"}, là où on ne boit pas.`,
       });
     }
   }

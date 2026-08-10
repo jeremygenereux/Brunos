@@ -64,8 +64,8 @@ export function detectDelusions(
         title: "Dans le déni",
         detail:
           rule === "ESCALATION"
-            ? `${b.voterName} s'était donné la première place. Le verdict l'envoie caler.`
-            : `${b.voterName} s'était mis·e bon·ne dernier·ère. La table l'a désigné·e quand même : shooter.`,
+            ? `${b.voterName} a mis son propre nom en premier. C'est ${b.voterName} qui prend le shooter.`
+            : `${b.voterName} a mis son propre nom en dernier. C'est ${b.voterName} qui prend le shooter.`,
       });
     }
   }

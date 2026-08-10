@@ -47,7 +47,7 @@ describe("detectDelusions — perdant boit (ESCALATION)", () => {
     expect(cards).toHaveLength(1);
     expect(cards[0].kind).toBe("self_delusion");
     expect(cards[0].detail).toContain("Félix");
-    expect(cards[0].detail).toContain("première place");
+    expect(cards[0].detail).toContain("a mis son propre nom en premier");
   });
 
   it("ignore un caleur lucide, qui se savait en danger", () => {

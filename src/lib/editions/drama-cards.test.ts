@@ -126,7 +126,7 @@ describe("Sans complexe et Aucune illusion", () => {
     );
     const sienne = c.filter((x) => x.kind === "self_top" && x.title === "Aucune illusion");
     expect(sienne.length).toBeGreaterThanOrEqual(1);
-    expect(sienne.some((x) => x.detail.includes("dernière place"))).toBe(true);
+    expect(sienne.some((x) => x.detail.includes("en dernier"))).toBe(true);
   });
 
   it("« gagnant boit » : se mettre dernier, c'est se mettre à l'abri", () => {
