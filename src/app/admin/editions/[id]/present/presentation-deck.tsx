@@ -470,42 +470,29 @@ export function PresentationDeck({
             {step >= picksStep && picks.length > 0 && (
               <div
                 key="picks"
-                className={`flex w-full flex-col items-center gap-6 ${
-                  picks.length > 6 ? "max-w-6xl" : "max-w-3xl"
-                }`}
+                className="flex w-full max-w-5xl flex-col items-center gap-6"
               >
                 <p className="text-or-400/70 font-sans text-base tracking-[0.4em] uppercase">
                   Qui a désigné qui
                 </p>
-                {/* Les DEUX noms. Un visage de 48 px ne se reconnaît pas du
-                    fond de la salle, et une flèche dont on ignore l'origine ne
-                    raconte rien : c'est le couple votant → désigné qui fait la
-                    diapositive. Une colonne tant que possible — à deux, les
-                    noms composés se faisaient tronquer, ce qui est pire que de
-                    ne rien afficher. */}
-                <ul
-                  className="grid w-full gap-x-8 gap-y-4"
-                  style={{
-                    gridTemplateColumns: `repeat(${picks.length > 6 ? 2 : 1}, minmax(0, 1fr))`,
-                  }}
-                >
+                {/* Les visages seuls. La salle vient de passer une diapositive
+                    entière sur « Les joueurs » puis sur le classement : elle
+                    sait qui est qui, et deux portraits reliés par une flèche se
+                    lisent plus vite qu'une ligne de texte. On les monte à 88 px
+                    — la place libérée par les noms sert à les rendre
+                    reconnaissables de loin. */}
+                <ul className="flex flex-wrap items-center justify-center gap-x-10 gap-y-6">
                   {picks.map((pick, i) => (
                     <li
                       key={`${pick.voterName}-${pick.targetPlayerId}`}
-                      className="brunos-rise brunos-glass border-or-400/15 flex items-center gap-3 rounded-full border py-2 pr-5 pl-2"
+                      className="brunos-rise brunos-glass border-or-400/15 flex items-center gap-4 rounded-full border p-2"
                       style={{ animationDelay: `${i * 110}ms` }}
                     >
-                      <Avatar name={pick.voterName} headshot={pick.voterHeadshot} size={48} />
-                      <span className="text-ivoire-muted min-w-0 flex-1 truncate text-right font-sans text-lg sm:text-xl">
-                        {pick.voterName}
-                      </span>
-                      <span className="text-or-400/70 font-display shrink-0 text-3xl leading-none">
+                      <Avatar name={pick.voterName} headshot={pick.voterHeadshot} size={88} />
+                      <span className="text-or-400/70 font-display shrink-0 text-4xl leading-none">
                         →
                       </span>
-                      <Avatar name={pick.targetName} headshot={pick.targetHeadshot} size={48} />
-                      <span className="text-ivoire min-w-0 flex-1 truncate font-sans text-lg sm:text-xl">
-                        {pick.targetName}
-                      </span>
+                      <Avatar name={pick.targetName} headshot={pick.targetHeadshot} size={88} />
                     </li>
                   ))}
                 </ul>

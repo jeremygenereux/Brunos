@@ -32,6 +32,28 @@ export type EditionReveal = {
   categories: CategoryReveal[];
 };
 
+/**
+ * Recolle le dévoilement (déboules, désignations) aux catégories de la
+ * présentation.
+ *
+ * Les DEUX présentations — celle de l'admin et celle de l'archive — passent
+ * par ici. Le branchement était recopié dans chacune, et l'archive avait fini
+ * par transmettre les déboules sans les désignations : la diapositive « qui a
+ * désigné qui » n'y apparaissait jamais. Un seul endroit, plus de divergence
+ * possible.
+ */
+export function withReveal<T extends { questionId: string }>(
+  categories: T[],
+  reveal: EditionReveal,
+) {
+  const parQuestion = new Map(reveal.categories.map((c) => [c.questionId, c]));
+  return categories.map((c) => ({
+    ...c,
+    drama: parQuestion.get(c.questionId)?.drama ?? [],
+    picks: parQuestion.get(c.questionId)?.picks ?? [],
+  }));
+}
+
 function personName(people: unknown): string {
   if (!people) return "Sans nom";
   if (Array.isArray(people)) {

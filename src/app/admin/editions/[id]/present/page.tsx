@@ -4,7 +4,7 @@ import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { loadPresentation } from "@/lib/editions/presentation";
-import { loadEditionVoteReveal } from "@/lib/editions/drama";
+import { loadEditionVoteReveal, withReveal } from "@/lib/editions/drama";
 import { STATE_ORDER } from "@/lib/editions/state-machine";
 import { PresentationDeck } from "./presentation-deck";
 
@@ -60,13 +60,7 @@ export default async function PresentPage({ params }: { params: Promise<{ id: st
   }
 
   const reveal = await loadEditionVoteReveal(supabase, id);
-  const dramaByQuestion = new Map(reveal.categories.map((c) => [c.questionId, c.drama]));
-  const picksByQuestion = new Map(reveal.categories.map((c) => [c.questionId, c.picks]));
-  const categories = data.categories.map((c) => ({
-    ...c,
-    drama: dramaByQuestion.get(c.questionId) ?? [],
-    picks: picksByQuestion.get(c.questionId) ?? [],
-  }));
+  const categories = withReveal(data.categories, reveal);
 
   return <PresentationDeck edition={edition} categories={categories} recap={data.recap} />;
 }
