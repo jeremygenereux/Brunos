@@ -12,7 +12,8 @@ import type {
 import { ArchiveButton } from "./archive-button";
 import { cascadeOf } from "@/lib/editions/reveal-order";
 import type { RankGroup } from "@/lib/editions/rank-groups";
-import { DRAMA_MAX_ON_STAGE } from "@/lib/editions/drama-cards";
+import { DRAMA_MAX_ON_STAGE, dramaCatalogueFor } from "@/lib/editions/drama-cards";
+import type { DrinkRule } from "@/lib/scoring/types";
 import { questionModesFor } from "@/lib/editions/question-modes";
 import { ChoiceGlyph, ModeCard, RankingGlyph } from "@/components/question-mode";
 import { ReactiveParticles, AwardCategoryReveal } from "@/components/award";
@@ -74,10 +75,12 @@ export function PresentationDeck({
 }) {
   const quitHref = backHref ?? `/admin/editions/${edition.id}`;
 
-  // Enchaînement : ouverture → règlement → catégories → relevé.
+  // Enchaînement : ouverture → tablée → règlement → déboules → catégories → relevé.
   type Slide =
     | { type: "intro" }
+    | { type: "players" }
     | { type: "rules" }
+    | { type: "dramaGuide" }
     | { type: "category"; cat: Category }
     | { type: "recap" };
 
@@ -87,14 +90,28 @@ export function PresentationDeck({
     [categories, edition.drinkRule],
   );
 
+  const catalogue = useMemo(
+    () =>
+      dramaCatalogueFor(
+        categories.map((c) => (c.rule ?? edition.drinkRule) as DrinkRule),
+      ),
+    [categories, edition.drinkRule],
+  );
+
   const slides = useMemo<Slide[]>(
     () => [
       { type: "intro" },
+      // La tablée avant le règlement : on présente les gens avant de dire ce
+      // qu'on va leur faire boire.
+      ...(recap.length > 0 ? [{ type: "players" as const }] : []),
       { type: "rules" },
+      // Et ce qui PEUT tomber, juste après les règles : la salle guette
+      // ensuite les déboules au lieu de les découvrir sans contexte.
+      ...(catalogue.length > 0 ? [{ type: "dramaGuide" as const }] : []),
       ...categories.map((cat) => ({ type: "category" as const, cat })),
       { type: "recap" },
     ],
-    [categories],
+    [categories, recap.length, catalogue.length],
   );
   const lastSlide = slides.length - 1;
 
@@ -111,7 +128,9 @@ export function PresentationDeck({
       if (sl?.type !== "category") return 0;
       if (sl.cat.players.length === 0) return 0;
       const hasDrama = Boolean(sl.cat.drama && sl.cat.drama.length > 0);
-      return 1 + (hasDrama ? 1 : 0);
+      const hasPicks = Boolean(sl.cat.picks && sl.cat.picks.length > 0);
+      // Pas de clic mort : chaque étape n'existe que si elle a du contenu.
+      return 1 + (hasDrama ? 1 : 0) + (hasPicks ? 1 : 0);
     },
     [slides],
   );
@@ -171,6 +190,8 @@ export function PresentationDeck({
   const currentSlide = slides[slide];
   const isIntro = currentSlide?.type === "intro";
   const isRules = currentSlide?.type === "rules";
+  const isPlayers = currentSlide?.type === "players";
+  const isDramaGuide = currentSlide?.type === "dramaGuide";
   const isRecap = currentSlide?.type === "recap";
   const cat = currentSlide?.type === "category" ? currentSlide.cat : null;
   const cascade = cascadeOf(cat?.players ?? []);
@@ -178,6 +199,9 @@ export function PresentationDeck({
   // Le classement de l'entourage est mis en pause : après la cascade, seules
   // les déboules restent.
   const dramaStep = 2;
+  // Les flèches viennent APRÈS les déboules, ou à leur place s'il n'y en a pas.
+  const picksStep = dramaStep + ((cat?.drama?.length ?? 0) > 0 ? 1 : 0);
+  const picks = cat?.picks ?? [];
   // La scène plafonne à quatre déboules : au-delà, la diapositive déborde et
   // se fait couper, et plus personne ne lit rien. Elles arrivent déjà triées
   // par priorité, donc on garde les plus racontables. L'ARCHIVE, elle, les
@@ -191,14 +215,21 @@ export function PresentationDeck({
       (step >= 1 && shooters.length
         ? `. ${shooters.flatMap((g) => g.players.map((p) => p.name)).join(", ")}.`
         : "") +
-      (step >= dramaStep && dramaOnStage.length
+      (step === dramaStep && dramaOnStage.length
         ? ` ${dramaOnStage.map((d) => `${d.title}. ${d.detail}`).join(" ")}`
+        : "") +
+      (step >= picksStep && picks.length
+        ? ` Qui a désigné qui. ${picks.map((p) => `${p.voterName} a désigné ${p.targetName}`).join(". ")}.`
         : "")
     : isRecap
       ? "Total des gorgées de la soirée."
       : isRules
         ? `Les règles de la soirée. ${modes.map((m) => `${m.title}. ${m.ballotNote} ${m.drinkNote}`).join(" ")}`
-        : `${edition.name}.`;
+        : isPlayers
+          ? `La tablée. ${recap.map((r) => r.name).join(", ")}.`
+          : isDramaGuide
+            ? `Les déboules possibles. ${catalogue.map((c) => `${c.title}. ${c.blurb}`).join(" ")}`
+            : `${edition.name}.`;
 
   return (
     <div
@@ -231,7 +262,11 @@ export function PresentationDeck({
                 ? "Total"
                 : isRules
                   ? "Règlement"
-                  : "Ouverture"}
+                  : isPlayers
+                    ? "La tablée"
+                    : isDramaGuide
+                      ? "Déboules"
+                      : "Ouverture"}
           </span>
           <button
             type="button"
@@ -263,6 +298,33 @@ export function PresentationDeck({
         {/* Le règlement porte les deux pictogrammes du bulletin : l'assemblée
             reconnaît en séance ce qu'elle a vu en votant, et découvre où tombe
             la charge AVANT le premier verdict plutôt que pendant. */}
+        {/* La tablée. On nomme et on montre tout le monde AVANT d'annoncer
+            les règles : la salle sait alors de qui on parle toute la soirée. */}
+        {isPlayers && (
+          <div key="players" className="brunos-fade flex w-full max-w-6xl flex-col items-center gap-10">
+            <Kicker>La tablée</Kicker>
+            <h2 className="text-ivoire font-display text-5xl leading-tight font-semibold sm:text-6xl">
+              {recap.length} nommé{recap.length > 1 ? "s" : ""} ce soir
+            </h2>
+            <ul className="flex flex-wrap items-start justify-center gap-x-10 gap-y-8">
+              {recap.map((r, i) => (
+                <li
+                  key={r.playerId}
+                  className="brunos-rise flex w-40 flex-col items-center gap-3 sm:w-48"
+                  style={{ animationDelay: `${i * 110}ms` }}
+                >
+                  <span className="brunos-aura">
+                    <Avatar name={r.name} headshot={r.headshot} size={140} />
+                  </span>
+                  <span className="text-ivoire font-display text-2xl leading-tight font-semibold sm:text-3xl">
+                    {r.name}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         {isRules && (
           <div key="rules" className="brunos-fade flex w-full max-w-6xl flex-col items-center gap-10">
             <Kicker>Règlement</Kicker>
@@ -298,6 +360,35 @@ export function PresentationDeck({
           </div>
         )}
 
+        {/* Ce qui PEUT tomber. Annoncé après les règles pour que la salle
+            guette les déboules au lieu de les subir sans contexte. Filtré sur
+            les règles réellement présentes : on ne promet rien d'impossible. */}
+        {isDramaGuide && (
+          <div key="dramaGuide" className="brunos-fade flex w-full max-w-6xl flex-col items-center gap-8">
+            <Kicker>Les déboules</Kicker>
+            <h2 className="text-ivoire font-display text-4xl leading-tight font-semibold sm:text-5xl">
+              Ce que les bulletins peuvent trahir
+            </h2>
+            <ul className="grid w-full gap-4 sm:grid-cols-2">
+              {catalogue.map((c, i) => (
+                <li
+                  key={c.kind}
+                  className="brunos-rise brunos-glass border-or-400/20 rounded-2xl border px-6 py-5 text-left"
+                  style={{ animationDelay: `${i * 90}ms` }}
+                >
+                  <p className="text-or-300 font-display text-2xl font-semibold sm:text-3xl">
+                    {c.title}
+                  </p>
+                  <p className="text-ivoire-muted mt-1 font-sans text-lg sm:text-xl">{c.blurb}</p>
+                </li>
+              ))}
+            </ul>
+            <p className="text-or-400/60 font-sans text-base tracking-[0.3em] uppercase">
+              Elles ne se déclenchent pas toutes. C&apos;est vous qui décidez.
+            </p>
+          </div>
+        )}
+
         {cat && (
           <AwardCategoryReveal
             key={`cat-${cat.questionId}`}
@@ -318,7 +409,7 @@ export function PresentationDeck({
             renderAvatar={(p, size) => <Avatar name={p.name} headshot={p.headshot} size={size} />}
           >
 
-            {step >= dramaStep && dramaOnStage.length > 0 && (
+            {step === dramaStep && dramaOnStage.length > 0 && (
               <div key="drama" className="flex w-full max-w-4xl flex-col items-center gap-5">
                 <p className="text-or-400/70 font-sans text-base tracking-[0.4em] uppercase">
                   {dramaOnStage.length > 1 ? "Déboules" : "Déboule"}
@@ -335,6 +426,33 @@ export function PresentationDeck({
                     <p className="text-ivoire mt-2 font-sans text-xl sm:text-2xl">{d.detail}</p>
                   </div>
                 ))}
+              </div>
+            )}
+            {/* Qui a envoyé qui boire. Le classement complet de chacun serait
+                illisible à cinq mètres ; on ne montre que le choix décisif —
+                une flèche par votant, vers la personne qu'il a placée du côté
+                qui trinque. */}
+            {step >= picksStep && picks.length > 0 && (
+              <div key="picks" className="flex w-full max-w-5xl flex-col items-center gap-6">
+                <p className="text-or-400/70 font-sans text-base tracking-[0.4em] uppercase">
+                  Qui a désigné qui
+                </p>
+                <ul className="flex flex-wrap items-center justify-center gap-x-8 gap-y-5">
+                  {picks.map((pick, i) => (
+                    <li
+                      key={`${pick.voterName}-${pick.targetPlayerId}`}
+                      className="brunos-rise brunos-glass border-or-400/15 flex items-center gap-3 rounded-full border py-2 pr-5 pl-2"
+                      style={{ animationDelay: `${i * 110}ms` }}
+                    >
+                      <Avatar name={pick.voterName} headshot={pick.voterHeadshot} size={48} />
+                      <span className="text-or-400/70 font-display text-3xl leading-none">→</span>
+                      <Avatar name={pick.targetName} headshot={pick.targetHeadshot} size={48} />
+                      <span className="text-ivoire font-sans text-lg sm:text-xl">
+                        {pick.targetName}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
               </div>
             )}
           </AwardCategoryReveal>

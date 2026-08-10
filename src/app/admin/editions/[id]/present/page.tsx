@@ -61,9 +61,11 @@ export default async function PresentPage({ params }: { params: Promise<{ id: st
 
   const reveal = await loadEditionVoteReveal(supabase, id);
   const dramaByQuestion = new Map(reveal.categories.map((c) => [c.questionId, c.drama]));
+  const picksByQuestion = new Map(reveal.categories.map((c) => [c.questionId, c.picks]));
   const categories = data.categories.map((c) => ({
     ...c,
     drama: dramaByQuestion.get(c.questionId) ?? [],
+    picks: picksByQuestion.get(c.questionId) ?? [],
   }));
 
   return <PresentationDeck edition={edition} categories={categories} recap={data.recap} />;

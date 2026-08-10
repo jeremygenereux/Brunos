@@ -57,6 +57,75 @@ const PRIORITE: DramaCard["kind"][] = [
 /** Combien de déboules la scène affiche au maximum. L'archive n'en coupe aucune. */
 export const DRAMA_MAX_ON_STAGE = 4;
 
+/**
+ * Le catalogue annoncé en début de soirée : ce qui PEUT tomber.
+ *
+ * `rules` dit sous quelles règles la carte existe. On ne promet jamais une
+ * déboule impossible : annoncer « Admiration mutuelle » à une soirée sans
+ * aucune catégorie « gagnant boit », c'est faire attendre pour rien.
+ */
+export const DRAMA_CATALOGUE: {
+  kind: DramaCard["kind"];
+  title: string;
+  blurb: string;
+  rules: DrinkRule[];
+}[] = [
+  {
+    kind: "protest_vote",
+    title: "À contre-courant",
+    blurb: "Un bulletin exactement inverse du verdict final.",
+    rules: ["ESCALATION", "ESCALATION_INVERSE"],
+  },
+  {
+    kind: "unanimous_first",
+    title: "Sans appel",
+    blurb: "Celui qui cale a été désigné à l'unanimité.",
+    rules: ["ESCALATION", "ESCALATION_INVERSE", "TOP_UNIQUE"],
+  },
+  {
+    kind: "self_delusion",
+    title: "Dans le déni",
+    blurb: "Celui qui cale s'était placé à l'autre bout.",
+    rules: ["ESCALATION", "ESCALATION_INVERSE"],
+  },
+  {
+    kind: "mutual_last",
+    title: "Rancune mutuelle",
+    blurb: "Deux joueurs se sont mutuellement mis derniers.",
+    rules: ["ESCALATION"],
+  },
+  {
+    kind: "mutual_first",
+    title: "Admiration mutuelle",
+    blurb: "Deux joueurs se sont mutuellement envoyés boire.",
+    rules: ["ESCALATION_INVERSE"],
+  },
+  {
+    kind: "sacrificed_friend",
+    title: "Sacrifice humain",
+    blurb: "Envoyer au shooter quelqu'un qui vous avait épargné.",
+    rules: ["ESCALATION", "ESCALATION_INVERSE"],
+  },
+  {
+    kind: "lone_defender",
+    title: "Joueur défensif",
+    blurb: "Une seule personne a épargné le caleur.",
+    rules: ["ESCALATION", "ESCALATION_INVERSE"],
+  },
+  {
+    kind: "self_top",
+    title: "Sans complexe · Aucune illusion",
+    blurb: "Se placer soi-même en première position.",
+    rules: ["ESCALATION", "ESCALATION_INVERSE", "TOP_UNIQUE"],
+  },
+];
+
+/** Les déboules réellement possibles au vu des règles présentes ce soir. */
+export function dramaCatalogueFor(rules: DrinkRule[]) {
+  const presentes = new Set(rules);
+  return DRAMA_CATALOGUE.filter((c) => c.rules.some((r) => presentes.has(r)));
+}
+
 export function buildDramaCards(input: DramaInput): DramaCard[] {
   const { format, rule, ballots, official, playerName } = input;
   if (ballots.length === 0 || official.length === 0) return [];

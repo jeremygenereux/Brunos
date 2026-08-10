@@ -240,3 +240,27 @@ describe("priorité et plafond", () => {
     expect(cartes([], "ESCALATION")).toEqual([]);
   });
 });
+
+describe("le catalogue annoncé en début de soirée", () => {
+  it("ne promet pas une déboule impossible", async () => {
+    const { dramaCatalogueFor } = await import("./drama-cards");
+    // Une soirée sans « gagnant boit » ne peut pas produire d'admiration
+    // mutuelle : l'annoncer ferait attendre pour rien.
+    const kinds = dramaCatalogueFor(["ESCALATION"]).map((c) => c.kind);
+    expect(kinds).not.toContain("mutual_first");
+    expect(kinds).toContain("mutual_last");
+  });
+
+  it("s'ouvre dès qu'une règle la rend possible", async () => {
+    const { dramaCatalogueFor } = await import("./drama-cards");
+    const kinds = dramaCatalogueFor(["ESCALATION", "ESCALATION_INVERSE"]).map((c) => c.kind);
+    expect(kinds).toContain("mutual_first");
+    expect(kinds).toContain("mutual_last");
+  });
+
+  it("une soirée de désignations seules garde le strict nécessaire", async () => {
+    const { dramaCatalogueFor } = await import("./drama-cards");
+    const kinds = dramaCatalogueFor(["TOP_UNIQUE"]).map((c) => c.kind);
+    expect(kinds).toEqual(["unanimous_first", "self_top"]);
+  });
+});

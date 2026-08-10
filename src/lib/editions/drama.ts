@@ -1,6 +1,6 @@
 import "server-only";
 import type { createClient } from "@/lib/supabase/server";
-import type { DramaCard } from "./presentation-types";
+import type { DramaCard, DrinkPick } from "./presentation-types";
 import { buildDramaCards } from "./drama-cards";
 import { computeQuestionRanking } from "@/lib/scoring/rankings";
 import type { DrinkRule } from "@/lib/scoring/types";
@@ -24,6 +24,8 @@ export type CategoryReveal = {
   revealEnabled: boolean;
   ballots: VoterBallot[];
   drama: DramaCard[];
+  /** Qui a envoyé qui boire — une flèche par votant, pour la scène. */
+  picks: DrinkPick[];
 };
 
 export type EditionReveal = {
@@ -76,9 +78,18 @@ export async function loadEditionVoteReveal(
 
   const { data: rawPlayers } = await supabase
     .from("players")
-    .select("id, person_id, people(display_name)")
+    .select("id, person_id, headshot_url, people(display_name, headshot_url)")
     .eq("edition_id", editionId);
   const playerName = new Map((rawPlayers ?? []).map((p) => [p.id, personName(p.people)]));
+  // La photo de l'édition prime ; à défaut le portrait de la personne, qui la
+  // suit d'une année à l'autre. Même règle que la présentation.
+  const playerHeadshot = new Map(
+    (rawPlayers ?? []).map((p) => {
+      const pe = Array.isArray(p.people) ? p.people[0] : p.people;
+      const portrait = (pe as { headshot_url?: string | null } | null)?.headshot_url ?? null;
+      return [p.id, p.headshot_url ?? portrait];
+    }),
+  );
   // person → the player row they ARE in THIS edition (for self-detection).
   const playerByPerson = new Map((rawPlayers ?? []).map((p) => [p.person_id, p.id]));
 
@@ -176,6 +187,24 @@ export async function loadEditionVoteReveal(
       playerName,
     });
 
+    // Le choix qui compte : la personne que ce votant a placée du côté qui
+    // cale. Afficher les six classements complets serait illisible de loin ;
+    // une flèche par votant se lit d'un coup d'œil.
+    const picks: DrinkPick[] = [];
+    for (const b of playerBallots) {
+      const cible = rule === "ESCALATION" ? b.maxRank : 1;
+      for (const [pid, r] of b.byPlayer) {
+        if (r !== cible) continue;
+        picks.push({
+          voterName: b.voterName,
+          voterHeadshot: b.selfPlayerId ? (playerHeadshot.get(b.selfPlayerId) ?? null) : null,
+          targetPlayerId: pid,
+          targetName: playerName.get(pid) ?? "?",
+          targetHeadshot: playerHeadshot.get(pid) ?? null,
+        });
+      }
+    }
+
     // The reveal list shows EVERY voter (players + entourage).
     const voterBallots: VoterBallot[] = allBallots
       .map((b) => ({
@@ -196,6 +225,7 @@ export async function loadEditionVoteReveal(
       revealEnabled,
       ballots: gated ? [] : voterBallots,
       drama: gated ? [] : drama,
+      picks: gated ? [] : picks,
     };
   });
 

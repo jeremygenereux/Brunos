@@ -192,6 +192,7 @@ export async function loadPresentation(
       index: i,
       prompt: q.prompt,
       format: q.format,
+      rule,
       players: shapeRanking(q.id, "players", q.format, rule),
       jury: shapeRanking(q.id, "jury", q.format, rule),
     };

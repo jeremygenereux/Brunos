@@ -44,9 +44,22 @@ export type Category = {
   index: number;
   prompt: string;
   format: string;
+  /** Règle EFFECTIVE de la catégorie (surcharge de la question incluse). */
+  rule?: string;
   players: RankRow[];
   jury: RankRow[];
   drama?: DramaCard[];
+  /** Qui a envoyé qui à l'extrémité qui cale. Une flèche par votant. */
+  picks?: DrinkPick[];
+};
+
+/** Le choix décisif d'un votant : la personne qu'il a placée du côté qui cale. */
+export type DrinkPick = {
+  voterName: string;
+  voterHeadshot: string | null;
+  targetPlayerId: string;
+  targetName: string;
+  targetHeadshot: string | null;
 };
 
 export type RecapRow = {
