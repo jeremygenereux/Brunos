@@ -57,11 +57,11 @@ function Kicker({ children }: { children: React.ReactNode }) {
  * Répartit N portraits en rangées ÉGALES.
  *
  * `flex-wrap` remplit chaque ligne avant de passer à la suivante : à six, on
- * obtient 5 + 1, et la salle regarde le joueur esseulé au lieu de la tablée.
+ * obtient 5 + 1, et la salle regarde le joueur esseulé au lieu du groupe.
  * On fixe donc le nombre de rangées d'abord, puis on divise — 6 → 3 + 3,
  * 7 → 4 + 3, 12 → 4 + 4 + 4.
  */
-function grilleTablee(n: number) {
+function grillePortraits(n: number) {
   const MAX_PAR_RANGEE = 5;
   const rangees = Math.max(1, Math.ceil(n / MAX_PAR_RANGEE));
   return { colonnes: Math.max(1, Math.ceil(n / rangees)), rangees };
@@ -89,7 +89,7 @@ export function PresentationDeck({
 }) {
   const quitHref = backHref ?? `/admin/editions/${edition.id}`;
 
-  // Enchaînement : ouverture → tablée → règlement → déboules → catégories → relevé.
+  // Enchaînement : ouverture → joueurs → règlement → déboules → catégories → relevé.
   type Slide =
     | { type: "intro" }
     | { type: "players" }
@@ -115,7 +115,7 @@ export function PresentationDeck({
   const slides = useMemo<Slide[]>(
     () => [
       { type: "intro" },
-      // La tablée avant le règlement : on présente les gens avant de dire ce
+      // Les joueurs avant le règlement : on présente les gens avant de dire ce
       // qu'on va leur faire boire.
       ...(recap.length > 0 ? [{ type: "players" as const }] : []),
       { type: "rules" },
@@ -209,7 +209,7 @@ export function PresentationDeck({
   const isIntro = currentSlide?.type === "intro";
   const isRules = currentSlide?.type === "rules";
   const isPlayers = currentSlide?.type === "players";
-  const tablee = grilleTablee(recap.length);
+  const portraits = grillePortraits(recap.length);
   const isDramaGuide = currentSlide?.type === "dramaGuide";
   const isRecap = currentSlide?.type === "recap";
   const cat = currentSlide?.type === "category" ? currentSlide.cat : null;
@@ -245,7 +245,7 @@ export function PresentationDeck({
       : isRules
         ? `Les règles de la soirée. ${modes.map((m) => `${m.title}. ${m.ballotNote} ${m.drinkNote}`).join(" ")}`
         : isPlayers
-          ? `La tablée. ${recap.map((r) => r.name).join(", ")}.`
+          ? `Les joueurs. ${recap.map((r) => r.name).join(", ")}.`
           : isDramaGuide
             ? `Les déboules possibles. ${catalogue.map((c) => `${c.title}. ${c.blurb}`).join(" ")}`
             : `${edition.name}.`;
@@ -287,7 +287,7 @@ export function PresentationDeck({
                 : isRules
                   ? "Règlement"
                   : isPlayers
-                    ? "La tablée"
+                    ? "Les joueurs"
                     : isDramaGuide
                       ? "Déboules"
                       : "Ouverture"}
@@ -322,11 +322,11 @@ export function PresentationDeck({
         {/* Le règlement porte les deux pictogrammes du bulletin : l'assemblée
             reconnaît en séance ce qu'elle a vu en votant, et découvre où tombe
             la charge AVANT le premier verdict plutôt que pendant. */}
-        {/* La tablée. On nomme et on montre tout le monde AVANT d'annoncer
+        {/* Les joueurs. On nomme et on montre tout le monde AVANT d'annoncer
             les règles : la salle sait alors de qui on parle toute la soirée. */}
         {isPlayers && (
           <div key="players" className="brunos-fade flex w-full max-w-6xl flex-col items-center gap-10">
-            <Kicker>La tablée</Kicker>
+            <Kicker>Les joueurs</Kicker>
             <h2 className="text-ivoire font-display text-5xl leading-tight font-semibold sm:text-6xl">
               {recap.length} nommé{recap.length > 1 ? "s" : ""} ce soir
             </h2>
@@ -334,9 +334,9 @@ export function PresentationDeck({
                 rangées on resserre, sinon la dernière sort de l'écran. */}
             <ul
               className={`grid items-start justify-center gap-x-10 ${
-                tablee.rangees > 2 ? "gap-y-5" : "gap-y-8"
+                portraits.rangees > 2 ? "gap-y-5" : "gap-y-8"
               }`}
-              style={{ gridTemplateColumns: `repeat(${tablee.colonnes}, minmax(0, 1fr))` }}
+              style={{ gridTemplateColumns: `repeat(${portraits.colonnes}, minmax(0, 1fr))` }}
             >
               {recap.map((r, i) => (
                 <li
@@ -345,11 +345,11 @@ export function PresentationDeck({
                   style={{ animationDelay: `${i * 110}ms` }}
                 >
                   <span className="brunos-aura">
-                    <Avatar name={r.name} headshot={r.headshot} size={tablee.rangees > 2 ? 104 : 140} />
+                    <Avatar name={r.name} headshot={r.headshot} size={portraits.rangees > 2 ? 104 : 140} />
                   </span>
                   <span
                     className={`text-ivoire font-display leading-tight font-semibold ${
-                      tablee.rangees > 2 ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"
+                      portraits.rangees > 2 ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"
                     }`}
                   >
                     {r.name}

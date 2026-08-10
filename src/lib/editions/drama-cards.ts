@@ -89,16 +89,14 @@ export const DRAMA_CATALOGUE: {
     rules: ["ESCALATION", "ESCALATION_INVERSE"],
   },
   {
+    // Une seule entrée au catalogue pour les deux réciproques : elles ne
+    // peuvent pas tomber sur la même question, et le public n'a pas à retenir
+    // laquelle va avec quelle règle. Le geste annoncé est le même — s'envoyer
+    // boire l'un l'autre. Les cartes, elles, restent distinctes en scène.
     kind: "mutual_last",
-    title: "Rancune mutuelle",
-    blurb: "Deux joueurs se sont mutuellement mis derniers.",
-    rules: ["ESCALATION"],
-  },
-  {
-    kind: "mutual_first",
-    title: "Admiration mutuelle",
+    title: "Rancune · Admiration mutuelle",
     blurb: "Deux joueurs se sont mutuellement envoyés boire.",
-    rules: ["ESCALATION_INVERSE"],
+    rules: ["ESCALATION", "ESCALATION_INVERSE"],
   },
   {
     kind: "sacrificed_friend",

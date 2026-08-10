@@ -244,18 +244,23 @@ describe("priorité et plafond", () => {
 describe("le catalogue annoncé en début de soirée", () => {
   it("ne promet pas une déboule impossible", async () => {
     const { dramaCatalogueFor } = await import("./drama-cards");
-    // Une soirée sans « gagnant boit » ne peut pas produire d'admiration
-    // mutuelle : l'annoncer ferait attendre pour rien.
-    const kinds = dramaCatalogueFor(["ESCALATION"]).map((c) => c.kind);
-    expect(kinds).not.toContain("mutual_first");
-    expect(kinds).toContain("mutual_last");
+    // Une soirée de désignations seules ne peut produire ni rancune ni
+    // admiration : les annoncer ferait attendre pour rien.
+    const kinds = dramaCatalogueFor(["TOP_UNIQUE"]).map((c) => c.kind);
+    expect(kinds).not.toContain("mutual_last");
   });
 
-  it("s'ouvre dès qu'une règle la rend possible", async () => {
+  it("annonce les deux réciproques d'une seule voix", async () => {
     const { dramaCatalogueFor } = await import("./drama-cards");
-    const kinds = dramaCatalogueFor(["ESCALATION", "ESCALATION_INVERSE"]).map((c) => c.kind);
-    expect(kinds).toContain("mutual_first");
-    expect(kinds).toContain("mutual_last");
+    // Rancune et admiration sont le même geste vu sous deux règles ; le
+    // catalogue les présente ensemble, sous une entrée unique.
+    for (const regles of [["ESCALATION"], ["ESCALATION_INVERSE"]] as const) {
+      const mutuelles = dramaCatalogueFor([...regles]).filter((c) =>
+        c.kind.startsWith("mutual"),
+      );
+      expect(mutuelles).toHaveLength(1);
+      expect(mutuelles[0].title).toBe("Rancune · Admiration mutuelle");
+    }
   });
 
   it("une soirée de désignations seules garde le strict nécessaire", async () => {
