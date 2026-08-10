@@ -12,6 +12,7 @@ import type {
 import { ArchiveButton } from "./archive-button";
 import { cascadeOf } from "@/lib/editions/reveal-order";
 import type { RankGroup } from "@/lib/editions/rank-groups";
+import { DRAMA_MAX_ON_STAGE } from "@/lib/editions/drama-cards";
 import { questionModesFor } from "@/lib/editions/question-modes";
 import { ChoiceGlyph, ModeCard, RankingGlyph } from "@/components/question-mode";
 import { ReactiveParticles, AwardCategoryReveal } from "@/components/award";
@@ -177,6 +178,11 @@ export function PresentationDeck({
   // Le classement de l'entourage est mis en pause : après la cascade, seules
   // les déboules restent.
   const dramaStep = 2;
+  // La scène plafonne à quatre déboules : au-delà, la diapositive déborde et
+  // se fait couper, et plus personne ne lit rien. Elles arrivent déjà triées
+  // par priorité, donc on garde les plus racontables. L'ARCHIVE, elle, les
+  // montre toutes — on y lit à son rythme.
+  const dramaOnStage = (cat?.drama ?? []).slice(0, DRAMA_MAX_ON_STAGE);
   const noVotes = Boolean(cat && cat.players.length === 0);
   const maxTotal = recap.length ? Math.max(...recap.map((r) => r.total)) : 0;
 
@@ -185,8 +191,8 @@ export function PresentationDeck({
       (step >= 1 && shooters.length
         ? `. ${shooters.flatMap((g) => g.players.map((p) => p.name)).join(", ")}.`
         : "") +
-      (step >= dramaStep && cat.drama
-        ? ` ${cat.drama.map((d) => `${d.title}. ${d.detail}`).join(" ")}`
+      (step >= dramaStep && dramaOnStage.length
+        ? ` ${dramaOnStage.map((d) => `${d.title}. ${d.detail}`).join(" ")}`
         : "")
     : isRecap
       ? "Total des gorgées de la soirée."
@@ -312,12 +318,12 @@ export function PresentationDeck({
             renderAvatar={(p, size) => <Avatar name={p.name} headshot={p.headshot} size={size} />}
           >
 
-            {step >= dramaStep && cat.drama && cat.drama.length > 0 && (
+            {step >= dramaStep && dramaOnStage.length > 0 && (
               <div key="drama" className="flex w-full max-w-4xl flex-col items-center gap-5">
                 <p className="text-or-400/70 font-sans text-base tracking-[0.4em] uppercase">
-                  {cat.drama.length > 1 ? "Déboules" : "Déboule"}
+                  {dramaOnStage.length > 1 ? "Déboules" : "Déboule"}
                 </p>
-                {cat.drama.map((d, i) => (
+                {dramaOnStage.map((d, i) => (
                   <div
                     key={`${d.kind}-${i}`}
                     className="brunos-glass brunos-rise border-or-400/30 w-full rounded-2xl border px-6 py-5 text-center"

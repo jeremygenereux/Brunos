@@ -25,7 +25,16 @@ export type RankRow = {
 };
 
 export type DramaCard = {
-  kind: "mutual_last" | "unanimous_first" | "unanimous_last" | "self_top" | "self_delusion";
+  kind:
+    | "protest_vote"
+    | "unanimous_first"
+    | "unanimous_last"
+    | "self_delusion"
+    | "mutual_last"
+    | "mutual_first"
+    | "sacrificed_friend"
+    | "lone_defender"
+    | "self_top";
   title: string;
   detail: string;
 };

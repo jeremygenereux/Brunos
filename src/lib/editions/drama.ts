@@ -1,9 +1,9 @@
 import "server-only";
 import type { createClient } from "@/lib/supabase/server";
 import type { DramaCard } from "./presentation-types";
-import { detectDelusions } from "./delusion";
+import { buildDramaCards } from "./drama-cards";
 import { computeQuestionRanking } from "@/lib/scoring/rankings";
-import type { DrinkRule, QuestionBallot } from "@/lib/scoring/types";
+import type { DrinkRule } from "@/lib/scoring/types";
 import { fetchAllRows } from "@/lib/supabase/fetch-all";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
@@ -153,120 +153,28 @@ export async function loadEditionVoteReveal(
       });
     }
 
-    // Drama is a PLAYER-audience story — matches the displayed standings.
+    // Toute la logique des déboules vit dans un module PUR, testable à froid.
+    // Elle raconte l'histoire des JOUEURS : c'est leur classement qui est à
+    // l'écran, et c'est eux que les gorgées concernent.
     const playerBallots = allBallots.filter((b) => b.voterKind === "player");
-    const voterCount = playerBallots.length;
-    const drama: DramaCard[] = [];
-
-    if (q.format === "ranking") {
-      // Each player-voter's own last-place pick → mutual pairs.
-      const lastPickByPlayer = new Map<string, string>();
-      for (const b of playerBallots) {
-        if (!b.selfPlayerId) continue;
-        for (const [pid, rank] of b.byPlayer) {
-          if (rank === b.maxRank) lastPickByPlayer.set(b.selfPlayerId, pid);
-        }
-      }
-      const seen = new Set<string>();
-      for (const [a, b] of lastPickByPlayer) {
-        if (lastPickByPlayer.get(b) === a && a !== b && !seen.has(b)) {
-          seen.add(a);
-          seen.add(b);
-          drama.push({
-            kind: "mutual_last",
-            title: "Rancune mutuelle",
-            detail: `${playerName.get(a) ?? "?"} et ${playerName.get(b) ?? "?"} se sont mutuellement classé·e·s dernier·ère·s.`,
-          });
-        }
-      }
-
-      for (const b of playerBallots) {
-        if (b.selfPlayerId && b.byPlayer.get(b.selfPlayerId) === 1) {
-          drama.push({
-            kind: "self_top",
-            title: "Sans complexe",
-            detail: `${b.voterName} s'est classé·e 1er·ère.`,
-          });
-        }
-      }
-
-      if (voterCount >= 2) {
-        const n = Math.max(0, ...playerBallots.map((b) => b.maxRank));
-        const everyoneRanks = (rank: number) => {
-          const tally = new Map<string, number>();
-          for (const b of playerBallots) {
-            for (const [pid, r] of b.byPlayer)
-              if (r === rank) tally.set(pid, (tally.get(pid) ?? 0) + 1);
-          }
-          for (const [pid, c] of tally) if (c === voterCount) return pid;
-          return null;
-        };
-        const firstPid = everyoneRanks(1);
-        if (firstPid) {
-          drama.push({
-            kind: "unanimous_first",
-            title: "Plébiscite",
-            detail: `${playerName.get(firstPid) ?? "?"} : 1re place à l'unanimité.`,
-          });
-        }
-        const lastPid = everyoneRanks(n);
-        if (lastPid && lastPid !== firstPid) {
-          drama.push({
-            kind: "unanimous_last",
-            title: "Personne n'y a échappé",
-            detail: `${playerName.get(lastPid) ?? "?"} : dernier·ère pour tout le monde.`,
-          });
-        }
-      }
-
-      // Le déni : le caleur s'était placé à l'extrémité opposée. On rejoue le
-      // classement officiel avec le même calcul que la compilation, pour que
-      // la carte ne contredise jamais le verdict affiché.
-      if (playerBallots.length > 0) {
-        const rule = (q.drink_rule_override ?? editionRule) as DrinkRule;
-        const asBallots: QuestionBallot[] = playerBallots.map((b) =>
-          [...b.byPlayer.entries()].map(([playerId, rank]) => ({ playerId, rank })),
-        );
-        const official = computeQuestionRanking("ranking", asBallots, [...playerName.keys()]);
-        drama.push(
-          ...detectDelusions(
-            playerBallots.map((b) => ({
-              voterName: b.voterName,
-              selfPlayerId: b.selfPlayerId,
-              selfRank: b.selfPlayerId ? (b.byPlayer.get(b.selfPlayerId) ?? null) : null,
-              maxRank: b.maxRank,
-            })),
-            official,
-            rule,
-          ),
-        );
-      }
-    } else {
-      for (const b of playerBallots) {
-        if (b.selfPlayerId && b.byPlayer.get(b.selfPlayerId) === 1) {
-          drama.push({
-            kind: "self_top",
-            title: "Sans complexe",
-            detail: `${b.voterName} a voté pour soi.`,
-          });
-        }
-      }
-      if (voterCount >= 2) {
-        const pick = new Map<string, number>();
-        for (const b of playerBallots) {
-          for (const [pid, r] of b.byPlayer) if (r === 1) pick.set(pid, (pick.get(pid) ?? 0) + 1);
-        }
-        for (const [pid, c] of pick) {
-          if (c === voterCount) {
-            drama.push({
-              kind: "unanimous_first",
-              title: "Plébiscite",
-              detail: `${playerName.get(pid) ?? "?"} : choisi·e à l'unanimité.`,
-            });
-          }
-        }
-      }
-    }
+    const rule = (q.drink_rule_override ?? editionRule) as DrinkRule;
+    const official = computeQuestionRanking(
+      q.format === "ranking" ? "ranking" : "single_choice",
+      playerBallots.map((b) => [...b.byPlayer.entries()].map(([playerId, rank]) => ({ playerId, rank }))),
+      [...playerName.keys()],
+    );
+    const drama = buildDramaCards({
+      format: q.format,
+      rule,
+      ballots: playerBallots.map((b) => ({
+        voterName: b.voterName,
+        selfPlayerId: b.selfPlayerId,
+        byPlayer: b.byPlayer,
+        maxRank: b.maxRank,
+      })),
+      official,
+      playerName,
+    });
 
     // The reveal list shows EVERY voter (players + entourage).
     const voterBallots: VoterBallot[] = allBallots
