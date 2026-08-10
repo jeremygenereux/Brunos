@@ -116,6 +116,19 @@ export function AwardCategoryReveal({
   const hauteur = rows.reduce((n, r) => n + r.entry.people.length, 0);
   const dense = hauteur > 4;
 
+  // Les ex æquo calent tous, sans plafond : à quatre, des portraits de 200 px
+  // débordaient de la scène et la deuxième rangée sortait de l'écran. On
+  // rétrécit le verdict à mesure qu'il se partage — il reste le plus gros
+  // élément de la diapositive dans tous les cas.
+  const caleurs = shooters.flatMap((g) => g.people);
+  const tailleCaleur = caleurs.length > 3 ? 124 : caleurs.length === 3 ? 160 : 200;
+  const nomCaleur =
+    caleurs.length > 3
+      ? "text-3xl sm:text-4xl"
+      : caleurs.length === 3
+        ? "text-4xl sm:text-5xl"
+        : "text-5xl sm:text-6xl";
+
   return (
     <div className="flex w-full max-w-5xl flex-col items-center gap-8 text-center">
       {/* En-tête : glisse vers le haut quand la cascade arrive.
@@ -249,8 +262,12 @@ export function AwardCategoryReveal({
           {/* Le verdict : la seule grande face card de la scène. Elle se
               matérialise (flou qui se dissipe + montée d'échelle) — le geste
               le plus lent et le plus appuyé de toute la présentation. */}
-          <div className="flex flex-wrap items-end justify-center gap-12">
-            {shooters.flatMap((g) => g.people.map((p) => ({ ...p, group: g }))).map((p, i) => (
+          <div
+            className={`flex flex-wrap items-end justify-center ${
+              caleurs.length > 3 ? "gap-6" : caleurs.length === 3 ? "gap-8" : "gap-12"
+            }`}
+          >
+            {caleurs.map((p, i) => (
               <motion.div
                 key={p.id}
                 className="flex flex-col items-center gap-4"
@@ -266,13 +283,13 @@ export function AwardCategoryReveal({
                   delay: d(climaxDelay + i * 0.5),
                 }}
               >
-                <div className="brunos-aura">{renderAvatar(p, 200)}</div>
+                <div className="brunos-aura">{renderAvatar(p, tailleCaleur)}</div>
                 <CinematicRevealText
                   as="span"
                   splitBy="chars"
                   text={p.name}
                   delay={d(climaxDelay + 0.5 + i * 0.5)}
-                  className="text-or-300 font-display text-5xl font-semibold sm:text-6xl"
+                  className={`text-or-300 font-display font-semibold ${nomCaleur}`}
                 />
                 <motion.span
                   className="text-or-400/85 font-sans text-base tracking-[0.45em] uppercase sm:text-xl"

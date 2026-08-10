@@ -112,10 +112,11 @@ export default function AwardShowcasePage() {
   const current = slides[slide];
   const cat = current.type === "category" ? CATS[current.index] : null;
 
+  // Voir presentation-deck : `hidden` laisserait le focus défiler la scène.
   return (
     <div
       onClick={advance}
-      className="bg-noir-900 text-ivoire fixed inset-0 z-50 cursor-pointer overflow-hidden select-none"
+      className="bg-noir-900 text-ivoire fixed inset-0 z-50 cursor-pointer overflow-clip select-none"
     >
       <div className="brunos-stage-glow" />
       <ReactiveParticles pulseKey={`${slide}-${step}`} />

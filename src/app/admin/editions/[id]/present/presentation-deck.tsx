@@ -53,6 +53,20 @@ function Kicker({ children }: { children: React.ReactNode }) {
 
 /** Une POSITION du classement → une entrée de cascade. Les ex æquo y arrivent
  *  ensemble : un numéro, une ardoise, plusieurs visages. */
+/**
+ * Répartit N portraits en rangées ÉGALES.
+ *
+ * `flex-wrap` remplit chaque ligne avant de passer à la suivante : à six, on
+ * obtient 5 + 1, et la salle regarde le joueur esseulé au lieu de la tablée.
+ * On fixe donc le nombre de rangées d'abord, puis on divise — 6 → 3 + 3,
+ * 7 → 4 + 3, 12 → 4 + 4 + 4.
+ */
+function grilleTablee(n: number) {
+  const MAX_PAR_RANGEE = 5;
+  const rangees = Math.max(1, Math.ceil(n / MAX_PAR_RANGEE));
+  return { colonnes: Math.max(1, Math.ceil(n / rangees)), rangees };
+}
+
 function toEntry(g: RankGroup) {
   return {
     id: g.players[0].playerId,
@@ -161,10 +175,14 @@ export function PresentationDeck({
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      // Let focused controls (Quitter, Archive, prev/next, fullscreen) keep
-      // their native keyboard activation — don't hijack Enter/Space from them.
-      const t = e.target;
-      if (t instanceof HTMLElement && t.closest("button, a, input, select, textarea")) return;
+      // On ne cède au contrôle focalisé que les touches qui l'ACTIVENT.
+      // Tout céder condamnait l'opérateur : un seul clic sur « Suivant » y
+      // laissait le focus, et les flèches restaient mortes pour le reste de la
+      // soirée. Sur un bouton, une flèche n'a aucun sens natif — elle revient
+      // donc à la cérémonie. Les champs de saisie, eux, gardent tout.
+      const t = e.target instanceof HTMLElement ? e.target : null;
+      if (t?.closest("input, select, textarea") || t?.isContentEditable) return;
+      if (t?.closest("button, a") && (e.key === " " || e.key === "Enter")) return;
       if (["ArrowRight", " ", "ArrowDown", "PageDown", "Enter"].includes(e.key)) {
         e.preventDefault();
         advance();
@@ -191,6 +209,7 @@ export function PresentationDeck({
   const isIntro = currentSlide?.type === "intro";
   const isRules = currentSlide?.type === "rules";
   const isPlayers = currentSlide?.type === "players";
+  const tablee = grilleTablee(recap.length);
   const isDramaGuide = currentSlide?.type === "dramaGuide";
   const isRecap = currentSlide?.type === "recap";
   const cat = currentSlide?.type === "category" ? currentSlide.cat : null;
@@ -231,11 +250,16 @@ export function PresentationDeck({
             ? `Les déboules possibles. ${catalogue.map((c) => `${c.title}. ${c.blurb}`).join(" ")}`
             : `${edition.name}.`;
 
+  // `overflow-clip` et non `overflow-hidden` : le halo de fond déborde de 20 %
+  // pour masquer ses bords, ce qui rend un conteneur `hidden` DÉFILABLE. Cliquer
+  // « Suivant » donnait le focus au bouton, le navigateur défilait pour le
+  // révéler, et toute la scène restait décalée jusqu'à la fin de la soirée.
+  // `clip` découpe sans jamais créer de zone défilable.
   return (
     <div
       ref={containerRef}
       onClick={advance}
-      className="bg-noir-900 text-ivoire fixed inset-0 z-50 cursor-pointer overflow-hidden select-none"
+      className="bg-noir-900 text-ivoire fixed inset-0 z-50 cursor-pointer overflow-clip select-none"
     >
       <div className="brunos-stage-glow" />
       <ReactiveParticles pulseKey={`${slide}-${step}`} />
@@ -306,7 +330,14 @@ export function PresentationDeck({
             <h2 className="text-ivoire font-display text-5xl leading-tight font-semibold sm:text-6xl">
               {recap.length} nommé{recap.length > 1 ? "s" : ""} ce soir
             </h2>
-            <ul className="flex flex-wrap items-start justify-center gap-x-10 gap-y-8">
+            {/* La diapositive est en `overflow-hidden` : au-delà de deux
+                rangées on resserre, sinon la dernière sort de l'écran. */}
+            <ul
+              className={`grid items-start justify-center gap-x-10 ${
+                tablee.rangees > 2 ? "gap-y-5" : "gap-y-8"
+              }`}
+              style={{ gridTemplateColumns: `repeat(${tablee.colonnes}, minmax(0, 1fr))` }}
+            >
               {recap.map((r, i) => (
                 <li
                   key={r.playerId}
@@ -314,9 +345,13 @@ export function PresentationDeck({
                   style={{ animationDelay: `${i * 110}ms` }}
                 >
                   <span className="brunos-aura">
-                    <Avatar name={r.name} headshot={r.headshot} size={140} />
+                    <Avatar name={r.name} headshot={r.headshot} size={tablee.rangees > 2 ? 104 : 140} />
                   </span>
-                  <span className="text-ivoire font-display text-2xl leading-tight font-semibold sm:text-3xl">
+                  <span
+                    className={`text-ivoire font-display leading-tight font-semibold ${
+                      tablee.rangees > 2 ? "text-xl sm:text-2xl" : "text-2xl sm:text-3xl"
+                    }`}
+                  >
                     {r.name}
                   </span>
                 </li>
@@ -433,11 +468,27 @@ export function PresentationDeck({
                 une flèche par votant, vers la personne qu'il a placée du côté
                 qui trinque. */}
             {step >= picksStep && picks.length > 0 && (
-              <div key="picks" className="flex w-full max-w-5xl flex-col items-center gap-6">
+              <div
+                key="picks"
+                className={`flex w-full flex-col items-center gap-6 ${
+                  picks.length > 6 ? "max-w-6xl" : "max-w-3xl"
+                }`}
+              >
                 <p className="text-or-400/70 font-sans text-base tracking-[0.4em] uppercase">
                   Qui a désigné qui
                 </p>
-                <ul className="flex flex-wrap items-center justify-center gap-x-8 gap-y-5">
+                {/* Les DEUX noms. Un visage de 48 px ne se reconnaît pas du
+                    fond de la salle, et une flèche dont on ignore l'origine ne
+                    raconte rien : c'est le couple votant → désigné qui fait la
+                    diapositive. Une colonne tant que possible — à deux, les
+                    noms composés se faisaient tronquer, ce qui est pire que de
+                    ne rien afficher. */}
+                <ul
+                  className="grid w-full gap-x-8 gap-y-4"
+                  style={{
+                    gridTemplateColumns: `repeat(${picks.length > 6 ? 2 : 1}, minmax(0, 1fr))`,
+                  }}
+                >
                   {picks.map((pick, i) => (
                     <li
                       key={`${pick.voterName}-${pick.targetPlayerId}`}
@@ -445,9 +496,14 @@ export function PresentationDeck({
                       style={{ animationDelay: `${i * 110}ms` }}
                     >
                       <Avatar name={pick.voterName} headshot={pick.voterHeadshot} size={48} />
-                      <span className="text-or-400/70 font-display text-3xl leading-none">→</span>
+                      <span className="text-ivoire-muted min-w-0 flex-1 truncate text-right font-sans text-lg sm:text-xl">
+                        {pick.voterName}
+                      </span>
+                      <span className="text-or-400/70 font-display shrink-0 text-3xl leading-none">
+                        →
+                      </span>
                       <Avatar name={pick.targetName} headshot={pick.targetHeadshot} size={48} />
-                      <span className="text-ivoire font-sans text-lg sm:text-xl">
+                      <span className="text-ivoire min-w-0 flex-1 truncate font-sans text-lg sm:text-xl">
                         {pick.targetName}
                       </span>
                     </li>
