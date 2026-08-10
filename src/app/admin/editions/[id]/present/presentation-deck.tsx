@@ -408,7 +408,14 @@ export function PresentationDeck({
               {catalogue.map((c, i) => (
                 <li
                   key={c.kind}
-                  className="brunos-rise brunos-glass border-or-400/20 rounded-2xl border px-6 py-5 text-left"
+                  // En nombre impair, la dernière carte occupe les deux
+                  // colonnes : une case vide à côté d'elle se lit comme une
+                  // déboule qu'on aurait oublié d'écrire.
+                  className={`brunos-rise brunos-glass border-or-400/20 rounded-2xl border px-6 py-5 text-left ${
+                    catalogue.length % 2 === 1 && i === catalogue.length - 1
+                      ? "sm:col-span-2"
+                      : ""
+                  }`}
                   style={{ animationDelay: `${i * 90}ms` }}
                 >
                   <p className="text-or-300 font-display text-2xl font-semibold sm:text-3xl">
@@ -473,7 +480,7 @@ export function PresentationDeck({
                 className="flex w-full max-w-5xl flex-col items-center gap-6"
               >
                 <p className="text-or-400/70 font-sans text-base tracking-[0.4em] uppercase">
-                  Qui a désigné qui
+                  Qui a désigné qui pour le shooter
                 </p>
                 {/* Les visages seuls. La salle vient de passer une diapositive
                     entière sur « Les joueurs » puis sur le classement : elle

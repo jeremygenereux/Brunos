@@ -149,6 +149,13 @@ export async function setPersonHeadshot(
   if (!(file instanceof File) || file.size === 0) return { error: "Choisissez une image." };
   const ext = IMAGE_EXT[file.type];
   if (!ext) return { error: "L'image doit être en PNG, JPEG ou WebP." };
+  // Le formulaire réduit déjà la photo avant l'envoi ; ce garde-fou ne sert
+  // qu'au cas où cette réduction n'a pas pu se faire. Sans lui, un fichier trop
+  // lourd est refusé par la plateforme AVANT d'arriver ici, et l'utilisateur
+  // tombe sur une page d'erreur brute sans savoir pourquoi.
+  if (file.size > 4_000_000) {
+    return { error: "Image trop lourde. Reprenez-la en plus petit format." };
+  }
 
   const supabase = await createClient();
   const objectPath = `people/${personId}-${randomUUID()}.${ext}`;

@@ -101,7 +101,7 @@ export const DRAMA_CATALOGUE: {
   {
     kind: "sacrificed_friend",
     title: "Sacrifice humain",
-    blurb: "Envoyer au shooter quelqu'un qui vous avait épargné.",
+    blurb: "Envoyer au shooter quelqu'un qui vous avait complètement épargné.",
     rules: ["ESCALATION", "ESCALATION_INVERSE"],
   },
   {
@@ -113,7 +113,7 @@ export const DRAMA_CATALOGUE: {
   {
     kind: "self_top",
     title: "Sans complexe · Aucune illusion",
-    blurb: "Se placer soi-même en première position.",
+    blurb: "Se placer soi-même du côté qui cale, ou du côté épargné.",
     rules: ["ESCALATION", "ESCALATION_INVERSE", "TOP_UNIQUE"],
   },
 ];
@@ -305,29 +305,38 @@ export function buildDramaCards(input: DramaInput): DramaCard[] {
   }
 
   /* ── Sans complexe / Aucune illusion ─────────────────────────────────
-     Quelqu'un se place premier. Le sens bascule avec la règle : c'est de
-     l'aplomb quand la tête est la place flatteuse, et de la lucidité quand
-     c'est elle qui cale. */
+     Deux gestes OPPOSÉS, pas un seul geste vu sous deux règles :
+
+       • se mettre du côté qui CALE   → lucidité   → « Aucune illusion »
+       • se mettre du côté ÉPARGNÉ    → aplomb     → « Sans complexe »
+
+     Le déclencheur est donc l'extrémité, jamais le rang 1. Le tester sur la
+     tête ratait le cas le plus courant — se classer dernier quand c'est le
+     dernier qui boit. En désignation il n'y a pas de côté épargné : voter
+     pour soi, c'est se désigner, et seule la lucidité existe. */
   for (const b of ballots) {
-    if (!b.selfPlayerId || b.byPlayer.get(b.selfPlayerId) !== 1) continue;
-    if (enDeni.has(b.voterName)) continue;
-    cards.push(
-      rule === "ESCALATION"
-        ? {
-            kind: "self_top",
-            title: "Sans complexe",
-            detail: estClassement
-              ? `${b.voterName} s'est classé·e 1er·ère.`
-              : `${b.voterName} a voté pour soi.`,
-          }
-        : {
-            kind: "self_top",
-            title: "Aucune illusion",
-            detail: estClassement
-              ? `${b.voterName} s'est placé·e en tête, là où l'on cale.`
-              : `${b.voterName} a voté pour soi, en sachant ce que ça coûte.`,
-          },
-    );
+    if (!b.selfPlayerId) continue;
+    const soi = b.byPlayer.get(b.selfPlayerId);
+    if (soi === undefined) continue;
+
+    if (soi === rangQuiCale(b)) {
+      cards.push({
+        kind: "self_top",
+        title: "Aucune illusion",
+        detail: estClassement
+          ? `${b.voterName} a pris ${rule === "ESCALATION" ? "la dernière" : "la première"} place, celle qui cale.`
+          : `${b.voterName} a voté pour soi, en sachant ce que ça coûte.`,
+      });
+    } else if (estClassement && soi === rangClement(b)) {
+      // Masquée quand « Dans le déni » vise déjà cette personne : lui
+      // reprocher son aveuglement ET son aplomb, c'est le dire deux fois.
+      if (enDeni.has(b.voterName)) continue;
+      cards.push({
+        kind: "self_top",
+        title: "Sans complexe",
+        detail: `${b.voterName} a pris ${rule === "ESCALATION" ? "la première" : "la dernière"} place, celle qui ne coûte rien.`,
+      });
+    }
   }
 
   return cards.sort((a, b) => PRIORITE.indexOf(a.kind) - PRIORITE.indexOf(b.kind));

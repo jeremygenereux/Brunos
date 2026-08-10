@@ -113,6 +113,34 @@ describe("Rancune et Admiration mutuelles", () => {
 });
 
 describe("Sans complexe et Aucune illusion", () => {
+  it("« perdant boit » : se mettre DERNIER, c'est se désigner soi-même", () => {
+    // Le cas signalé en prod : la carte se testait sur le rang 1 et ratait
+    // l'auto-désignation la plus courante.
+    const c = cartes(
+      [
+        bulletin("a", "a", ["b", "c", "d", "a"]),
+        bulletin("b", "b", ["a", "c", "d", "b"]),
+        bulletin("c", "c", ["b", "a", "d", "c"]),
+      ],
+      "ESCALATION",
+    );
+    const sienne = c.filter((x) => x.kind === "self_top" && x.title === "Aucune illusion");
+    expect(sienne.length).toBeGreaterThanOrEqual(1);
+    expect(sienne.some((x) => x.detail.includes("dernière place"))).toBe(true);
+  });
+
+  it("« gagnant boit » : se mettre dernier, c'est se mettre à l'abri", () => {
+    const c = cartes(
+      [
+        bulletin("a", "a", ["b", "c", "d", "a"]),
+        bulletin("b", "b", ["c", "d", "a", "b"]),
+      ],
+      "ESCALATION_INVERSE",
+    );
+    expect(c.some((x) => x.title === "Sans complexe")).toBe(true);
+    expect(c.some((x) => x.title === "Aucune illusion")).toBe(false);
+  });
+
   it("« perdant boit » : se mettre premier, c'est de l'aplomb", () => {
     const c = cartes(
       [bulletin("a", "a", ["a", "b", "c", "d"]), bulletin("b", "b", ["b", "a", "c", "d"])],
