@@ -305,7 +305,7 @@ select
     when 'samuel'         then '/players/joueur-3.png'
     when 'vincent'        then '/players/joueur-4.png'
     when 'nicolas'        then '/players/joueur-5.png'
-    when 'gabriel' then '/players/joueur-6.png'
+    when 'gabriel'        then '/players/joueur-6.png'
     else 'https://placehold.co/512x512/0a0a0b/d4af37.png?text=' || pl.label
   end,
   pl.ord
