@@ -22,7 +22,7 @@ function row(
 
 describe("groupByRank", () => {
   it("réunit les ex æquo en UNE position", () => {
-    // Le cas réel : Amélie et Noé premiers, 15 gorgées chacun.
+    // Deux joueurs premiers ex æquo, 15 gorgées chacun.
     const g = groupByRank([
       row(1, 1, 15, { isWinner: true, isShooter: true }),
       row(2, 1, 15, { isWinner: true, isShooter: true }),
