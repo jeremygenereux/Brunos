@@ -20,6 +20,29 @@ sur invitation, non indexée.
 > row-level security on every table and the scoring logic kept pure and tested.
 > The interface, the code comments and the rest of this README are in French.
 
+## Aperçu
+
+L'application est privée : ces captures viennent du jeu de démonstration, dont
+les personnes, les portraits et les votes sont fictifs.
+
+![Une catégorie dévoilée : le classement position par position, un ex æquo à trois qui partage une seule ardoise, puis le shooter en grand](docs/screenshots/presentation-reveal.png)
+
+Le verdict d'une catégorie. Les gorgées montent avec le rang, les ex æquo
+occupent **une** position et boivent la même chose, et la personne qui prend le
+shooter arrive en dernier — jamais devinable par élimination.
+
+![Le catalogue des déboules annoncé en début de soirée, sept cartes en deux colonnes](docs/screenshots/presentation-deboules.png)
+![Les déboules d'une catégorie : sacrifice humain, et deux joueurs qui se sont mis premiers](docs/screenshots/presentation-cartes.png)
+
+Ce que les bulletins trahissent, annoncé au début puis révélé après chaque
+verdict. Le catalogue est filtré sur les règles réellement en jeu ce soir-là :
+on ne promet jamais une déboule impossible.
+
+<img src="docs/screenshots/bulletin-mobile.png" alt="Le bulletin sur téléphone : une catégorie à classer, poignées de glissement et flèches de réordonnancement" width="380">
+
+Le bulletin, sur téléphone. Le classement se fait au glisser-déposer ou aux
+flèches, et le verre marque la place qui paiera un shooter.
+
 ---
 
 ## Ce que fait l'application
