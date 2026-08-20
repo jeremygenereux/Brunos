@@ -1,5 +1,7 @@
 # Les Brunos
 
+[![CI](https://github.com/jeremygenereux/Brunos/actions/workflows/ci.yml/badge.svg)](https://github.com/jeremygenereux/Brunos/actions/workflows/ci.yml)
+
 Application web du gala annuel des **Brunos** : une remise de prix entre amis où
 l'on vote _who's most likely to_, où les classements décident qui boit quoi, et
 où les résultats sont dévoilés sur grand écran, façon Oscars.

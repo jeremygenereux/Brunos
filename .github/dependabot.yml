@@ -1,0 +1,36 @@
+version: 2
+
+# Les mises à jour mineures et correctives arrivent GROUPÉES, en une seule PR
+# par semaine. Sans regroupement, un projet de cette taille produit huit PR
+# hebdomadaires : on cesse de les lire au bout d'un mois, et le jour où une
+# faille arrive elle se noie dans le lot.
+#
+# Les montées de version MAJEURES restent séparées, une par PR : elles cassent,
+# et elles se relisent une par une.
+updates:
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 5
+    groups:
+      mineures:
+        update-types:
+          - minor
+          - patch
+    commit-message:
+      prefix: chore
+      include: scope
+
+  # Les actions GitHub bougent peu ; une fois par mois suffit.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: ci
