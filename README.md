@@ -11,6 +11,13 @@ sur invitation, non indexée.
 > voir [`LICENSE`](LICENSE). Les personnes, les lieux et les votes du jeu de
 > démonstration sont fictifs.
 
+> **In English** — Web app for a private annual awards night: friends rank each
+> other in _who's most likely to_ categories, a Borda count turns the ballots
+> into standings, the standings decide who drinks what, and the results are
+> revealed on a big screen. Built with Next.js 16, React 19 and Supabase, with
+> row-level security on every table and the scoring logic kept pure and tested.
+> The interface, the code comments and the rest of this README are in French.
+
 ---
 
 ## Ce que fait l'application
@@ -38,13 +45,35 @@ et une **règle de gorgées**, qui décide de ce que ça coûte.
 | `ranking`       | classe tous les nommés, du 1ᵉʳ au Nᵉ | Borda (somme des rangs) |
 | `single_choice` | désigne une seule personne           | décompte des voix       |
 
-| Règle        | Qui cale   | Et les autres                               |
-| ------------ | ---------- | ------------------------------------------- |
-| `TOP_UNIQUE` | le premier | rien du tout                                |
-| `ESCALATION` | le dernier | 1 gorgée au 1ᵉʳ, 2 au 2ᵉ, et ainsi de suite |
+La règle **découle du format**, imposée en base par déclencheur : une désignation
+et un classement ne peuvent pas se comporter pareil.
+
+| Règle                | S'applique à    | Qui prend le shooter | Et les autres                   |
+| -------------------- | --------------- | -------------------- | ------------------------------- |
+| `TOP_UNIQUE`         | `single_choice` | le plus voté         | rien du tout                    |
+| `ESCALATION`         | `ranking`       | le dernier           | 1 gorgée au 1ᵉʳ, 2 au 2ᵉ, etc.  |
+| `ESCALATION_INVERSE` | `ranking`       | le premier           | les suivants boivent en montant |
+
+Les deux variantes de classement punissent la même personne ; seul l'énoncé
+change de sens (« qui est le plus susceptible de… » contre « qui est le moins… »).
 
 Un shooter vaut un nombre de gorgées configurable par édition (8 par défaut), ce
 qui rend les charges comparables d'une catégorie à l'autre.
+
+### Les ex æquo
+
+Deux joueurs au même total de Borda sont **ex æquo, sans départage**, et boivent
+exactement la même chose — shooter compris, sans plafond sur le nombre de
+co-gagnants. Le classement porte donc deux rangs : `final_rank`, distinct par
+construction, n'ordonne que l'affichage ; `tied_rank` est le rang de compétition
+(1, 2, 2, 4), partagé, et c'est lui seul qui décide des gorgées. Calculer sur le
+rang d'affichage laissait un hachage d'identifiant désigner qui calait.
+
+### Les cercles
+
+Une personne peut appartenir à plusieurs cercles, et chaque cercle a son propre
+palmarès : archive, trophées et carrières sont cloisonnés, les gorgées de l'un
+ne s'additionnent jamais à celles de l'autre.
 
 ### L'égaliseur
 
