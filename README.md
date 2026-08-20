@@ -91,11 +91,22 @@ types de catégories.
 
 ### La révélation
 
-Le mode présentation déroule chaque catégorie en cascade, en réservant
-l'avant-dernière position pour la fin : sans cela, la dernière personne serait
-devinable par élimination.
-[`src/lib/editions/drama.ts`](src/lib/editions/drama.ts) en extrait au passage
-des anecdotes — rancunes mutuelles, plébiscites, vote pour soi-même.
+La soirée s'ouvre sur les joueurs, puis le règlement, puis le catalogue des
+déboules qui peuvent tomber — filtré sur les règles réellement présentes, pour
+ne jamais annoncer l'impossible. Chaque catégorie déroule ensuite sa cascade en
+réservant l'avant-dernière position pour la fin : sans cela, la dernière
+personne serait devinable par élimination. Après le verdict viennent les
+déboules, puis une flèche par votant vers la personne qu'il a envoyée boire.
+
+[`src/lib/editions/drama-cards.ts`](src/lib/editions/drama-cards.ts) détecte
+neuf déboules — bulletin à contre-courant, unanimité, déni, rancune ou
+admiration réciproque, sacrifice d'un allié, défenseur solitaire,
+auto-désignation. Chacune est restreinte à la règle sous laquelle elle a un
+sens : se classer mutuellement dernier est une rancune quand le dernier boit,
+et une politesse quand c'est le premier. Module pur, un test par déclencheur ;
+[`drama.ts`](src/lib/editions/drama.ts) ne fait que lire la base et lui passer
+les bulletins. La scène n'affiche que les quatre plus rares, l'archive les
+montre toutes.
 
 ---
 
