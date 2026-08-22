@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { questionDrinks, sumDrinks } from "./drinks";
+import { questionDrinks, shooterIdsOf, sumDrinks } from "./drinks";
 import type { PlayerScore } from "./types";
 
 function mkRanking(order: string[], tiedTop: string[] = [order[0]]): PlayerScore[] {
@@ -56,5 +56,86 @@ describe("sumDrinks", () => {
     );
     expect(t.get("a")).toBe(5);
     expect(t.get("b")).toBe(5);
+  });
+});
+
+describe("shooterIdsOf", () => {
+  const rangs = (paires: [string, number][]) =>
+    paires.map(([playerId, tiedRank]) => ({ playerId, tiedRank }));
+
+  it("« perdant boit » : le dernier rang, ex æquo compris", () => {
+    const r = rangs([
+      ["a", 1],
+      ["b", 2],
+      ["c", 3],
+      ["d", 3],
+    ]);
+    const d = questionDrinks(
+      r.map((x) => ({
+        ...x,
+        bordaScore: 0,
+        voteCount: null,
+        firstPlaceCount: 0,
+        finalRank: 1,
+        tiedForWin: false,
+      })),
+      "ESCALATION",
+      8,
+    );
+    expect([...shooterIdsOf(r, "ESCALATION", d)].sort()).toEqual(["c", "d"]);
+  });
+
+  it("« gagnant boit » : c'est la tête qui trinque", () => {
+    const r = rangs([
+      ["a", 1],
+      ["b", 1],
+      ["c", 3],
+    ]);
+    const d = questionDrinks(
+      r.map((x) => ({
+        ...x,
+        bordaScore: 0,
+        voteCount: null,
+        firstPlaceCount: 0,
+        finalRank: 1,
+        tiedForWin: false,
+      })),
+      "ESCALATION_INVERSE",
+      8,
+    );
+    expect([...shooterIdsOf(r, "ESCALATION_INVERSE", d)].sort()).toEqual(["a", "b"]);
+  });
+
+  it("désignation : seuls les plus votés, jamais le reste du classement", () => {
+    const r = rangs([
+      ["a", 1],
+      ["b", 2],
+      ["c", 3],
+    ]);
+    const d = questionDrinks(
+      r.map((x) => ({
+        ...x,
+        bordaScore: 0,
+        voteCount: null,
+        firstPlaceCount: 0,
+        finalRank: 1,
+        tiedForWin: false,
+      })),
+      "TOP_UNIQUE",
+      8,
+    );
+    expect([...shooterIdsOf(r, "TOP_UNIQUE", d)]).toEqual(["a"]);
+  });
+
+  it("sans bulletin, personne ne cale", () => {
+    const r = rangs([
+      ["a", 1],
+      ["b", 2],
+    ]);
+    const vide = new Map([
+      ["a", 0],
+      ["b", 0],
+    ]);
+    expect(shooterIdsOf(r, "ESCALATION", vide).size).toBe(0);
   });
 });

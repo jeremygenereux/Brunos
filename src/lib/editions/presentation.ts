@@ -4,6 +4,7 @@ import { computeEditionResultRows } from "./snapshot";
 import type { Category, PresentEdition, RankRow, RecapRow } from "./presentation-types";
 import type { DrinkRule } from "@/lib/scoring/types";
 import { fetchAllRows } from "@/lib/supabase/fetch-all";
+import { shooterIdsOf } from "@/lib/scoring/drinks";
 
 type Client = Awaited<ReturnType<typeof createClient>>;
 
@@ -158,7 +159,18 @@ export async function loadPresentation(
       }
       tiedRank.push(i > 0 && scoreOf(r) === scoreOf(sorted[i - 1]) ? tiedRank[i - 1] : i + 1);
     });
-    const dernierRang = tiedRank.reduce((max, v) => Math.max(max, v), 0);
+    // Qui cale : même fonction que la compilation, pour que l'écran de
+    // sélection et la scène ne puissent pas désigner deux personnes
+    // différentes. Elle exige des gorgées > 0, donc une ligne gelée
+    // incohérente n'affiche plus « shooter » sous quelqu'un qui ne boit rien.
+    const caleurs =
+      audience === "players"
+        ? shooterIdsOf(
+            sorted.map((r, i) => ({ playerId: r.player_id, tiedRank: tiedRank[i] })),
+            rule,
+            new Map(sorted.map((r) => [r.player_id, r.drinks])),
+          )
+        : new Set<string>();
 
     return sorted.map((r, i) => ({
       playerId: r.player_id,
@@ -172,16 +184,7 @@ export async function loadPresentation(
       // partagent, donc ils gagnent tous — ce que l'archive montrait déjà et
       // que la scène ignorait.
       isWinner: audience === "players" && tiedRank[i] === 1,
-      // Qui cale, selon la règle effective — toujours sur le rang PARTAGÉ,
-      // pour que deux ex æquo à l'extrémité qui trinque calent tous les deux.
-      isShooter:
-        audience === "players"
-          ? rule === "ESCALATION"
-            ? tiedRank[i] === dernierRang
-            : rule === "ESCALATION_INVERSE"
-              ? tiedRank[i] === 1
-              : r.drinks > 0
-          : false,
+      isShooter: caleurs.has(r.player_id),
     }));
   };
 

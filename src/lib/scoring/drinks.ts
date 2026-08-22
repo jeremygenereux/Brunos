@@ -51,6 +51,37 @@ export function questionDrinks(
   return out;
 }
 
+/**
+ * Qui prend le shooter sur une question.
+ *
+ * Même définition que `questionDrinks`, au même endroit : la règle de
+ * l'extrémité qui trinque est recopiée dès qu'on en a besoin ailleurs, et deux
+ * copies finissent toujours par diverger. La compilation et la présentation
+ * doivent désigner exactement les mêmes personnes.
+ *
+ * Sur une désignation il n'y a pas d'extrémité : boire, c'est caler. Sans
+ * bulletin, personne ne cale — un classement vide ne désigne pas un coupable.
+ */
+export function shooterIdsOf(
+  ranking: readonly { playerId: string; tiedRank: number }[],
+  rule: DrinkRule,
+  drinks: ReadonlyMap<string, number>,
+): Set<string> {
+  const dernierRang = ranking.reduce((max, r) => Math.max(max, r.tiedRank), 0);
+  const out = new Set<string>();
+  for (const r of ranking) {
+    if ((drinks.get(r.playerId) ?? 0) <= 0) continue;
+    const cale =
+      rule === "ESCALATION"
+        ? r.tiedRank === dernierRang
+        : rule === "ESCALATION_INVERSE"
+          ? r.tiedRank === 1
+          : true; // TOP_UNIQUE : seuls les plus votés ont des gorgées
+    if (cale) out.add(r.playerId);
+  }
+  return out;
+}
+
 /** Sum drink maps over several questions into per-player totals. */
 export function sumDrinks(
   perQuestion: Map<string, number>[],

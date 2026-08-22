@@ -1,16 +1,59 @@
 "use client";
 
 import { useState, useTransition } from "react";
+import Image from "next/image";
 import { equalize, type QuestionLoad } from "@/lib/scoring/equalizer";
 import { saveSelection, type SelectionResult } from "./actions";
 
-type Player = { id: string; name: string };
+type Player = { id: string; name: string; headshot: string | null };
 type Question = {
   id: string;
   prompt: string;
   format: string;
   drinks: Record<string, number>;
+  /** Qui prendrait le shooter si la question était retenue. */
+  shooterIds: string[];
 };
+
+/**
+ * Le visage de qui cale, sur la ligne de la question.
+ *
+ * L'écart max−min dit si la soirée est équilibrée, jamais QUI encaisse. En
+ * ajustant la sélection à la main on veut voir la même chose que la salle :
+ * des visages. Le nom reste en `title` et en texte de remplacement, pour
+ * l'infobulle et pour le lecteur d'écran.
+ */
+function Caleurs({ players }: { players: Player[] }) {
+  if (players.length === 0) return null;
+  return (
+    <span
+      className="flex shrink-0 -space-x-2"
+      aria-label={`Shooter : ${players.map((p) => p.name).join(", ")}`}
+    >
+      {players.map((p) =>
+        p.headshot ? (
+          <Image
+            key={p.id}
+            src={p.headshot}
+            alt={p.name}
+            title={p.name}
+            width={28}
+            height={28}
+            className="border-or-400/50 bg-noir-900 h-7 w-7 rounded-full border object-cover"
+          />
+        ) : (
+          <span
+            key={p.id}
+            title={p.name}
+            className="border-or-400/50 bg-noir-700 text-or-300 flex h-7 w-7 items-center justify-center rounded-full border font-sans text-[11px]"
+          >
+            {p.name.charAt(0).toUpperCase()}
+          </span>
+        ),
+      )}
+    </span>
+  );
+}
 
 function totalsFor(selected: Set<string>, questions: Question[], players: Player[]) {
   const totals: Record<string, number> = {};
@@ -44,6 +87,7 @@ export function EqualizerPanel({
   const [result, setResult] = useState<SelectionResult>({ error: null });
   const [pending, startTransition] = useTransition();
 
+  const byId = new Map(players.map((p) => [p.id, p]));
   const totals = totalsFor(selected, questions, players);
   const spread = spreadOf(totals);
 
@@ -148,8 +192,11 @@ export function EqualizerPanel({
                 onChange={() => toggle(q.id)}
                 className="accent-[var(--or-500)]"
               />
-              <span className="text-ivoire flex-1 font-sans text-sm">{q.prompt}</span>
-              <span className="text-ivoire-faint shrink-0 font-sans text-xs">
+              <span className="text-ivoire min-w-0 flex-1 font-sans text-sm">{q.prompt}</span>
+              <Caleurs
+                players={q.shooterIds.map((id) => byId.get(id)).filter(Boolean) as Player[]}
+              />
+              <span className="text-ivoire-faint w-20 shrink-0 text-right font-sans text-xs">
                 {Object.values(q.drinks).reduce((a, b) => a + b, 0)} gorgées
               </span>
             </li>

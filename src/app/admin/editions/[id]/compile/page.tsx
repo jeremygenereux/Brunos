@@ -4,7 +4,8 @@ import type { Metadata } from "next";
 import { requireAdmin } from "@/lib/auth/guards";
 import { createClient } from "@/lib/supabase/server";
 import { computeQuestionResult } from "@/lib/scoring/edition";
-import type { QuestionBallot } from "@/lib/scoring/types";
+import type { DrinkRule, QuestionBallot } from "@/lib/scoring/types";
+import { shooterIdsOf } from "@/lib/scoring/drinks";
 import { loadEditionVoteReveal } from "@/lib/editions/drama";
 import { EqualizerPanel } from "./equalizer-panel";
 import { RevealCurator } from "./reveal-curator";
@@ -18,6 +19,14 @@ function personName(people: unknown): string {
     return (people[0] as { display_name?: string } | undefined)?.display_name ?? "Sans nom";
   }
   return (people as { display_name?: string }).display_name ?? "Sans nom";
+}
+
+function personHeadshot(people: unknown): string | null {
+  if (!people) return null;
+  const p = Array.isArray(people)
+    ? (people[0] as { headshot_url?: string | null } | undefined)
+    : (people as { headshot_url?: string | null });
+  return p?.headshot_url ?? null;
 }
 
 export default async function CompilePage({ params }: { params: Promise<{ id: string }> }) {
@@ -51,10 +60,16 @@ export default async function CompilePage({ params }: { params: Promise<{ id: st
 
   const { data: rawPlayers } = await supabase
     .from("players")
-    .select("id, people(display_name)")
+    .select("id, headshot_url, people(display_name, headshot_url)")
     .eq("edition_id", id)
     .order("display_order");
-  const players = (rawPlayers ?? []).map((p) => ({ id: p.id, name: personName(p.people) }));
+  // Le portrait posé sur le joueur de l'année prime sur celui de la personne,
+  // comme partout ailleurs.
+  const players = (rawPlayers ?? []).map((p) => ({
+    id: p.id,
+    name: personName(p.people),
+    headshot: p.headshot_url ?? personHeadshot(p.people),
+  }));
   const playerIds = players.map((p) => p.id);
 
   const { data: questions } = await supabase
@@ -126,11 +141,17 @@ export default async function CompilePage({ params }: { params: Promise<{ id: st
       shooterValue,
     );
     const drinks = Object.fromEntries(computed.drinks);
+    // Qui calerait si cette question était retenue. C'est l'information qui
+    // manque pour ajuster la sélection à la main : l'écart total ne dit pas
+    // qui prend les shooters, et c'est pourtant ce qui se voit dans la salle.
+    const rule = (q.drink_rule_override ?? edition.drink_rule) as DrinkRule;
+    const shooters = shooterIdsOf(computed.players, rule, computed.drinks);
     return {
       id: q.id,
       prompt: q.prompt,
       format: q.format,
       drinks,
+      shooterIds: [...shooters],
       selected: q.is_selected_for_show,
       showOrder: q.show_order,
     };
@@ -163,8 +184,8 @@ export default async function CompilePage({ params }: { params: Promise<{ id: st
       </Link>
       <h1 className="text-ivoire font-display mt-4 text-4xl font-semibold">Compilation</h1>
       <p className="text-ivoire-muted mt-1 mb-8 font-sans text-sm">
-        Fixez le nombre de catégories, laissez l&apos;égaliseur répartir les charges au mieux,
-        puis ajustez à la main.
+        Fixez le nombre de catégories, laissez l&apos;égaliseur répartir les charges au mieux, puis
+        ajustez à la main.
       </p>
 
       {players.length === 0 || computed.length === 0 ? (
@@ -181,6 +202,7 @@ export default async function CompilePage({ params }: { params: Promise<{ id: st
               prompt: c.prompt,
               format: c.format,
               drinks: c.drinks,
+              shooterIds: c.shooterIds,
             }))}
             initialSelected={initialSelected}
           />
